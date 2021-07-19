@@ -2,8 +2,11 @@
 # Need some kind of 'intelligent' reader, the idea is to use KROME format so we
 # read to find the 'format', then the lines after that have to follow this
 # format. Need a Reaction class and a Network class for sure
+from networkx.drawing.nx_pydot import to_pydot
 from typing import List
 import networkx as nx
+from itertools import product
+from math import exp  # used in 'eval'
 
 
 def create_complex(lst): return ' + '.join(lst)
@@ -28,6 +31,8 @@ class Reaction:
     # Fortran -> Python format
     self.rate_expression = rate_expression.replace('d', 'e')
 
+    self.rate = self.evaluate_rate_expression(300)  # default
+
     if idx:
       self.idx = idx
 
@@ -38,6 +43,13 @@ class Reaction:
       output += f"\tIndex = {self.idx}"
 
     return output
+
+  def evaluate_rate_expression(self, temperature=None):
+    # Evaluate (potentially temperature-dependent) rate expression
+    # WARNING: Eval is evil!
+    expression = self.rate_expression.replace("Tgas", str(temperature))
+    rate = eval(expression)
+    return rate
 
 
 class Network:
@@ -52,15 +64,53 @@ class Network:
       species.extend(rxn.reactants + rxn.products)
     self.species = list(set(species))
 
+    # TODO: Additional constraint: combinations, not permutations!
+    # e.g. H + H + H2 == H2 + H + H
+    # Also need to check this when creating the graph!
     complexes = []
     for rxn in reactions:
       complexes.append(rxn.reactant_complex)
       complexes.append(rxn.product_complex)
     self.complexes = list(set(complexes))
 
-    # Create MultiDiGraph using networkx
+    # Create MultiDiGraphs for species and complexes using networkx
+    self.species_graph = self.create_species_graph()
+    self.complex_graph = self.create_complex_graph()
+
+  def create_species_graph(self, temperature=None) -> nx.MultiDiGraph:
+    # Create graph of species
+    species_graph = nx.MultiDiGraph()
+    for rxn in self.reactions:
+      # TODO: Optimise with itertools.product()
+      for r in rxn.reactants:
+        for p in rxn.products:
+          weight = rxn.evaluate_rate_expression(temperature) \
+              if temperature else rxn.rate
+          species_graph.add_edge(r, p, weight=weight)
+
+    return species_graph
+
+  def create_complex_graph(self, temperature=None) -> nx.MultiDiGraph:
+    # Create graph of complexes
+    complex_graph = nx.MultiDiGraph()
+    for rxn in self.reactions:
+      weight = rxn.evaluate_rate_expression(temperature) \
+          if temperature else rxn.rate
+      complex_graph.add_edge(rxn.reactant_complex,
+                             rxn.product_complex, weight=weight)
+
+    return complex_graph
+
+  def update_species_graph(self, temperature: float):
+    # Given a certain temperature, update the species Graph (weights)
+    self.species_graph = self.create_species_graph(temperature=temperature)
+
+  def update_complex_graph(self, temperature: float):
+    # Given a certain temperature, update the species Graph (weights)
+    self.complex_graph = self.create_complex_graph(temperature=temperature)
 
 
+# cls method for Network!
 def read_krome_file(filepath: str) -> Network:
   # Reads in a KROME rxn network as a Network
   rxn_format = None
@@ -107,8 +157,10 @@ if __name__ == "__main__":
   krome_file = '../res/react-co-solar-umist12'
   network = read_krome_file(krome_file)
 
-  for rxn in network.reactions:
-    print(rxn)
-
+  print("Species")
   print(network.species)
+  print("Complexes")
   print(network.complexes)
+
+  to_pydot(network.species_graph).write_png("./species.png")
+  to_pydot(network.complex_graph).write_png("./complex.png")
