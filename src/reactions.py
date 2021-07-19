@@ -3,6 +3,7 @@
 # read to find the 'format', then the lines after that have to follow this
 # format. Need a Reaction class and a Network class for sure
 from typing import List
+import networkx as nx
 
 
 def create_complex(lst): return ' + '.join(lst)
@@ -17,6 +18,9 @@ class Reaction:
     # Remove empty reactants and products
     self.reactants = [reactant for reactant in self.reactants if reactant]
     self.products = [product for product in self.products if product]
+
+    self.reactant_complex = create_complex(self.reactants)
+    self.product_complex = create_complex(self.products)
 
     # Need to evaluate this rate expression for temperature, so keep it as
     # something we can 'eval'
@@ -40,12 +44,21 @@ class Network:
   def __init__(self, reactions: List[Reaction]) -> None:
     self.reactions = reactions
 
+    # Potential space saving with clever list comprehensions?
+    # Doing species and complexes in this way is redundant, should do complexes
+    # first and then reduce that to get the species
     species = []
     for rxn in reactions:
       species.extend(rxn.reactants + rxn.products)
     self.species = list(set(species))
 
-    # Also initialise incidence matrix, adjacency matrix, etc?
+    complexes = []
+    for rxn in reactions:
+      complexes.append(rxn.reactant_complex)
+      complexes.append(rxn.product_complex)
+    self.complexes = list(set(complexes))
+
+    # Create MultiDiGraph using networkx
 
 
 def read_krome_file(filepath: str) -> Network:
@@ -98,3 +111,4 @@ if __name__ == "__main__":
     print(rxn)
 
   print(network.species)
+  print(network.complexes)
