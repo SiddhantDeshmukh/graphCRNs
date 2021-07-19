@@ -1,0 +1,15 @@
+Metadata-Version: 1.2
+Name: graphCRN
+Version: 0.0.1
+Summary: A set of tools to investigate chemical reaction networks as graphs.
+Home-page: https://github.com/SiddhantDeshmukh/graphCRNs
+Author: Siddhant A. Deshmukh
+Author-email: siddhant593@gmail.com
+License: UNKNOWN
+Description: # Graph Theory and Chemical Reaction Networks
+        
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
