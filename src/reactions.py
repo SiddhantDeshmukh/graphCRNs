@@ -9,7 +9,10 @@ from itertools import product
 from math import exp  # used in 'eval'
 
 
-def create_complex(lst): return ' + '.join(lst)
+# Order list alphabetically so that complex combinations work out
+# e.g. H + CH == CH + H
+# TODO: Do it properly when creating the set of complexes!
+def create_complex(lst): return ' + '.join(sorted(lst))
 
 
 class Reaction:
@@ -76,6 +79,7 @@ class Network:
     # Create MultiDiGraphs for species and complexes using networkx
     self.species_graph = self.create_species_graph()
     self.complex_graph = self.create_complex_graph()
+    self.species_complex_graph = self.create_species_complex_graph()
 
   def create_species_graph(self, temperature=None) -> nx.MultiDiGraph:
     # Create graph of species
@@ -101,13 +105,30 @@ class Network:
 
     return complex_graph
 
+  def create_species_complex_graph(self, temperature=None) -> nx.DiGraph:
+    # Create the graph relating complexes to their constituent species
+    species_complex_graph = nx.DiGraph()
+    for complex in self.complexes:
+      # Turn 'complex' into a list and check which species are in it
+      split_complex = [c.strip() for c in complex.split("+")]
+      for species in self.species:
+        if species in split_complex:
+          species_complex_graph.add_edge(species, complex)
+
+    return species_complex_graph
+
   def update_species_graph(self, temperature: float):
     # Given a certain temperature, update the species Graph (weights)
     self.species_graph = self.create_species_graph(temperature=temperature)
 
   def update_complex_graph(self, temperature: float):
-    # Given a certain temperature, update the species Graph (weights)
+    # Given a certain temperature, update the complex Graph (weights)
     self.complex_graph = self.create_complex_graph(temperature=temperature)
+
+  def update_species_complex_graph(self, temperature: float):
+    # Given a certain temperature, update the species-complex Graph (weights)
+    self.species_complex_graph = self.create_species_complex_graph(
+        temperature=temperature)
 
 
 # cls method for Network!
@@ -161,6 +182,10 @@ if __name__ == "__main__":
   print(network.species)
   print("Complexes")
   print(network.complexes)
+  print("Rates")
+  for rxn in network.reactions:
+    print(rxn.rate)
 
   to_pydot(network.species_graph).write_png("./species.png")
   to_pydot(network.complex_graph).write_png("./complex.png")
+  to_pydot(network.species_complex_graph).write_png("./species_complex.png")
