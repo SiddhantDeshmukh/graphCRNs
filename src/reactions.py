@@ -2,6 +2,7 @@
 # Need some kind of 'intelligent' reader, the idea is to use KROME format so we
 # read to find the 'format', then the lines after that have to follow this
 # format. Need a Reaction class and a Network class for sure
+import numpy as np
 from networkx.drawing.nx_pydot import to_pydot
 from typing import List
 import networkx as nx
@@ -79,7 +80,21 @@ class Network:
     # Create MultiDiGraphs for species and complexes using networkx
     self.species_graph = self.create_species_graph()
     self.complex_graph = self.create_complex_graph()
-    self.species_complex_graph = self.create_species_complex_graph()
+
+    # Create incidence matrices from graphs
+    self.species_incidence_matrix = nx.incidence_matrix(self.species_graph)
+    self.complex_incidence_matrix = nx.incidence_matrix(self.complex_graph)
+
+    # Complex composition matrix (m x c)
+    self.complex_composition_matrix = self.create_complex_composition_matrix()
+
+    # Stoichiometric matrix (m x r)
+    self.stoichiometric_matrix = self.complex_composition_matrix @ self.complex_incidence_matrix
+
+    # Potential graphs from defined incidence matrices
+    # self.complex_composition_graph = nx.from_numpy_matrix(
+    #     incidence_to_adjacency(self.complex_composition_matrix))
+    # self.complex_composition_graph = self.create_complex_composition_graph()
 
   def create_species_graph(self, temperature=None) -> nx.MultiDiGraph:
     # Create graph of species
@@ -105,17 +120,29 @@ class Network:
 
     return complex_graph
 
-  def create_species_complex_graph(self, temperature=None) -> nx.DiGraph:
-    # Create the graph relating complexes to their constituent species
-    species_complex_graph = nx.DiGraph()
-    for complex in self.complexes:
-      # Turn 'complex' into a list and check which species are in it
-      split_complex = [c.strip() for c in complex.split("+")]
-      for species in self.species:
+  def create_complex_composition_matrix(self) -> np.ndarray:
+    # Create matrix describing the composition of each complex 'c' based on its
+    # constituent metabolites 'm' (m x c)
+    complex_composition_matrix = np.zeros((len(self.species),
+                                           len(self.complexes)))
+    for i, species in enumerate(self.species):
+      for j, complex in enumerate(self.complexes):
+        split_complex = [c.strip() for c in complex.split("+")]
         if species in split_complex:
-          species_complex_graph.add_edge(species, complex)
+          complex_composition_matrix[i, j] = 1
 
-    return species_complex_graph
+    return complex_composition_matrix
+
+  def create_complex_composition_graph(self) -> nx.DiGraph:
+    # From the complex composition matrix, create a Directed Graph
+    # (species -> complex) for each species/complex in the network
+    complex_composition_graph = nx.DiGraph()
+    for i, species in enumerate(self.species):
+      for j, complex in enumerate(self.complexes):
+        if self.complex_composition_matrix[i, j] == 1:
+          complex_composition_graph.add_edge(species, complex)
+
+    return complex_composition_graph
 
   def update_species_graph(self, temperature: float):
     # Given a certain temperature, update the species Graph (weights)
@@ -125,10 +152,19 @@ class Network:
     # Given a certain temperature, update the complex Graph (weights)
     self.complex_graph = self.create_complex_graph(temperature=temperature)
 
-  def update_species_complex_graph(self, temperature: float):
-    # Given a certain temperature, update the species-complex Graph (weights)
-    self.species_complex_graph = self.create_species_complex_graph(
-        temperature=temperature)
+
+# Move to a different utils script for graphs
+def incidence_to_adjacency(incidence_matrix: np.ndarray,
+                           remove_self_loops=False) -> np.ndarray:
+  # From an incidence matrix, create and return the respective adjacency matrix
+  # Useful since networkx graphs can be created with adjacency matrices,
+  # but not incidence matrices
+  adjacency_matrix = (np.dot(incidence_matrix,
+                             incidence_matrix.T) > 0).astype(int)
+  if remove_self_loops:
+    np.fill_diagonal(adjacency_matrix, 0)
+
+  return adjacency_matrix
 
 
 # cls method for Network!
@@ -178,14 +214,27 @@ if __name__ == "__main__":
   krome_file = '../res/react-co-solar-umist12'
   network = read_krome_file(krome_file)
 
-  print("Species")
+  print(f"{len(network.species)} Species:")
   print(network.species)
-  print("Complexes")
+  print(f"{len(network.complexes)} Complexes:")
   print(network.complexes)
-  print("Rates")
-  for rxn in network.reactions:
-    print(rxn.rate)
+  # print("Rates")
+  # for rxn in network.reactions:
+  #   print(rxn.rate)
 
   to_pydot(network.species_graph).write_png("./species.png")
   to_pydot(network.complex_graph).write_png("./complex.png")
-  to_pydot(network.species_complex_graph).write_png("./species_complex.png")
+
+  # Check matrices
+  print("Adjacency matrices")
+  print(nx.to_numpy_array(network.species_graph).shape)
+  print(nx.to_numpy_array(network.complex_graph).shape)
+  print(incidence_to_adjacency(network.complex_composition_matrix).shape)
+
+  print("Incidence matrices")
+  print(network.species_incidence_matrix.shape)
+  print(network.complex_incidence_matrix.shape)
+  print(network.complex_composition_matrix.shape)
+
+  print("Stoichiometric matrix")
+  print(network.stoichiometric_matrix.shape)
