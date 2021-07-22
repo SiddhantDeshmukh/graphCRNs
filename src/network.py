@@ -176,7 +176,7 @@ class Network:
 
     return kinetics_matrix
 
-  def create_laplacian_matrix(self, temperature=300) -> np.ndarray:
+  def create_laplacian_matrix(self) -> np.ndarray:
     # Create (c x c) Laplacian matrix L := -DK
     D, K = self.complex_incidence_matrix, self.kinetics_matrix
     laplacian_matrix = -D @ K

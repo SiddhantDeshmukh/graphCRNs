@@ -29,19 +29,18 @@ class NetworkDynamics():
     return number_densities
 
   def create_rates_vector(self, number_densities: np.ndarray) -> np.ndarray:
-    # Create the vector v(x) = Exp(Z.T Ln(x)) that includes the stoichiometry
+    # Create the vector v(x) = K Exp(Z.T Ln(x)) that includes the stoichiometry
     # into reaction rates
     # 'number_densities' must have the same indexing as species!
-    Z = self.complex_incidence_matrix
-    rates_vector = np.exp(Z.T.dot(np.log(number_densities)))
+    Z = self.network.complex_composition_matrix
+    K = self.network.kinetics_matrix
+    rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
 
     return rates_vector
 
   def calculate_dynamics(self) -> np.ndarray:
-    # Calculate the RHS ZDK v(x)
-    Z = self.network.complex_composition_matrix
-    D = self.network.complex_incidence_matrix
-    K = self.network.kinetics_matrix
-    dynamics_vector = Z @ D @ K.dot(self.number_densities)
+    # Calculate the RHS ZD v(x) = Sv(x)
+    S = self.network.stoichiometric_matrix
+    dynamics_vector = S.dot(self.rates_vector)
 
     return dynamics_vector
