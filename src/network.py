@@ -6,24 +6,24 @@ import numpy as np
 
 class Network:
   def __init__(self, reactions: List[Reaction]) -> None:
-    self.reactions = reactions
+    self.reactions = sorted(reactions, key=lambda rxn: rxn.idx)
 
     # Potential space saving with clever list comprehensions?
     # Doing species and complexes in this way is redundant, should do complexes
     # first and then reduce that to get the species
     species = []
-    for rxn in reactions:
+    for rxn in self.reactions:
       species.extend(rxn.reactants + rxn.products)
-    self.species = list(set(species))
+    self.species = sorted(list(set(species)))
 
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H
     # Also need to check this when creating the graph!
     complexes = []
-    for rxn in reactions:
+    for rxn in self.reactions:
       complexes.append(rxn.reactant_complex)
       complexes.append(rxn.product_complex)
-    self.complexes = list(set(complexes))
+    self.complexes = sorted(list(set(complexes)))
 
     # Create MultiDiGraphs for species and complexes using networkx
     self.species_graph = self.create_species_graph()
