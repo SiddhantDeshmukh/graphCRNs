@@ -2,51 +2,79 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.drawing.nx_pylab import draw, draw_networkx_edge_labels
 from networkx.drawing.nx_pydot import to_pydot
-from src.reactions import Reaction
+from src.network import Network
 import pydot
+import numpy as np
 
+# # Simple network of a reversible reaction
+# # H + CH <-> C + H2
+# # k_forward = 5
+# # k_backward = 3
+# reactants = ['H', 'CH']
+# products = ['C', 'H2']
+# forward_rate = 5
+# reverse_rate = 3
 
-reactants = ['H', 'CH']
-products = ['C', 'H2']
-forward_rate = 5
-reverse_rate = 3
+# forward_reaction = Reaction(
+#     reactants, products, rate_expression=f"{forward_rate}")
+# reverse_reaction = Reaction(
+#     products, reactants, rate_expression=f"{reverse_rate}")
 
-forward_reaction = Reaction(
-    reactants, products, rate_expression=f"{forward_rate}")
-reverse_reaction = Reaction(
-    products, reactants, rate_expression=f"{reverse_rate}")
+# network = Network([forward_reaction, reverse_reaction])
+# # Move kinetics matrix and Laplacian matrix into 'Network'
+# kinetics_matrix = np.zeros((2, 2))
+# for i, rxn in enumerate(network.reactions):
+#   for j, complex in enumerate(network.complexes):
+#     if complex == rxn.reactant_complex:
+#       kinetics_matrix[i, j] = rxn.evaluate_rate_expression(300)
+#     else:
+#       kinetics_matrix[i, j] = 0
 
-# Create graph of species
-species_graph = nx.MultiDiGraph()
-for r in forward_reaction.reactants:
-  for p in forward_reaction.products:
-    species_graph.add_edge(r, p, weight=forward_rate)
-for r in reverse_reaction.reactants:
-  for p in reverse_reaction.products:
-    species_graph.add_edge(r, p, weight=reverse_rate)
+# laplacian_matrix = -network.complex_incidence_matrix @ kinetics_matrix
 
-plt.figure()
-pos = nx.spring_layout(species_graph)
-draw(species_graph, pos=pos, with_labels=True)
-draw_networkx_edge_labels(species_graph, pos=pos)
+# # Determine RHS vector Exp(Z.T Ln(x)), where 'x' is number densities
+# x = [1., 3., 2., 4.]  # strictly non-negative
+# rhs = np.exp(network.complex_composition_matrix.T.dot(np.log(x)))
+# Z, D, K = network.complex_composition_matrix, network.complex_incidence_matrix, kinetics_matrix
+# dynamics_rhs = Z @ D @ K.dot(rhs)
 
-# Create graph of complexes
-complex_graph = nx.MultiDiGraph()
-complex_graph.add_edge(forward_reaction.reactant_complex,
-                       forward_reaction.product_complex, weight=forward_rate)
-complex_graph.add_edge(forward_reaction.product_complex,
-                       forward_reaction.reactant_complex, weight=reverse_rate)
+# print(x)
+# print(network.species)
+# print(dynamics_rhs)
 
-plt.figure()
-pos = nx.spring_layout(complex_graph)
-draw(complex_graph, pos=pos, with_labels=True)
-draw_networkx_edge_labels(complex_graph, pos=pos)
+# Check this by hand!
+# Also make sure the list indices line up as expected with the array
 
-print(complex_graph.number_of_edges())
-# plt.show()
+# print(network.species_incidence_matrix.shape)
+# print(kinetics_matrix)
+# print(network.complex_incidence_matrix)
+# print(laplacian_matrix)
 
-pydot_species_graph = to_pydot(species_graph)
-pydot_complex_graph = to_pydot(complex_graph)
+if __name__ == "__main__":
+  krome_file = '../res/react-co-solar-umist12'
+  network = Network.from_krome_file(krome_file)
 
-pydot_species_graph.write_png("./species.png")
-pydot_complex_graph.write_png("./complex.png")
+  print(f"{len(network.species)} Species")
+  # print(network.species)
+  print(f"{len(network.complexes)} Complexes")
+  # print(network.complexes)
+  print(f"{len(network.reactions)} Reactions")
+  # print("Rates")
+  # for rxn in network.reactions:
+  #   print(rxn.rate)
+
+  to_pydot(network.species_graph).write_png("./species.png")
+  to_pydot(network.complex_graph).write_png("./complex.png")
+
+  # Check matrices
+  print("Adjacency matrices")
+  print(f"Species: {nx.to_numpy_array(network.species_graph).shape}")
+  print(f"Complex: {nx.to_numpy_array(network.complex_graph).shape}")
+
+  print("Incidence matrices")
+  print(f"Species:        {network.species_incidence_matrix.shape}")
+  print(f"Complex:        {network.complex_incidence_matrix.shape}")
+  print(f"Composition:    {network.complex_composition_matrix.shape}")
+  print(f"Stoichiometric: {network.stoichiometric_matrix.shape}")
+  print(f"Kinetics:       {network.kinetics_matrix.shape}")
+  print(f"Laplacian:      {network.laplacian_matrix.shape}")
