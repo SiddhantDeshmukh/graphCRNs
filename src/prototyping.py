@@ -55,7 +55,8 @@ from scipy.linalg import null_space
 if __name__ == "__main__":
   # Initialising network
   # krome_file = '../res/react-co-solar-umist12'
-  krome_file = '../res/ring-reaction'
+  # krome_file = '../res/ring-reaction'
+  krome_file = '../res/quad-ring-reaction'
   network = Network.from_krome_file(krome_file)
 
   print(f"{len(network.species)} Species")
@@ -83,7 +84,7 @@ if __name__ == "__main__":
   print(f"Kinetics:       {network.kinetics_matrix.shape}")
   print(f"Laplacian:      {network.laplacian_matrix.shape}")
 
-  # # Dynamics
+  # Dynamics
   # initial_number_densities = {
   #     "H": 1e12,
   #     "H2": 1e-4,
@@ -95,25 +96,55 @@ if __name__ == "__main__":
   #     "M": 1e11,
   # }
 
-  # dynamics = NetworkDynamics(network, initial_number_densities)
-  # print(dynamics.network.species)
-  # print(dynamics.initial_number_densities)
-  # print(dynamics.dynamics_vector)
+  initial_number_densities = {
+      "A": 2,
+      "B": 3,
+      "C": 4,
+      "D": 5
+  }
 
-  # Equilibrium
-  # Complex-balanced equilibrium exists if Dv(x*) = 0
-  # Species-balanced equilibrium exists if Sv(x*) = 0 (?)
-  # Since Dv(x*) = -LExp(...), we can check nullspace of L for complex-balanced
-  # and nullspace of SK for species-balanced
-  complex_nullspace = null_space(network.laplacian_matrix)
+  dynamics = NetworkDynamics(network, initial_number_densities)
+  print("Dynamics")
+  print(dynamics.network.species)
+  print(f"x_0   = {dynamics.initial_number_densities}")
+  print(f"x_dot = {dynamics.dynamics_vector}")
 
-  species_laplacian = network.stoichiometric_matrix @ network.kinetics_matrix
-  species_nullspace = null_space(species_laplacian)
+  # # Equilibrium
+  # # Complex-balanced equilibrium exists if Dv(x*) = 0
+  # # Species-balanced equilibrium exists if Sv(x*) = 0 (?)
+  # # Since Dv(x*) = -LExp(...), we can check nullspace of L for complex-balanced
+  # # and nullspace of SK for species-balanced
+  # complex_nullspace = null_space(network.laplacian_matrix)
 
-  print("Equilibria nullspaces")
-  print(f"Complex: {complex_nullspace}")
-  print(network.laplacian_matrix)
-  print(f"Species: {species_nullspace}")
-  print(species_laplacian)
+  # species_laplacian = -network.stoichiometric_matrix @ network.kinetics_matrix
+  # species_nullspace = null_space(species_laplacian)
+
+  # print("Equilibria nullspaces")
+  # print(f"Complex: {complex_nullspace}")
+  # print(network.laplacian_matrix)
+  # print(f"Species: {species_nullspace}")
+  # print(species_laplacian)
 
   # Pathfinding
+  # Find shortest path and 'k' shortest path between two species
+  # source = 'C'
+  # target = 'CO'
+  source = 'A'
+  target = 'C'
+  cutoff = 4
+  shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
+                                       cutoff=cutoff)
+
+  print("Paths and lengths")
+  count = 0
+  for path in shortest_paths:
+    total_length = 0
+    for i in range(len(path) - 1):
+      source, target = path[i], path[i+1]
+      edge = network.species_graph[source][target][0]
+      length = edge['weight']
+      total_length += length
+    print(path, total_length)
+    count += 1
+    if count >= 10:
+      break

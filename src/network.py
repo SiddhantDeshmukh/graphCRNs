@@ -71,8 +71,13 @@ class Network:
     with open(krome_file, 'r', encoding='utf-8') as infile:
       while True:
         line = infile.readline().strip()
+        # TODO: Fix this condition, since if empty lines are present in a file,
+        # it stops reading (happens often when adding comments)
         if not line:
           break
+
+        if line.startswith("#"):
+          continue
 
         # Check for 'format'
         if line.startswith('@format:'):
