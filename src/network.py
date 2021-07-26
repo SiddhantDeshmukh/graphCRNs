@@ -64,7 +64,9 @@ class Network:
         'idx': [],
         'R': [],
         'P': [],
-        'rate': []
+        'rate': [],
+        'Tmin': [],
+        'Tmax': [],
     }
 
     reactions = []
@@ -91,7 +93,9 @@ class Network:
 
           reactions.append(Reaction(format_dict['R'], format_dict['P'],
                                     format_dict['rate'][0],
-                                    idx=format_dict['idx'][0]))
+                                    idx=format_dict['idx'][0],
+                                    min_temperature=format_dict['Tmin'],
+                                    max_temperature=format_dict['Tmax']))
 
         # Reset quantities
         for key in format_dict.keys():

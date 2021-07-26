@@ -14,7 +14,7 @@ def create_complex(lst): return ' + '.join(sorted(lst))
 
 class Reaction:
   def __init__(self, reactants: List, products: List, rate_expression: str,
-               idx=None) -> None:
+               idx=None, min_temperature=None, max_temperature=None) -> None:
     self.reactants = reactants
     self.products = products
 
@@ -34,6 +34,8 @@ class Reaction:
     self.rate = self.evaluate_rate_expression(300)  # default
 
     self.idx = idx if idx else None
+    self.min_temperature = min_temperature if min_temperature else None
+    self.max_temperature = max_temperature if max_temperature else None
 
   def __str__(self) -> str:
     output = f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
