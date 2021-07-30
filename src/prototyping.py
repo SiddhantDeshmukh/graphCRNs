@@ -51,6 +51,17 @@ from scipy.linalg import null_space
 # print(kinetics_matrix)
 # print(network.complex_incidence_matrix)
 # print(laplacian_matrix)
+def is_square(matrix: np.ndarray) -> bool:
+  # Checks if a matrix is square. Must be a 2D array
+  return matrix.shape[0] == matrix.shape[1]
+
+def is_identity(matrix: np.ndarray) -> bool:
+  # Checks if a matrix is the identity matrix. Must be a 2D array
+  return (matrix == np.eye(matrix.shape[0])).all()
+
+def is_orthogonal(matrix: np.ndarray) -> bool:
+  # Checks if a matrix is orthogonal. Must be a 2D array
+  return is_identity(matrix @ matrix.T)
 
 if __name__ == "__main__":
   # Initialising network
@@ -109,42 +120,69 @@ if __name__ == "__main__":
   print(f"x_0   = {dynamics.initial_number_densities}")
   print(f"x_dot = {dynamics.dynamics_vector}")
 
-  # # Equilibrium
-  # # Complex-balanced equilibrium exists if Dv(x*) = 0
-  # # Species-balanced equilibrium exists if Sv(x*) = 0 (?)
-  # # Since Dv(x*) = -LExp(...), we can check nullspace of L for complex-balanced
-  # # and nullspace of SK for species-balanced
-  # complex_nullspace = null_space(network.laplacian_matrix)
+  # Equilibrium
+  # Complex-balanced equilibrium exists if Dv(x*) = 0
+  # Species-balanced equilibrium exists if Sv(x*) = 0 (?)
+  # Since Dv(x*) = -LExp(...), we can check nullspace of L for complex-balanced
+  # and nullspace of SK for species-balanced
+  # This gives negative answers, reckon I should multiply by -1!
+  # I think it's because the dynamics equation will have -L, not L, so we need
+  # to multiply by -1 to ensure all concentrations >= 0
+  complex_nullspace = null_space(network.laplacian_matrix)
+  complex_nullspace *= -1
 
   # species_laplacian = -network.stoichiometric_matrix @ network.kinetics_matrix
   # species_nullspace = null_space(species_laplacian)
 
-  # print("Equilibria nullspaces")
-  # print(f"Complex: {complex_nullspace}")
-  # print(network.laplacian_matrix)
+  print("Equilibria nullspaces")
+  print(f"Complex: {complex_nullspace}")
+  print(network.laplacian_matrix)
   # print(f"Species: {species_nullspace}")
   # print(species_laplacian)
 
-  # Pathfinding
-  # Find shortest path and 'k' shortest path between two species
-  # source = 'C'
-  # target = 'CO'
-  source = 'A'
-  target = 'C'
-  cutoff = 4
-  shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
-                                       cutoff=cutoff)
+  # Nullspace is Exp(Z^T Ln(x)) := y
+  # Need to invert this relationship to get 'x'
+  # x = EXP((Z^T)^-1 Ln(y))
+  # First check if 'Z' is orthogonal
+  y = complex_nullspace
+  Z = network.complex_composition_matrix
+  y = np.log(y)
+  if is_orthogonal(Z):
+    y = Z @ y
+  else:
+    # Costly!
+    y = np.linalg.inv(Z.T) @ y
+  x = np.exp(y)
 
-  print("Paths and lengths")
-  count = 0
-  for path in shortest_paths:
-    total_length = 0
-    for i in range(len(path) - 1):
-      source, target = path[i], path[i+1]
-      edge = network.species_graph[source][target][0]
-      length = edge['weight']
-      total_length += length
-    print(path, total_length)
-    count += 1
-    if count >= 10:
-      break
+  print(x)
+
+  # This is the same as 'x' here because the species are the same as the
+  # complexes
+  # However, won't this generalise to species matrix well? Since the complex
+
+  # Check network dynamics to see complex-balanced eqm and steady-states
+
+  # # Pathfinding
+  # # Find shortest path and 'k' shortest path between two species
+  # # source = 'C'
+  # # target = 'CO'
+  # source = 'A'
+  # target = 'C'
+  # cutoff = 4
+  # shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
+  #                                      cutoff=cutoff)
+
+  # print("Paths and lengths")
+  # count = 0
+  # for path in shortest_paths:
+  #   total_length = 0
+  #   for i in range(len(path) - 1):
+  #     source, target = path[i], path[i+1]
+  #     edge = network.species_graph[source][target][0]
+  #     length = edge['weight']
+  #     total_length += length
+  #   print(path, total_length)
+  #   count += 1
+  #   if count >= 10:
+  #     break
+
