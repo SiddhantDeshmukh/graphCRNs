@@ -12,3 +12,10 @@ def incidence_to_adjacency(incidence_matrix: np.ndarray,
     np.fill_diagonal(adjacency_matrix, 0)
 
   return adjacency_matrix
+
+
+def normalise_2d(array: np.ndarray) -> np.ndarray:
+  # Requires 2D array input
+  # Normalises the array between [0, 1]
+  norm = np.linalg.norm(array)
+  return array / norm

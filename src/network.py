@@ -1,3 +1,4 @@
+from src.utilities import normalise_2d
 from typing import List
 from src.reaction import Reaction
 import networkx as nx
@@ -172,7 +173,7 @@ class Network:
 
     return complex_composition_matrix
 
-  def create_kinetics_matrix(self, temperature=300) -> np.ndarray:
+  def create_kinetics_matrix(self, temperature=300, normalise_kinetics=False) -> np.ndarray:
     # Create the (r x c) coindicidence matrix containing reaction rate constants
     kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)))
 
@@ -182,6 +183,10 @@ class Network:
           kinetics_matrix[i, j] = rxn.evaluate_rate_expression(temperature)
         else:
           kinetics_matrix[i, j] = 0
+
+    # Normalise such that all rates are between 0, 1
+    if normalise_kinetics:
+      normalise_2d(kinetics_matrix)
 
     return kinetics_matrix
 
