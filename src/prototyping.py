@@ -71,12 +71,13 @@ def is_orthogonal(matrix: np.ndarray) -> bool:
 
 if __name__ == "__main__":
   # Initialising network
-  # krome_file = '../res/react-co-solar-umist12'
+  krome_file = '../res/react-co-solar-umist12'
   # krome_file = '../res/ring-reaction'
   # krome_file = '../res/quad-ring-reaction'
   # krome_file = '../res/T-network'
-  krome_file = '../res/L-network'
+  # krome_file = '../res/L-network'
   # krome_file = '../res/diamond-network'
+  # krome_file = '../res/multi-species-line'
   network = Network.from_krome_file(krome_file)
 
   print(f"{len(network.species)} Species")
@@ -147,7 +148,8 @@ if __name__ == "__main__":
   # print(network.laplacian_matrix)
   print(f"Species: {species_nullspace.shape}")
   # print(species_laplacian)
-  print(species_nullspace)
+  # print(complex_nullspace)
+  # print(species_nullspace)
 
   # Nullspace is Exp(Z^T Ln(x)) := y
   # Need to invert this relationship to get 'x'
@@ -160,10 +162,14 @@ if __name__ == "__main__":
   # Compute complex balance from Matrix Tree theorem
   print(network.complex_laplacian.shape)
   print(network.species_laplacian.shape)
-  # print(network.compute_complex_balance(300))
-  # print(network.compute_species_balance(300))
-  print(cofactor_matrix(network.complex_laplacian)[0])
-  print(cofactor_matrix(network.species_laplacian)[0])
+  print(network.compute_complex_balance(300))
+  rho = cofactor_matrix(network.complex_laplacian)[0]
+  x = np.exp(np.linalg.pinv(Z.T) @ np.log(rho))
+  print(x)
+
+  # Try getting species balance directly
+  print(network.compute_species_balance(300))
+
   exit()
   # if is_orthogonal(Z):
   #   y = Z @ y
@@ -185,10 +191,10 @@ if __name__ == "__main__":
 
   # Pathfinding
   # Find shortest path and 'k' shortest path between two species
-  source = 'C'
-  target = 'CO'
-  # source = 'A'
-  # target = 'C'
+  # source = 'C'
+  # target = 'CO'
+  source = 'A'
+  target = 'C'
   cutoff = 4
   shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
                                        cutoff=cutoff)
