@@ -1,4 +1,4 @@
-from src.utilities import normalise_2d
+from src.utilities import cofactor_matrix, normalise_2d
 from typing import List
 from src.reaction import Reaction
 import networkx as nx
@@ -43,10 +43,16 @@ class Network:
     self.stoichiometric_matrix = self.complex_composition_matrix @ self.complex_incidence_matrix
 
     # Outgoing co-incidence matrix of reaction rates (r x c)
-    self.kinetics_matrix = self.create_kinetics_matrix()
+    self.complex_kinetics_matrix = self.create_complex_kinetics_matrix()
+
+    # Outgoing co-incidence matrix of reaction rates (r x m)
+    self.species_kinetics_matrix = self.create_species_kinetics_matrix()
 
     # Weighted Laplacian (transpose of conventional Laplacian) matrix (c x c)
-    self.laplacian_matrix = self.create_laplacian_matrix()
+    self.complex_laplacian = self.create_complex_laplacian_matrix()
+
+    # Weighted Laplacian matrix (m x m)
+    self.species_laplacian = self.create_species_laplacian_matrix()
 
     # Potential graphs from defined incidence matrices
     # self.complex_composition_graph = nx.from_numpy_matrix(
@@ -173,16 +179,14 @@ class Network:
 
     return complex_composition_matrix
 
-  def create_kinetics_matrix(self, temperature=300, normalise_kinetics=False) -> np.ndarray:
+  def create_complex_kinetics_matrix(self, temperature=300, normalise_kinetics=False) -> np.ndarray:
     # Create the (r x c) coindicidence matrix containing reaction rate constants
+    # 'K' in: x_dot =  ZDK Exp(Z.T Ln(x))
     kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)))
-
     for i, rxn in enumerate(self.reactions):
       for j, complex in enumerate(self.complexes):
         if complex == rxn.reactant_complex:
           kinetics_matrix[i, j] = rxn.evaluate_rate_expression(temperature)
-        else:
-          kinetics_matrix[i, j] = 0
 
     # Normalise such that all rates are between 0, 1
     if normalise_kinetics:
@@ -190,10 +194,30 @@ class Network:
 
     return kinetics_matrix
 
-  def create_laplacian_matrix(self) -> np.ndarray:
+  def create_species_kinetics_matrix(self, temperature=300, normalise_kinetics=False) -> np.ndarray:
+    # Create (r x m) coincidence matrix containing reaction rate constants
+    # 'K' in: x_dot =  SK x
+    kinetics_matrix = np.zeros((len(self.reactions), len(self.species)))
+    for i, rxn in enumerate(self.reactions):
+      for j, species in enumerate(self.species):
+        if species in rxn.reactants:
+          # TODO:
+          # Should check if we've already been on the reactant side of a certain
+          # reaction since we don't need to do the same reaction more than once
+          kinetics_matrix[i, j] = rxn.evaluate_rate_expression(temperature)
+
+    return kinetics_matrix
+
+  def create_complex_laplacian_matrix(self) -> np.ndarray:
     # Create (c x c) Laplacian matrix L := -DK
-    D, K = self.complex_incidence_matrix, self.kinetics_matrix
+    D, K = self.complex_incidence_matrix, self.complex_kinetics_matrix
     laplacian_matrix = -D @ K
+    return laplacian_matrix
+
+  def create_species_laplacian_matrix(self) -> np.ndarray:
+    # Create (m x m) Laplacian matrix L := -SK
+    S, K = self.stoichiometric_matrix, self.species_kinetics_matrix
+    laplacian_matrix = -S @ K
     return laplacian_matrix
 
   # ----------------------------------------------------------------------------
@@ -207,3 +231,24 @@ class Network:
   def update_complex_graph(self, temperature: float):
     # Given a certain temperature, update the complex Graph (weights)
     self.complex_graph = self.create_complex_graph(temperature=temperature)
+
+  # ----------------------------------------------------------------------------
+  # Methods for computing nullspaces
+  # ----------------------------------------------------------------------------
+  def compute_complex_balance(self, temperature: float) -> np.ndarray:
+    # Using Kirchhoff's Matrix Tree theorem, compute the kernel of the Laplacian
+    # corresponding to a positive, complex-balanced equilibrium for a given
+    # temperature
+    # Only need first row of cofactor matrix!
+    C = cofactor_matrix(self.complex_laplacian)
+    rho = C[0]
+    return rho
+
+  def compute_species_balance(self, temperature: float) -> np.ndarray:
+    # Using Kirchhoff's Matrix Tree theorem, compute the kernel of the Laplacian
+    # corresponding to a positive, complex-balanced equilibrium for a given
+    # temperature
+    # Only need first row of cofactor matrix!
+    C = cofactor_matrix(self.species_laplacian)
+    rho = C[0]
+    return rho

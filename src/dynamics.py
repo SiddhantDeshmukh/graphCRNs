@@ -33,7 +33,7 @@ class NetworkDynamics():
     # into reaction rates
     # 'number_densities' must have the same indexing as species!
     Z = self.network.complex_composition_matrix
-    K = self.network.kinetics_matrix
+    K = self.network.complex_kinetics_matrix
     rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
 
     return rates_vector
@@ -44,3 +44,5 @@ class NetworkDynamics():
     dynamics_vector = S.dot(self.rates_vector)
 
     return dynamics_vector
+
+  # Nonlinear ODE solver?

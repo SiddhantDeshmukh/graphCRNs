@@ -1,3 +1,4 @@
+from src.utilities import cofactor_matrix
 from src.dynamics import NetworkDynamics
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -70,9 +71,12 @@ def is_orthogonal(matrix: np.ndarray) -> bool:
 
 if __name__ == "__main__":
   # Initialising network
-  krome_file = '../res/react-co-solar-umist12'
+  # krome_file = '../res/react-co-solar-umist12'
   # krome_file = '../res/ring-reaction'
   # krome_file = '../res/quad-ring-reaction'
+  # krome_file = '../res/T-network'
+  krome_file = '../res/L-network'
+  # krome_file = '../res/diamond-network'
   network = Network.from_krome_file(krome_file)
 
   print(f"{len(network.species)} Species")
@@ -97,20 +101,20 @@ if __name__ == "__main__":
   print(f"Complex:        {network.complex_incidence_matrix.shape}")
   print(f"Composition:    {network.complex_composition_matrix.shape}")
   print(f"Stoichiometric: {network.stoichiometric_matrix.shape}")
-  print(f"Kinetics:       {network.kinetics_matrix.shape}")
-  print(f"Laplacian:      {network.laplacian_matrix.shape}")
+  print(f"Kinetics:       {network.complex_kinetics_matrix.shape}")
+  print(f"Laplacian:      {network.complex_laplacian.shape}")
 
   # Dynamics
-  initial_number_densities = {
-      "H": 1e12,
-      "H2": 1e-4,
-      "OH": 1e-12,
-      "C": 10**(8.39),
-      "O": 10**(8.66),
-      "CH": 1e-12,
-      "CO": 1e-12,
-      "M": 1e11,
-  }
+  # initial_number_densities = {
+  #     "H": 1e12,
+  #     "H2": 1e-4,
+  #     "OH": 1e-12,
+  #     "C": 10**(8.39),
+  #     "O": 10**(8.66),
+  #     "CH": 1e-12,
+  #     "CO": 1e-12,
+  #     "M": 1e11,
+  # }
 
   # initial_number_densities = {
   #     "A": 2,
@@ -119,11 +123,11 @@ if __name__ == "__main__":
   #     "D": 5
   # }
 
-  dynamics = NetworkDynamics(network, initial_number_densities)
-  print("Dynamics")
-  # print(dynamics.network.species)
-  print(f"x_0   = {dynamics.initial_number_densities}")
-  print(f"x_dot = {dynamics.dynamics_vector}")
+  # dynamics = NetworkDynamics(network, initial_number_densities)
+  # print("Dynamics")
+  # # print(dynamics.network.species)
+  # print(f"x_0   = {dynamics.initial_number_densities}")
+  # print(f"x_dot = {dynamics.dynamics_vector}")
 
   # Equilibrium
   # Complex-balanced equilibrium exists if Dv(x*) = 0
@@ -133,9 +137,9 @@ if __name__ == "__main__":
   # This gives negative answers, reckon I should multiply by -1!
   # I think it's because the dynamics equation will have -L, not L, so we need
   # to multiply by -1 to ensure all concentrations >= 0
-  complex_nullspace = -null_space(network.laplacian_matrix.T)
+  complex_nullspace = -null_space(network.complex_laplacian.T)
 
-  species_laplacian = -network.stoichiometric_matrix @ network.kinetics_matrix
+  species_laplacian = -network.stoichiometric_matrix @ network.complex_kinetics_matrix
   species_nullspace = -null_space(species_laplacian.T)
 
   print("Equilibria nullspaces")
@@ -152,7 +156,15 @@ if __name__ == "__main__":
   y = complex_nullspace
   Z = network.complex_composition_matrix
   y = np.log(y)
-  print(Z.shape, Z.T.shape, y.shape)
+
+  # Compute complex balance from Matrix Tree theorem
+  print(network.complex_laplacian.shape)
+  print(network.species_laplacian.shape)
+  # print(network.compute_complex_balance(300))
+  # print(network.compute_species_balance(300))
+  print(cofactor_matrix(network.complex_laplacian)[0])
+  print(cofactor_matrix(network.species_laplacian)[0])
+  exit()
   # if is_orthogonal(Z):
   #   y = Z @ y
   # else:

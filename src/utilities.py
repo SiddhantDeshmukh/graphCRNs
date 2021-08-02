@@ -19,3 +19,14 @@ def normalise_2d(array: np.ndarray) -> np.ndarray:
   # Normalises the array between [0, 1]
   norm = np.linalg.norm(array)
   return array / norm
+
+
+def cofactor_matrix(matrix: np.ndarray) -> np.ndarray:
+  C = np.zeros(matrix.shape)
+  nrows, ncols = C.shape
+  for row in range(nrows):
+    for col in range(ncols):
+      minor = matrix[np.array(list(range(row))+list(range(row+1, nrows)))[:, np.newaxis],
+                     np.array(list(range(col))+list(range(col+1, ncols)))]
+      C[row, col] = (-1)**(row+col) * np.linalg.det(minor)
+  return C

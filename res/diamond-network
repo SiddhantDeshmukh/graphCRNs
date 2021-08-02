@@ -1,0 +1,7 @@
+@format:idx,R,P,rate
+1,A,B,1
+2,B,C,2
+3,C,D,3
+4,D,A,4
+5,E,D,5
+6,B,E,6
