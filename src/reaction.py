@@ -2,7 +2,7 @@
 # Need some kind of 'intelligent' reader, the idea is to use KROME format so we
 # read to find the 'format', then the lines after that have to follow this
 # format. Need a Reaction class and a Network class for sure
-from typing import List
+from typing import Dict, List
 from math import exp  # used in 'eval'
 
 
@@ -22,6 +22,9 @@ class Reaction:
     self.reactants = [reactant for reactant in self.reactants if reactant]
     self.products = [product for product in self.products if product]
 
+    # Create stoichiometry
+    self.stoichiometry = self.calcluate_stoichiometry()
+
     self.reactant_complex = create_complex(self.reactants)
     self.product_complex = create_complex(self.products)
 
@@ -32,6 +35,7 @@ class Reaction:
     self.rate_expression = rate_expression.replace('d', 'e')
 
     self.rate = self.evaluate_rate_expression(300)  # default
+    self.mass_action_rate_expression = self.determine_mass_action_rate()
 
     self.idx = idx if idx else None
     self.min_temperature = min_temperature if min_temperature else None
@@ -45,9 +49,40 @@ class Reaction:
 
     return output
 
+  def calcluate_stoichiometry(self) -> Dict:
+    # Write out stoichiometry for the reaction
+    # Convention: reactants are negative
+    reactant_stoichiometry = {}
+    product_stoichiometry = {}
+
+    for reactant in self.reactants:
+      if reactant in reactant_stoichiometry.keys():
+        reactant_stoichiometry[reactant] -= 1
+      else:
+        reactant_stoichiometry[reactant] = -1
+
+    for product in self.products:
+      if product in product_stoichiometry.keys():
+        product_stoichiometry[product] += 1
+      else:
+        product_stoichiometry[product] = 1
+
+    return reactant_stoichiometry, product_stoichiometry
+
   def evaluate_rate_expression(self, temperature=None):
     # Evaluate (potentially temperature-dependent) rate expression
     # WARNING: Eval is evil!
     expression = self.rate_expression.replace("Tgas", str(temperature))
     rate = eval(expression)
+    return rate
+
+  def determine_mass_action_rate(self):
+    # String expression of the reaction rate v(x)
+    reactants = self.stoichiometry[0]
+    rate = f"({self.rate_expression})"
+    for key, value in reactants.items():
+      rate += f" * [{key}]"
+      if abs(value) > 1:
+        rate += f"^{abs(value)}"
+
     return rate

@@ -105,6 +105,14 @@ if __name__ == "__main__":
   print(f"Kinetics:       {network.complex_kinetics_matrix.shape}")
   print(f"Laplacian:      {network.complex_laplacian.shape}")
 
+  # Stoichiometry
+  for reaction in network.reactions:
+    print(reaction.stoichiometry)
+    print(reaction.mass_action_rate_expression)
+    print()
+
+  exit()
+
   # Dynamics
   # initial_number_densities = {
   #     "H": 1e12,
@@ -138,39 +146,39 @@ if __name__ == "__main__":
   # This gives negative answers, reckon I should multiply by -1!
   # I think it's because the dynamics equation will have -L, not L, so we need
   # to multiply by -1 to ensure all concentrations >= 0
-  complex_nullspace = -null_space(network.complex_laplacian.T)
+  # complex_nullspace = -null_space(network.complex_laplacian.T)
 
-  species_laplacian = -network.stoichiometric_matrix @ network.complex_kinetics_matrix
-  species_nullspace = -null_space(species_laplacian.T)
+  # species_laplacian = -network.stoichiometric_matrix @ network.complex_kinetics_matrix
+  # species_nullspace = -null_space(species_laplacian.T)
 
-  print("Equilibria nullspaces")
-  print(f"Complex: {complex_nullspace.shape}")
-  # print(network.laplacian_matrix)
-  print(f"Species: {species_nullspace.shape}")
-  # print(species_laplacian)
-  # print(complex_nullspace)
-  # print(species_nullspace)
+  # print("Equilibria nullspaces")
+  # print(f"Complex: {complex_nullspace.shape}")
+  # # print(network.laplacian_matrix)
+  # print(f"Species: {species_nullspace.shape}")
+  # # print(species_laplacian)
+  # # print(complex_nullspace)
+  # # print(species_nullspace)
 
-  # Nullspace is Exp(Z^T Ln(x)) := y
-  # Need to invert this relationship to get 'x'
-  # x = EXP((Z^T)^-1 Ln(y))
-  # First check if 'Z' is orthogonal
-  y = complex_nullspace
-  Z = network.complex_composition_matrix
-  y = np.log(y)
+  # # Nullspace is Exp(Z^T Ln(x)) := y
+  # # Need to invert this relationship to get 'x'
+  # # x = EXP((Z^T)^-1 Ln(y))
+  # # First check if 'Z' is orthogonal
+  # y = complex_nullspace
+  # Z = network.complex_composition_matrix
+  # y = np.log(y)
 
-  # Compute complex balance from Matrix Tree theorem
-  print(network.complex_laplacian.shape)
-  print(network.species_laplacian.shape)
-  print(network.compute_complex_balance(300))
-  rho = cofactor_matrix(network.complex_laplacian)[0]
-  x = np.exp(np.linalg.pinv(Z.T) @ np.log(rho))
-  print(x)
+  # # Compute complex balance from Matrix Tree theorem
+  # print(network.complex_laplacian.shape)
+  # print(network.species_laplacian.shape)
+  # print(network.compute_complex_balance(300))
+  # rho = cofactor_matrix(network.complex_laplacian)[0]
+  # x = np.exp(np.linalg.pinv(Z.T) @ np.log(rho))
+  # print(x)
 
-  # Try getting species balance directly
-  print(network.compute_species_balance(300))
+  # # Try getting species balance directly
+  # print(network.compute_species_balance(300))
 
-  exit()
+  # exit()
   # if is_orthogonal(Z):
   #   y = Z @ y
   # else:
