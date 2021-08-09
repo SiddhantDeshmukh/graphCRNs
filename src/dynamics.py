@@ -53,7 +53,8 @@ class NetworkDynamics():
     return dynamics_vector
 
   def solve(self, timescale: float, initial_number_densities: np.ndarray,
-            initial_time=0, create_jacobian=False, jacobian=None) -> np.ndarray:
+            initial_time=0, create_jacobian=False, jacobian=None,
+            atol=1e-30, rtol=1e-4) -> np.ndarray:
     # TODO:
     # Add atol, rtol and other solver params
     def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
@@ -68,9 +69,10 @@ class NetworkDynamics():
       # Create the Jacobian matrix analytically
       pass
     if jacobian:
-      solver = ode(f, jacobian).set_integrator("vode", method='bdf')
+      solver = ode(f, jacobian).set_integrator("vode", method='bdf',
+                                               atol=atol, rtol=rtol)
     else:
-      solver = ode(f).set_integrator("vode", method='bdf')
+      solver = ode(f).set_integrator("vode", method='bdf', atol=atol, rtol=rtol)
 
     # Initial values
     solver.set_initial_value(initial_number_densities, initial_time)
