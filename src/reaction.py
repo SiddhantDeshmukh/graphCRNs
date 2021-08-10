@@ -81,7 +81,7 @@ class Reaction:
     reactants = self.stoichiometry[0]
     rate = f"({self.rate_expression})"
     for key, value in reactants.items():
-      rate += f" * [{key}]"
+      rate += f" * n_{key}"
       if abs(value) > 1:
         rate += f"^{abs(value)}"
 

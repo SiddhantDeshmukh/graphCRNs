@@ -89,7 +89,8 @@ class NetworkDynamics():
 
   def solve_steady_state(self, initial_number_densities: np.ndarray,
                          create_jacobian=False, jacobian=None,
-                         tolerance=1e-7) -> Union[np.ndarray, float]:
+                         tolerance=1e-5,
+                         max_iter=1000) -> Union[np.ndarray, float]:
     # Solves the CRN dynamics for a steady-state given initial conditions and
     # returns the steady-state number densities alongside the time to reach
     # steady-state
@@ -121,11 +122,21 @@ class NetworkDynamics():
     # TODO: Check for failure and return codes
     y_previous = initial_number_densities.copy()
     done = False
+    n_iter = 0
 
+    # TODO:
+    # verbosity control
     while not done:
       y = solver.integrate(solver.t + dt)
-      if np.abs(y - y_previous).all() < tolerance:
+      difference = np.abs(y - y_previous)
+      if (difference < tolerance).all():
         done = True
-      y_previous = y.copy()
 
+      if n_iter > max_iter:
+        print(f"Max iterations {max_iter} exceeded.")
+        print(f"Current difference is {difference} with tolerance {tolerance}.")
+        done = True
+
+      y_previous = y.copy()
+      n_iter += 1
     return y, solver.t

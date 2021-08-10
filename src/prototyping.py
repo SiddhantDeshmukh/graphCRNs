@@ -8,6 +8,7 @@ from src.network import Network
 import pydot
 import numpy as np
 from scipy.linalg import null_space
+import sympy
 
 # # Simple network of a reversible reaction
 # # H + CH <-> C + H2
@@ -71,13 +72,14 @@ def is_orthogonal(matrix: np.ndarray) -> bool:
 
 if __name__ == "__main__":
   # Initialising network
-  krome_file = '../res/react-co-solar-umist12'
+  # krome_file = '../res/react-co-solar-umist12'
   # krome_file = '../res/ring-reaction'
   # krome_file = '../res/quad-ring-reaction'
   # krome_file = '../res/T-network'
   # krome_file = '../res/L-network'
   # krome_file = '../res/diamond-network'
   # krome_file = '../res/multi-species-line'
+  krome_file = '../res/reverse'
   network = Network.from_krome_file(krome_file)
 
   print(f"{len(network.species)} Species")
@@ -106,12 +108,26 @@ if __name__ == "__main__":
   print(f"Laplacian:      {network.complex_laplacian.shape}")
 
   # Stoichiometry
+  num_species = len(network.species)
+  jacobian = np.zeros((num_species, num_species))
+  # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
+  differential_dict = {}  # keys are species
   for reaction in network.reactions:
-    print(reaction.stoichiometry)
-    print(reaction.mass_action_rate_expression)
-    print()
+    # Test derivative
+    expression = reaction.mass_action_rate_expression
+    symbols = [f"n_{key}" for key in reaction.stoichiometry[0].keys()]
+    for symbol in symbols:
+      differential = sympy.diff(reaction.mass_action_rate_expression, symbol)
+      if symbol in differential_dict.keys():
+        differential_dict[symbol].append(differential)
+      else:
+        differential_dict[symbol] = [differential]
 
-  exit()
+    # print(reaction.stoichiometry)
+    # print(reaction.mass_action_rate_expression)
+    # print()
+
+  # print(len(differential_dict["n_H"]))
 
   # Dynamics
   # initial_number_densities = {
@@ -132,11 +148,16 @@ if __name__ == "__main__":
   #     "D": 5
   # }
 
-  # dynamics = NetworkDynamics(network, initial_number_densities)
-  # print("Dynamics")
-  # # print(dynamics.network.species)
-  # print(f"x_0   = {dynamics.initial_number_densities}")
-  # print(f"x_dot = {dynamics.dynamics_vector}")
+  initial_number_densities = {
+      "A": 2,
+      "B": 2,
+  }
+
+  dynamics = NetworkDynamics(network, initial_number_densities)
+  print("Dynamics")
+  # print(dynamics.network.species)
+  print(f"x_0   = {dynamics.initial_number_densities}")
+  print(f"x_dot = {dynamics.dynamics_vector}")
 
   # Equilibrium
   # Complex-balanced equilibrium exists if Dv(x*) = 0
@@ -150,7 +171,31 @@ if __name__ == "__main__":
 
   # species_laplacian = -network.stoichiometric_matrix @ network.complex_kinetics_matrix
   # species_nullspace = -null_space(species_laplacian.T)
+  initial_densities = dynamics.initial_number_densities
+  print("Initial")
+  print(initial_densities)
+  times = [1, 5, 10, 50, 100]
+  for time in times:
+    final_densities = dynamics.solve(time, initial_densities)
+    print(f"Final at {time} seconds")
+    print(final_densities[0])
+  steady_state_densities, time = dynamics.solve_steady_state(initial_densities)
+  print(f"Steady state in {time:.3e} seconds")
+  print(steady_state_densities)
 
+  # # Plot
+  # import matplotlib.pyplot as plt
+  # fig, axes = plt.subplots(3, 3)
+  # seq = [1, 2, 3]
+  # for i, (initial, final, steady) in enumerate(zip(initial_densities, final_densities[0], steady_state_densities)):
+  #   idx_x, idx_y = i // 3, i % 3
+
+  #   axes[idx_x, idx_y].plot(seq[0], np.log10(initial), 'kx')
+  #   axes[idx_x, idx_y].plot(seq[1], np.log10(final), 'b.')
+  #   axes[idx_x, idx_y].plot(seq[2], np.log10(steady), 'ro')
+
+  # plt.show()
+  exit()
   # print("Equilibria nullspaces")
   # print(f"Complex: {complex_nullspace.shape}")
   # # print(network.laplacian_matrix)
