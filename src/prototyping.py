@@ -154,22 +154,13 @@ if __name__ == "__main__":
   print(f"Laplacian:      {network.complex_laplacian.shape}")
 
   # Stoichiometry
-  num_species = len(network.species)
-  jacobian = np.zeros((num_species, num_species), dtype=object)
-  # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
-
-  # TODO:
-  # Define the symbols in 'network'
-  symbols = ['n_H', 'n_CH', 'n_O', 'n_CO', 'n_C', 'n_H2', 'n_OH', 'n_M']
 
   # Loop over reactions to get all mass action rates as dictionary
   rate_dict = {}  # keys are species
   for reaction in network.reactions:
-    # Test derivative
     expression = reaction.mass_action_rate_expression
     reactant_symbols = [f"n_{key}" for key in reaction.stoichiometry[0].keys()]
     product_symbols = [f"n_{key}" for key in reaction.stoichiometry[1].keys()]
-    # differential = sympy.diff(reaction.mass_action_rate_expression, symbol)
     for symbol in reactant_symbols:
       if symbol in rate_dict.keys():
         rate_dict[symbol].append(f"-{expression}")
@@ -182,13 +173,28 @@ if __name__ == "__main__":
       else:
         rate_dict[symbol] = [expression]
 
-    # print(reaction.stoichiometry)
-    # print(reaction.mass_action_rate_expression)
-    # print()
   for key, values in rate_dict.items():
     print(f"{key}: {len(values)} terms.")
 
-  print(rate_dict["n_CO"])
+  # Jacobian
+  # TODO:
+  # Define the symbols in 'network'
+  symbols = ['n_H', 'n_CH', 'n_O', 'n_CO', 'n_C', 'n_H2', 'n_OH', 'n_M']
+  num_species = len(network.species)
+  jacobian = np.zeros((num_species, num_species), dtype=object)
+  # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
+  for i, (key, rate) in enumerate(rate_dict.items()):
+    expression = " + ".join(rate)
+    for j, symbol in enumerate(symbols):
+      differential = sympy.diff(expression, symbol)
+      jacobian[i, j] = str(differential)
+
+
+  print(jacobian.shape)
+  # Jacobian
+  # TODO:
+  # To evaluate the Jacobian, we need the number densities and the temperature
+  # Assume that the indexing for symbols and number densities is the same!
   exit()
 
   # print(len(differential_dict["n_H"]))

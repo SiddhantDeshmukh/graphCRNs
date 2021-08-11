@@ -1,8 +1,9 @@
 from src.utilities import cofactor_matrix, normalise_2d
-from typing import List
+from typing import Dict, List
 from src.reaction import Reaction
 import networkx as nx
 import numpy as np
+import sympy
 
 
 # TODO:
@@ -19,6 +20,11 @@ class Network:
     for rxn in self.reactions:
       species.extend(rxn.reactants + rxn.products)
     self.species = sorted(list(set(species)))
+    self.symbols = [f"n_{s}" for s in self.species]
+
+    # Rates and Jacobian attributes
+    self.rate_dict = self.create_rate_dict()
+    self.jacobian_str = self.create_jacobian()
 
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H
@@ -277,6 +283,46 @@ class Network:
     C = cofactor_matrix(self.species_laplacian)
     rho = C[0]
     return rho
+
+  # ----------------------------------------------------------------------------
+  # Methods for Jacobian and rate analysis
+  # ----------------------------------------------------------------------------
+  def create_rate_dict(self) -> Dict:
+    # Create the dictionary describing the time-dependent system of equations
+    # d[X]/dt = x_1 + x_2 + ...
+    rate_dict = {}  # keys are species
+    for reaction in self.reactions:
+      expression = reaction.mass_action_rate_expression
+      reactant_symbols = [f"n_{key}" for key in reaction.stoichiometry[0].keys()]
+      product_symbols = [f"n_{key}" for key in reaction.stoichiometry[1].keys()]
+      for symbol in reactant_symbols:
+        if symbol in rate_dict.keys():
+          rate_dict[symbol].append(f"-{expression}")
+        else:
+          rate_dict[symbol] = [f"-{expression}"]
+
+      for symbol in product_symbols:
+        if symbol in rate_dict.keys():
+          rate_dict[symbol].append(expression)
+        else:
+          rate_dict[symbol] = [expression]
+
+    return rate_dict
+
+
+  def create_jacobian(self) -> np.ndarray:
+    # Create the analytical Jacobian matrix as a 2D array of strings
+    # Uses sympy for the differential (which uses eval)
+    num_species = len(self.species)
+    jacobian = np.zeros((num_species, num_species), dtype=object)
+    # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
+    for i, rate in enumerate(self.rate_dict.values()):
+      expression = " + ".join(rate)
+      for j, symbol in enumerate(self.symbols):
+        differential = sympy.diff(expression, symbol)
+        jacobian[i, j] = str(differential)
+
+    return jacobian
 
   # ----------------------------------------------------------------------------
   # Methods for properties
