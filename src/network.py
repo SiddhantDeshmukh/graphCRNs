@@ -324,6 +324,25 @@ class Network:
 
     return jacobian
 
+  def evaluate_jacobian(self, temperature: float,
+                        number_densities: np.ndarray) -> np.ndarray:
+    # Evaluate the 'jacobian_str' using sympy
+    # Note that 'number_densities' must have the same indexing as
+    # network species
+    # TODO:
+    # Use some fancy code-gen to write the jacobian into C-like code since
+    # upon evaluation, we just need to pass in temperature and number densities
+    n_dict = {s: n for s, n in zip(self.symbols, number_densities)}
+    rows, cols = self.jacobian_str.shape
+    jacobian = np.zeros((rows, cols))
+    for i in range(rows):
+      for j in range(cols):
+        # Evaluate with temperature and number densities!
+        # jacobian[i, j] = sympy
+        pass
+
+    return jacobian
+
   # ----------------------------------------------------------------------------
   # Methods for properties
   # ----------------------------------------------------------------------------
