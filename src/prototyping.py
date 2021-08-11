@@ -1,4 +1,6 @@
+from typing import Dict, List
 from src.utilities import cofactor_matrix
+import matplotlib.pyplot as plt
 from src.dynamics import NetworkDynamics
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -9,6 +11,8 @@ import pydot
 import numpy as np
 from scipy.linalg import null_space
 import sympy
+
+plt.style.use("standard-scientific")
 
 # # Simple network of a reversible reaction
 # # H + CH <-> C + H2
@@ -70,16 +74,58 @@ def is_orthogonal(matrix: np.ndarray) -> bool:
   return is_identity(matrix @ matrix.T)
 
 
+# TODO:
+# Refactor so that dynamics.solve() takes in a list of times!
+def run_dynamics(network: Network, initial_number_densities: Dict,
+                 times: List, temperature: float):
+  # Run dynamics for a given network, initial set of number densities and
+  # temperature for specified times
+  dynamics = NetworkDynamics(network, initial_number_densities,
+                             temperature=temperature)
+  # print("Dynamics")
+  # print(dynamics.network.species)
+  # print(f"x_0   = {dynamics.initial_number_densities}")
+  # print(f"x_dot = {dynamics.dynamics_vector}")
+
+  initial_densities = dynamics.initial_number_densities
+  final_densities = []
+  for time in times:
+    n = dynamics.solve(time, initial_densities)
+    final_densities.append(n[0])
+
+  steady_state_densities, time = dynamics.solve_steady_state(initial_densities,
+                                                             max_iter=100000)
+
+  return initial_densities, final_densities, steady_state_densities, time
+
+
+def plot_dynamics(axes, initial_densities, final_densities,
+                  steady_state_densities, initial_time, times,
+                  steady_state_time, label=None):
+  for i, initial in enumerate(initial_densities):
+    idx_x, idx_y = i // 3, i % 3
+    axes[idx_x, idx_y].plot(np.log10(initial_time), np.log10(initial), 'kx')
+  for i, final in enumerate(np.array(final_densities).T):
+    idx_x, idx_y = i // 3, i % 3
+    axes[idx_x, idx_y].plot(np.log10(times), np.log10(final), label=label)
+  for i, steady in enumerate(steady_state_densities):
+    idx_x, idx_y = i // 3, i % 3
+    axes[idx_x, idx_y].plot(np.log10(steady_state_time), np.log10(steady), 'ro')
+
+    axes[idx_x, idx_y].legend(ncol=2)
+
+
 if __name__ == "__main__":
   # Initialising network
-  # krome_file = '../res/react-co-solar-umist12'
+  krome_file = '../res/react-co-solar-umist12'
   # krome_file = '../res/ring-reaction'
   # krome_file = '../res/quad-ring-reaction'
   # krome_file = '../res/T-network'
   # krome_file = '../res/L-network'
   # krome_file = '../res/diamond-network'
   # krome_file = '../res/multi-species-line'
-  krome_file = '../res/reverse'
+  # krome_file = '../res/reverse'
+  # krome_file = '../res/reverse-3'
   network = Network.from_krome_file(krome_file)
 
   print(f"{len(network.species)} Species")
@@ -130,16 +176,19 @@ if __name__ == "__main__":
   # print(len(differential_dict["n_H"]))
 
   # Dynamics
-  # initial_number_densities = {
-  #     "H": 1e12,
-  #     "H2": 1e-4,
-  #     "OH": 1e-12,
-  #     "C": 10**(8.39),
-  #     "O": 10**(8.66),
-  #     "CH": 1e-12,
-  #     "CO": 1e-12,
-  #     "M": 1e11,
-  # }
+  initial_number_densities = {
+      "H": 1e12,
+      "H2": 1e-4,
+      "OH": 1e-12,
+      "C": 10**(8.39),
+      "O": 10**(8.66),
+      "CH": 1e-12,
+      "CO": 1e-12,
+      "M": 1e11,
+  }
+
+  # TODO:
+  # Scale with gas density!
 
   # initial_number_densities = {
   #     "A": 2,
@@ -148,51 +197,27 @@ if __name__ == "__main__":
   #     "D": 5
   # }
 
-  initial_number_densities = {
-      "A": 2,
-      "B": 2,
-  }
+  # initial_number_densities = {
+  #     "A": 2,
+  #     "B": 2,
+  # }
 
-  dynamics = NetworkDynamics(network, initial_number_densities)
-  print("Dynamics")
-  # print(dynamics.network.species)
-  print(f"x_0   = {dynamics.initial_number_densities}")
-  print(f"x_dot = {dynamics.dynamics_vector}")
+  # initial_number_densities = {
+  #     "A": 3,
+  #     "B": 4,
+  #     "C": 1,
+  # }
 
-  # Equilibrium
-  # Complex-balanced equilibrium exists if Dv(x*) = 0
-  # Species-balanced equilibrium exists if Sv(x*) = 0 (?)
-  # Since Dv(x*) = -LExp(...), we can check nullspace of L for complex-balanced
-  # and nullspace of SK for species-balanced
-  # This gives negative answers, reckon I should multiply by -1!
-  # I think it's because the dynamics equation will have -L, not L, so we need
-  # to multiply by -1 to ensure all concentrations >= 0
-  # complex_nullspace = -null_space(network.complex_laplacian.T)
-
-  # species_laplacian = -network.stoichiometric_matrix @ network.complex_kinetics_matrix
-  # species_nullspace = -null_space(species_laplacian.T)
-  initial_densities = dynamics.initial_number_densities
-  print("Initial")
-  print(initial_densities)
-  times = [1, 5, 10, 50, 100]
-  for time in times:
-    final_densities = dynamics.solve(time, initial_densities)
-    print(f"Final at {time} seconds")
-    print(final_densities[0])
-  steady_state_densities, time = dynamics.solve_steady_state(initial_densities)
-  print(f"Steady state in {time:.3e} seconds")
-  print(steady_state_densities)
-
-  # # Plot
-  # import matplotlib.pyplot as plt
-  # fig, axes = plt.subplots(3, 3)
-  # seq = [1, 2, 3]
-  # for i, (initial, final, steady) in enumerate(zip(initial_densities, final_densities[0], steady_state_densities)):
-  #   idx_x, idx_y = i // 3, i % 3
-
-  #   axes[idx_x, idx_y].plot(seq[0], np.log10(initial), 'kx')
-  #   axes[idx_x, idx_y].plot(seq[1], np.log10(final), 'b.')
-  #   axes[idx_x, idx_y].plot(seq[2], np.log10(steady), 'ro')
+  fig, axes = plt.subplots(3, 3)
+  times = np.logspace(-4, 4, num=50)
+  temperatures = [3000, 5000, 10000, 20000]
+  for temperature in temperatures:
+    initial, final, steady, steady_time = \
+        run_dynamics(network, initial_number_densities, times, temperature)
+    plot_dynamics(axes, initial, final, steady, 0, times, steady_time,
+                  label=temperature)
+    print(f"Temperature = {temperature} [K].")
+    print(f"Steady state reached in {steady_time} [s].")
 
   # plt.show()
   exit()

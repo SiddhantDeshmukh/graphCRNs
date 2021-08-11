@@ -5,8 +5,11 @@ import networkx as nx
 import numpy as np
 
 
+# TODO:
+# Clean-up temperature implementation, use it as a private attribute
+
 class Network:
-  def __init__(self, reactions: List[Reaction]) -> None:
+  def __init__(self, reactions: List[Reaction], temperature=300) -> None:
     self.reactions = sorted(reactions, key=lambda rxn: rxn.idx)
 
     # Potential space saving with clever list comprehensions?
@@ -58,6 +61,9 @@ class Network:
     # self.complex_composition_graph = nx.from_numpy_matrix(
     #     incidence_to_adjacency(self.complex_composition_matrix))
     # self.complex_composition_graph = self.create_complex_composition_graph()
+
+    # Properties
+    self._temperature = temperature
 
   @classmethod
   def from_krome_file(cls, krome_file: str):
@@ -233,6 +239,25 @@ class Network:
     self.complex_graph = self.create_complex_graph(temperature=temperature)
 
   # ----------------------------------------------------------------------------
+  # Methods for updating attributes
+  # ----------------------------------------------------------------------------
+  def update(self, temperature: float):
+    # TODO:
+    # Use temperature property instead of passing in
+
+    # Given a certain temperature, update all matrices and graphs
+    # that depend on it
+    print(f"Updating matrices with temperature {temperature} K")
+    self.complex_kinetics_matrix =\
+        self.create_complex_kinetics_matrix(temperature)
+    self.species_kinetics_matrix =\
+        self.create_species_kinetics_matrix(temperature)
+
+    print(f"Updating graphs with temperature {temperature} K")
+    self.update_species_graph(temperature)
+    self.update_complex_graph(temperature)
+
+  # ----------------------------------------------------------------------------
   # Methods for computing nullspaces
   # ----------------------------------------------------------------------------
   def compute_complex_balance(self, temperature: float) -> np.ndarray:
@@ -252,3 +277,15 @@ class Network:
     C = cofactor_matrix(self.species_laplacian)
     rho = C[0]
     return rho
+
+  # ----------------------------------------------------------------------------
+  # Methods for properties
+  # ----------------------------------------------------------------------------
+  @property
+  def temperature(self):
+    return self._temperature
+
+  @temperature.setter
+  def temperature(self, value: float):
+    self._temperature = value
+    self.update(value)

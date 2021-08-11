@@ -4,16 +4,27 @@ from src.network import Network
 from scipy.integrate import ode
 
 
+# TODO:
+# Clear up distinction between Network and NetworkDynamics
+# Where should temperature be represented? How to interface using it?
+
 class NetworkDynamics():
   def __init__(self, network: Network,
-               initial_number_densities: Union[Dict, List, np.ndarray]) -> None:
+               initial_number_densities: Union[Dict, List, np.ndarray],
+               temperature=300) -> None:
     self.network = network
-    self.initial_number_densities = self.setup_initial_number_densities(
-        initial_number_densities)
+    if temperature:
+      self.network.temperature = temperature
+    self.initial_number_densities =\
+        self.setup_initial_number_densities(initial_number_densities)
     self.number_densities = self.initial_number_densities.copy()
 
-    self.rates_vector = self.create_rates_vector(self.number_densities)
+    self.rates_vector = self.create_rates_vector(self.number_densities,
+                                                 temperature=temperature)
     self.dynamics_vector = self.calculate_dynamics()
+
+    # Properties
+    self._temperature = temperature
 
   def setup_initial_number_densities(self, initial_number_densities: Union[Dict, List, np.ndarray]) -> np.ndarray:
     # Create the array of number densities with the same indexing as the species
@@ -72,7 +83,8 @@ class NetworkDynamics():
       solver = ode(f, jacobian).set_integrator("vode", method='bdf',
                                                atol=atol, rtol=rtol)
     else:
-      solver = ode(f).set_integrator("vode", method='bdf', atol=atol, rtol=rtol)
+      solver = ode(f).set_integrator("vode", method='bdf', atol=atol, rtol=rtol,
+                                     with_jacobian=True)
 
     # Initial values
     solver.set_initial_value(initial_number_densities, initial_time)
@@ -89,7 +101,7 @@ class NetworkDynamics():
 
   def solve_steady_state(self, initial_number_densities: np.ndarray,
                          create_jacobian=False, jacobian=None,
-                         tolerance=1e-5,
+                         atol=1e-20, rtol=1e-5,
                          max_iter=1000) -> Union[np.ndarray, float]:
     # Solves the CRN dynamics for a steady-state given initial conditions and
     # returns the steady-state number densities alongside the time to reach
@@ -109,9 +121,11 @@ class NetworkDynamics():
       # Create the Jacobian matrix analytically
       pass
     if jacobian:
-      solver = ode(f, jacobian).set_integrator("vode", method='bdf')
+      solver = ode(f, jacobian).set_integrator("vode", method='bdf',
+                                               atol=atol, rtol=rtol)
     else:
-      solver = ode(f).set_integrator("vode", method='bdf')
+      solver = ode(f).set_integrator("vode", method='bdf', with_jacobian=True,
+                                     atol=atol, rtol=rtol)
 
     # Initial values
     solver.set_initial_value(initial_number_densities)
@@ -128,15 +142,38 @@ class NetworkDynamics():
     # verbosity control
     while not done:
       y = solver.integrate(solver.t + dt)
-      difference = np.abs(y - y_previous)
-      if (difference < tolerance).all():
+      absolute_difference = np.abs(y - y_previous)
+      relative_difference = np.abs(1 - y / y_previous)
+
+      # Converged (absolute tolerance)
+      if (absolute_difference < atol).all():
+        done = True
+
+      # Converged (relative tolerance)
+      if (relative_difference < rtol).all():
         done = True
 
       if n_iter > max_iter:
         print(f"Max iterations {max_iter} exceeded.")
-        print(f"Current difference is {difference} with tolerance {tolerance}.")
+        print(
+            f"Current difference: {absolute_difference}, absolute tolerance: {atol}.")
+        print(
+            f"Current ratio: {relative_difference}, relative tolerance: {rtol}.")
+        done = True
+
+      if (y < 0).any():
+        print(f"Error: number densities < 0 at time {solver.t}.")
         done = True
 
       y_previous = y.copy()
       n_iter += 1
     return y, solver.t
+
+  @property
+  def temperature(self):
+    return self._temperature
+
+  @temperature.setter
+  def temperature(self, value):
+    self._temperature = value
+    self.network._temperature = value
