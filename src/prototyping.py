@@ -155,49 +155,27 @@ if __name__ == "__main__":
 
   # Stoichiometry
 
-  # Loop over reactions to get all mass action rates as dictionary
-  rate_dict = {}  # keys are species
-  for reaction in network.reactions:
-    expression = reaction.mass_action_rate_expression
-    reactant_symbols = [f"n_{key}" for key in reaction.stoichiometry[0].keys()]
-    product_symbols = [f"n_{key}" for key in reaction.stoichiometry[1].keys()]
-    for symbol in reactant_symbols:
-      if symbol in rate_dict.keys():
-        rate_dict[symbol].append(f"-{expression}")
-      else:
-        rate_dict[symbol] = [f"-{expression}"]
+  # # Loop over reactions to get all mass action rates as dictionary
+  # rate_dict = {}  # keys are species
+  # for reaction in network.reactions:
+  #   expression = reaction.mass_action_rate_expression
+  #   reactant_symbols = [f"n_{key}" for key in reaction.stoichiometry[0].keys()]
+  #   product_symbols = [f"n_{key}" for key in reaction.stoichiometry[1].keys()]
+  #   for symbol in reactant_symbols:
+  #     if symbol in rate_dict.keys():
+  #       rate_dict[symbol].append(f"-{expression}")
+  #     else:
+  #       rate_dict[symbol] = [f"-{expression}"]
 
-    for symbol in product_symbols:
-      if symbol in rate_dict.keys():
-        rate_dict[symbol].append(expression)
-      else:
-        rate_dict[symbol] = [expression]
+  #   for symbol in product_symbols:
+  #     if symbol in rate_dict.keys():
+  #       rate_dict[symbol].append(expression)
+  #     else:
+  #       rate_dict[symbol] = [expression]
 
-  for key, values in rate_dict.items():
-    print(f"{key}: {len(values)} terms.")
+  # for key, values in rate_dict.items():
+  #   print(f"{key}: {len(values)} terms.")
 
-  # Jacobian
-  # TODO:
-  # Define the symbols in 'network'
-  symbols = ['n_H', 'n_CH', 'n_O', 'n_CO', 'n_C', 'n_H2', 'n_OH', 'n_M']
-  num_species = len(network.species)
-  jacobian = np.zeros((num_species, num_species), dtype=object)
-  # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
-  for i, (key, rate) in enumerate(rate_dict.items()):
-    expression = " + ".join(rate)
-    for j, symbol in enumerate(symbols):
-      differential = sympy.diff(expression, symbol)
-      jacobian[i, j] = str(differential)
-
-
-  print(jacobian.shape)
-  # Jacobian
-  # TODO:
-  # To evaluate the Jacobian, we need the number densities and the temperature
-  # Assume that the indexing for symbols and number densities is the same!
-  exit()
-
-  # print(len(differential_dict["n_H"]))
 
   # Dynamics
   initial_number_densities = {
@@ -211,6 +189,22 @@ if __name__ == "__main__":
       "M": 1e11,
   }
 
+  print(type(network.jacobian_str[0,0]))
+  print(network.jacobian_str[0,0])
+
+  # TODO:
+  # Add this to Dynamics to initialise number densities
+  number_densities = np.zeros(len(initial_number_densities.keys()))
+  for i, s in enumerate(network.species):
+    number_densities[i] = initial_number_densities[s]
+    print(f"n_{s} = {number_densities[i]:.3e}")
+
+  temperatures = [300, 3000, 5000, 7500, 10000]
+  for temperature in temperatures:
+    print(f"Tgas = {temperature}")
+    jacobian = network.evaluate_jacobian(temperature, number_densities)
+    print(jacobian[0, 0])
+  exit()
   # TODO:
   # Scale with gas density!
 
@@ -234,7 +228,7 @@ if __name__ == "__main__":
 
   fig, axes = plt.subplots(3, 3)
   times = np.logspace(-4, 4, num=50)
-  temperatures = [3000, 5000, 10000, 20000]
+  temperatures = [3000, 5000, 7500, 10000, 20000, 25000]
   for temperature in temperatures:
     initial, final, steady, steady_time = \
         run_dynamics(network, initial_number_densities, times, temperature)
@@ -243,7 +237,8 @@ if __name__ == "__main__":
     print(f"Temperature = {temperature} [K].")
     print(f"Steady state reached in {steady_time} [s].")
 
-  # plt.show()
+
+  plt.show()
   exit()
   # print("Equilibria nullspaces")
   # print(f"Complex: {complex_nullspace.shape}")

@@ -13,6 +13,7 @@ class NetworkDynamics():
                initial_number_densities: Union[Dict, List, np.ndarray],
                temperature=300) -> None:
     self.network = network
+    self.species = None  # should be indexed tbe same as 'number densities'
     if temperature:
       self.network.temperature = temperature
     self.initial_number_densities =\
@@ -31,8 +32,11 @@ class NetworkDynamics():
     # in the network
     number_densities = np.zeros(len(self.network.species))
     if isinstance(initial_number_densities, dict):
-      for i, species in enumerate(self.network.species):
-        number_densities[i] = initial_number_densities[species]
+      species = []
+      for i, s in enumerate(self.network.species):
+        number_densities[i] = initial_number_densities[s]
+        species.append(s)
+      self.species = species
     elif isinstance(initial_number_densities, List):
       number_densities = np.array(initial_number_densities)
     elif isinstance(initial_number_densities, np.ndarray):
@@ -102,13 +106,15 @@ class NetworkDynamics():
   def solve_steady_state(self, initial_number_densities: np.ndarray,
                          create_jacobian=False, jacobian=None,
                          atol=1e-20, rtol=1e-5,
+                         eqm_atol=1e-13, eqm_rtol=1e-5,
+                         initial_dt=0.1,
                          max_iter=1000) -> Union[np.ndarray, float]:
     # Solves the CRN dynamics for a steady-state given initial conditions and
     # returns the steady-state number densities alongside the time to reach
     # steady-state
     # Solves the system until the change is less than 'tol'
     # TODO:
-    # Wrap self.solve() using 'atol', 'rtol'?
+    # Move this to be a generic method like 'RHS'
     def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
       Z = self.network.complex_composition_matrix
@@ -131,7 +137,11 @@ class NetworkDynamics():
     solver.set_initial_value(initial_number_densities)
 
     # TODO: Add better time-stepping control
-    dt = 0.1
+    min_dt = 1e-6
+    max_dt = 1e6
+    cfl = 0.9
+    dt = initial_dt
+
 
     # TODO: Check for failure and return codes
     y_previous = initial_number_densities.copy()
@@ -146,11 +156,11 @@ class NetworkDynamics():
       relative_difference = np.abs(1 - y / y_previous)
 
       # Converged (absolute tolerance)
-      if (absolute_difference < atol).all():
+      if (absolute_difference < eqm_atol).all():
         done = True
 
       # Converged (relative tolerance)
-      if (relative_difference < rtol).all():
+      if (relative_difference < eqm_rtol).all():
         done = True
 
       if n_iter > max_iter:
@@ -166,6 +176,15 @@ class NetworkDynamics():
         done = True
 
       y_previous = y.copy()
+      
+      # Calculate 'dt'
+      # dt *= cfl * np.min(y / y_previous)
+      # print(dt, np.min(y / y_previous))
+      if dt < min_dt:
+        dt = min_dt
+      if dt > max_dt:
+        dt = max_dt
+
       n_iter += 1
     return y, solver.t
 
@@ -174,6 +193,6 @@ class NetworkDynamics():
     return self._temperature
 
   @temperature.setter
-  def temperature(self, value):
+  def temperature(self, value: float):
     self._temperature = value
     self.network._temperature = value

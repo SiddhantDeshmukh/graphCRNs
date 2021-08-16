@@ -284,6 +284,8 @@ class Network:
     rho = C[0]
     return rho
 
+  # TODO:
+  # Move all of this to Dynamics or a separate module containing these functions
   # ----------------------------------------------------------------------------
   # Methods for Jacobian and rate analysis
   # ----------------------------------------------------------------------------
@@ -333,13 +335,13 @@ class Network:
     # Use some fancy code-gen to write the jacobian into C-like code since
     # upon evaluation, we just need to pass in temperature and number densities
     n_dict = {s: n for s, n in zip(self.symbols, number_densities)}
+    n_dict['Tgas'] = temperature
     rows, cols = self.jacobian_str.shape
     jacobian = np.zeros((rows, cols))
     for i in range(rows):
       for j in range(cols):
         # Evaluate with temperature and number densities!
-        # jacobian[i, j] = sympy
-        pass
+        jacobian[i, j] = sympy.parse_expr(self.jacobian_str[i, j], evaluate=True, local_dict=n_dict)
 
     return jacobian
 
