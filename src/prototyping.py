@@ -87,6 +87,16 @@ def run_dynamics(network: Network, initial_number_densities: Dict,
   # print(f"x_0   = {dynamics.initial_number_densities}")
   # print(f"x_dot = {dynamics.dynamics_vector}")
 
+  jacobian = dynamics.evaluate_jacobian(temperature, number_densities)
+  # Jacobian timescales from eigenvalues
+  eigenvalues, eigenvectors = np.linalg.eig(jacobian)
+  eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
+  negative_mask = eigenvalues < 0
+  timescales = 1 / eigenvalues
+  print(network.species)
+  print(eigenvalues)
+  print(timescales)
+  # print(jacobian)
   initial_densities = dynamics.initial_number_densities
   final_densities = []
   for time in times:
@@ -94,32 +104,34 @@ def run_dynamics(network: Network, initial_number_densities: Dict,
     final_densities.append(n[0])
 
   steady_state_densities, time = dynamics.solve_steady_state(initial_densities,
-                                                             max_iter=100000)
+                                                             max_iter=30,
+                                                             create_jacobian=True)
 
   return initial_densities, final_densities, steady_state_densities, time
 
 
-def plot_dynamics(axes, initial_densities, final_densities,
+def plot_dynamics(ax, species, initial_densities, final_densities,
                   steady_state_densities, initial_time, times,
-                  steady_state_time, label=None):
-  for i, initial in enumerate(initial_densities):
-    idx_x, idx_y = i // 3, i % 3
-    axes[idx_x, idx_y].plot(np.log10(initial_time), np.log10(initial), 'kx')
-  for i, final in enumerate(np.array(final_densities).T):
-    idx_x, idx_y = i // 3, i % 3
-    axes[idx_x, idx_y].plot(np.log10(times), np.log10(final), label=label)
-  for i, steady in enumerate(steady_state_densities):
-    idx_x, idx_y = i // 3, i % 3
-    axes[idx_x, idx_y].plot(np.log10(steady_state_time), np.log10(steady), 'ro')
+                  steady_state_time):
+  for initial in initial_densities:
+    ax.plot(np.log10(initial_time), np.log10(initial), 'kx')
 
-    axes[idx_x, idx_y].legend(ncol=2)
+  # time evolution
+  for i, final in enumerate(np.array(final_densities).T):
+    ax.plot(np.log10(times), np.log10(final), '-', label=species[i])
+
+  # steady state
+  for steady in steady_state_densities:
+    ax.plot(np.log10(steady_state_time), np.log10(steady), 'ro')
+
+  ax.legend(ncol=2)
 
 
 if __name__ == "__main__":
   # Initialising network
-  krome_file = '../res/react-co-solar-umist12'
+  # krome_file = '../res/react-co-solar-umist12'
   # krome_file = '../res/ring-reaction'
-  # krome_file = '../res/quad-ring-reaction'
+  krome_file = '../res/quad-ring-reaction'
   # krome_file = '../res/T-network'
   # krome_file = '../res/L-network'
   # krome_file = '../res/diamond-network'
@@ -153,67 +165,25 @@ if __name__ == "__main__":
   print(f"Kinetics:       {network.complex_kinetics_matrix.shape}")
   print(f"Laplacian:      {network.complex_laplacian.shape}")
 
-  # Stoichiometry
-
-  # # Loop over reactions to get all mass action rates as dictionary
-  # rate_dict = {}  # keys are species
-  # for reaction in network.reactions:
-  #   expression = reaction.mass_action_rate_expression
-  #   reactant_symbols = [f"n_{key}" for key in reaction.stoichiometry[0].keys()]
-  #   product_symbols = [f"n_{key}" for key in reaction.stoichiometry[1].keys()]
-  #   for symbol in reactant_symbols:
-  #     if symbol in rate_dict.keys():
-  #       rate_dict[symbol].append(f"-{expression}")
-  #     else:
-  #       rate_dict[symbol] = [f"-{expression}"]
-
-  #   for symbol in product_symbols:
-  #     if symbol in rate_dict.keys():
-  #       rate_dict[symbol].append(expression)
-  #     else:
-  #       rate_dict[symbol] = [expression]
-
-  # for key, values in rate_dict.items():
-  #   print(f"{key}: {len(values)} terms.")
-
-
-  # Dynamics
-  initial_number_densities = {
-      "H": 1e12,
-      "H2": 1e-4,
-      "OH": 1e-12,
-      "C": 10**(8.39),
-      "O": 10**(8.66),
-      "CH": 1e-12,
-      "CO": 1e-12,
-      "M": 1e11,
-  }
-
-  print(type(network.jacobian_str[0,0]))
-  print(network.jacobian_str[0,0])
-
-  # TODO:
-  # Add this to Dynamics to initialise number densities
-  number_densities = np.zeros(len(initial_number_densities.keys()))
-  for i, s in enumerate(network.species):
-    number_densities[i] = initial_number_densities[s]
-    print(f"n_{s} = {number_densities[i]:.3e}")
-
-  temperatures = [300, 3000, 5000, 7500, 10000]
-  for temperature in temperatures:
-    print(f"Tgas = {temperature}")
-    jacobian = network.evaluate_jacobian(temperature, number_densities)
-    print(jacobian[0, 0])
-  exit()
   # TODO:
   # Scale with gas density!
-
   # initial_number_densities = {
-  #     "A": 2,
-  #     "B": 3,
-  #     "C": 4,
-  #     "D": 5
+  #     "H": 1e12,
+  #     "H2": 1e-4,
+  #     "OH": 1e-12,
+  #     "C": 10**(8.39),
+  #     "O": 10**(8.66),
+  #     "CH": 1e-12,
+  #     "CO": 1e-12,
+  #     "M": 1e11,
   # }
+
+  initial_number_densities = {
+      "A": 2,
+      "B": 3,
+      "C": 4,
+      "D": 5
+  }
 
   # initial_number_densities = {
   #     "A": 2,
@@ -226,17 +196,27 @@ if __name__ == "__main__":
   #     "C": 1,
   # }
 
-  fig, axes = plt.subplots(3, 3)
+  # TODO:
+  # Add this to Dynamics to initialise number densities
+  number_densities = np.zeros(len(initial_number_densities.keys()))
+  for i, s in enumerate(network.species):
+    number_densities[i] = initial_number_densities[s]
+    print(f"n_{s} = {number_densities[i]:.3e}")
+
+  # Each subplot is a different temperature
+  # Plot all species on same axes
+  fig, axes = plt.subplots(1, 1)
   times = np.logspace(-4, 4, num=50)
-  temperatures = [3000, 5000, 7500, 10000, 20000, 25000]
+  # temperatures = [3000, 5000, 7500, 10000, 20000, 25000]
+  temperatures = [5000]
   for temperature in temperatures:
-    initial, final, steady, steady_time = \
-        run_dynamics(network, initial_number_densities, times, temperature)
-    plot_dynamics(axes, initial, final, steady, 0, times, steady_time,
-                  label=temperature)
+    print(f"Tgas = {temperature}")
+    initial, final, steady, steady_time = run_dynamics(
+        network, initial_number_densities, times, temperature)
+    plot_dynamics(axes, network.species, initial, final, steady, 1e-4, times,
+                  steady_time)
     print(f"Temperature = {temperature} [K].")
     print(f"Steady state reached in {steady_time} [s].")
-
 
   plt.show()
   exit()

@@ -2,6 +2,7 @@ from typing import Union, Dict, List
 import numpy as np
 from src.network import Network
 from scipy.integrate import ode
+import sympy
 
 
 # TODO:
@@ -13,7 +14,8 @@ class NetworkDynamics():
                initial_number_densities: Union[Dict, List, np.ndarray],
                temperature=300) -> None:
     self.network = network
-    self.species = None  # should be indexed tbe same as 'number densities'
+    self.species = self.network.species
+    self.symbols = [f"n_{s}" for s in self.species]
     if temperature:
       self.network.temperature = temperature
     self.initial_number_densities =\
@@ -23,6 +25,10 @@ class NetworkDynamics():
     self.rates_vector = self.create_rates_vector(self.number_densities,
                                                  temperature=temperature)
     self.dynamics_vector = self.calculate_dynamics()
+
+    # Rates and Jacobian attributes
+    self.rate_dict = self.create_rate_dict()
+    self.jacobian_str = self.create_jacobian()
 
     # Properties
     self._temperature = temperature
@@ -43,6 +49,66 @@ class NetworkDynamics():
       number_densities = initial_number_densities
 
     return number_densities
+
+  # ----------------------------------------------------------------------------
+  # Methods for Jacobian and rate analysis
+  # ----------------------------------------------------------------------------
+  def create_rate_dict(self) -> Dict:
+    # Create the dictionary describing the time-dependent system of equations
+    # d[X]/dt = x_1 + x_2 + ...
+    rate_dict = {}  # keys are species
+    for reaction in self.network.reactions:
+      expression = reaction.mass_action_rate_expression
+      reactant_symbols = [
+          f"n_{key}" for key in reaction.stoichiometry[0].keys()]
+      product_symbols = [f"n_{key}" for key in reaction.stoichiometry[1].keys()]
+      for symbol in reactant_symbols:
+        if symbol in rate_dict.keys():
+          rate_dict[symbol].append(f"-{expression}")
+        else:
+          rate_dict[symbol] = [f"-{expression}"]
+
+      for symbol in product_symbols:
+        if symbol in rate_dict.keys():
+          rate_dict[symbol].append(expression)
+        else:
+          rate_dict[symbol] = [expression]
+
+    return rate_dict
+
+  def create_jacobian(self) -> np.ndarray:
+    # Create the analytical Jacobian matrix as a 2D array of strings
+    # Uses sympy for the differential (which uses eval)
+    num_species = len(self.species)
+    jacobian = np.zeros((num_species, num_species), dtype=object)
+    # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
+    for i, rate in enumerate(self.rate_dict.values()):
+      expression = " + ".join(rate)
+      for j, symbol in enumerate(self.symbols):
+        differential = sympy.diff(expression, symbol)
+        jacobian[i, j] = str(differential)
+
+    return jacobian
+
+  def evaluate_jacobian(self, temperature: float,
+                        number_densities: np.ndarray) -> np.ndarray:
+    # Evaluate the 'jacobian_str' using sympy
+    # Note that 'number_densities' must have the same indexing as
+    # network species
+    # TODO:
+    # Use some fancy code-gen to write the jacobian into C-like code since
+    # upon evaluation, we just need to pass in temperature and number densities
+    n_dict = {s: n for s, n in zip(self.symbols, number_densities)}
+    n_dict['Tgas'] = temperature
+    rows, cols = self.jacobian_str.shape
+    jacobian = np.zeros((rows, cols))
+    for i in range(rows):
+      for j in range(cols):
+        # Evaluate with temperature and number densities!
+        jacobian[i, j] = sympy.parse_expr(self.jacobian_str[i, j],
+                                          evaluate=True, local_dict=n_dict)
+
+    return jacobian
 
   def create_rates_vector(self, number_densities: np.ndarray,
                           temperature=None) -> np.ndarray:
@@ -125,7 +191,8 @@ class NetworkDynamics():
 
     if create_jacobian:
       # Create the Jacobian matrix analytically
-      pass
+      self.create_jacobian()
+      jacobian = self.evaluate_jacobian
     if jacobian:
       solver = ode(f, jacobian).set_integrator("vode", method='bdf',
                                                atol=atol, rtol=rtol)
@@ -141,7 +208,6 @@ class NetworkDynamics():
     max_dt = 1e6
     cfl = 0.9
     dt = initial_dt
-
 
     # TODO: Check for failure and return codes
     y_previous = initial_number_densities.copy()
@@ -176,10 +242,21 @@ class NetworkDynamics():
         done = True
 
       y_previous = y.copy()
-      
-      # Calculate 'dt'
-      # dt *= cfl * np.min(y / y_previous)
-      # print(dt, np.min(y / y_previous))
+
+      # Calculate 'dt' from Jacobian linear eigenvalue analysis
+      eigenvalues = np.linalg.eigvals(jacobian(self.temperature, y))
+      eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
+      timescales = 1 / np.abs(np.real(eigenvalues[eigenvalues < 0]))
+      dt = np.sort(timescales)[0]
+      # dt = np.mean(timescales[:2])
+
+      print(f"{n_iter + 1} / {max_iter}: dt = {dt}")
+      # print(timescales)
+      # print(
+      #     f"Current difference: {absolute_difference}, absolute tolerance: {eqm_atol}.")
+      # print(
+      #     f"Current ratio: {relative_difference}, relative tolerance: {eqm_rtol}.")
+
       if dt < min_dt:
         dt = min_dt
       if dt > max_dt:
