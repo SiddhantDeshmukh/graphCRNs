@@ -95,6 +95,7 @@ def run_dynamics(network: Network, initial_number_densities: Dict,
   timescales = 1 / eigenvalues
   print(network.species)
   print(eigenvalues)
+  print(eigenvectors)
   print(timescales)
   # print(jacobian)
   initial_densities = dynamics.initial_number_densities
@@ -130,8 +131,8 @@ def plot_dynamics(ax, species, initial_densities, final_densities,
 if __name__ == "__main__":
   # Initialising network
   # krome_file = '../res/react-co-solar-umist12'
-  # krome_file = '../res/ring-reaction'
-  krome_file = '../res/quad-ring-reaction'
+  krome_file = '../res/ring-reaction'
+  # krome_file = '../res/quad-ring-reaction'
   # krome_file = '../res/T-network'
   # krome_file = '../res/L-network'
   # krome_file = '../res/diamond-network'
@@ -178,23 +179,23 @@ if __name__ == "__main__":
   #     "M": 1e11,
   # }
 
-  initial_number_densities = {
-      "A": 2,
-      "B": 3,
-      "C": 4,
-      "D": 5
-  }
+  # initial_number_densities = {
+  #     "A": 2,
+  #     "B": 3,
+  #     "C": 4,
+  #     "D": 5
+  # }
 
   # initial_number_densities = {
   #     "A": 2,
   #     "B": 2,
   # }
 
-  # initial_number_densities = {
-  #     "A": 3,
-  #     "B": 4,
-  #     "C": 1,
-  # }
+  initial_number_densities = {
+      "A": 3,
+      "B": 4,
+      "C": 1,
+  }
 
   # TODO:
   # Add this to Dynamics to initialise number densities

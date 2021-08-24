@@ -1,5 +1,6 @@
 from typing import Union, Dict, List
 import numpy as np
+from sympy.utilities.iterables import numbered_symbols
 from src.network import Network
 from scipy.integrate import ode
 import sympy
@@ -115,6 +116,9 @@ class NetworkDynamics():
     # Create the vector v(x) = K Exp(Z.T Ln(x)) that includes the stoichiometry
     # into reaction rates
     # 'number_densities' must have the same indexing as species!
+    # if (number_densities < 0).any():
+    #   print("Error: number densities negative!")
+    #   exit(-1)
     Z = self.network.complex_composition_matrix
 
     if temperature:
@@ -123,7 +127,6 @@ class NetworkDynamics():
       K = self.network.complex_kinetics_matrix
 
     rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
-
     return rates_vector
 
   def calculate_dynamics(self) -> np.ndarray:
@@ -247,8 +250,8 @@ class NetworkDynamics():
       eigenvalues = np.linalg.eigvals(jacobian(self.temperature, y))
       eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
       timescales = 1 / np.abs(np.real(eigenvalues[eigenvalues < 0]))
-      dt = np.sort(timescales)[0]
-      # dt = np.mean(timescales[:2])
+      # dt = np.sort(timescales)[0]
+      dt = np.mean(timescales[:2])
 
       print(f"{n_iter + 1} / {max_iter}: dt = {dt}")
       # print(timescales)
