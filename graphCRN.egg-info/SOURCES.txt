@@ -7,5 +7,9 @@ graphCRN.egg-info/SOURCES.txt
 graphCRN.egg-info/dependency_links.txt
 graphCRN.egg-info/top_level.txt
 src/__init__.py
+src/dynamics.py
+src/network.py
 src/pathfinding.py
-src/reactions.py
+src/prototyping.py
+src/reaction.py
+src/utilities.py

@@ -1,3 +1,4 @@
+# %%
 from typing import Dict, List
 from src.utilities import cofactor_matrix
 import matplotlib.pyplot as plt
@@ -11,8 +12,9 @@ import pydot
 import numpy as np
 from scipy.linalg import null_space
 import sympy
+from scipy.linalg import expm
 
-plt.style.use("standard-scientific")
+# plt.style.use("standard-scientific")
 
 # # Simple network of a reversible reaction
 # # H + CH <-> C + H2
@@ -87,17 +89,6 @@ def run_dynamics(network: Network, initial_number_densities: Dict,
   # print(f"x_0   = {dynamics.initial_number_densities}")
   # print(f"x_dot = {dynamics.dynamics_vector}")
 
-  jacobian = dynamics.evaluate_jacobian(temperature, number_densities)
-  # Jacobian timescales from eigenvalues
-  eigenvalues, eigenvectors = np.linalg.eig(jacobian)
-  eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
-  negative_mask = eigenvalues < 0
-  timescales = 1 / eigenvalues
-  print(network.species)
-  print(eigenvalues)
-  print(eigenvectors)
-  print(timescales)
-  # print(jacobian)
   initial_densities = dynamics.initial_number_densities
   final_densities = []
   for time in times:
@@ -219,53 +210,47 @@ if __name__ == "__main__":
     print(f"Temperature = {temperature} [K].")
     print(f"Steady state reached in {steady_time} [s].")
 
+  # plt.savefig("./dynamics.png", bbox_inches="tight")
+  # Manual calculation
+  dynamics = NetworkDynamics(network, initial_number_densities,
+                             temperature=temperature)
+  jacobian = dynamics.evaluate_jacobian(temperature, number_densities)
+  # Jacobian timescales from eigenvalues
+  eigenvalues, eigenvectors = np.linalg.eig(jacobian)
+  eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
+  eigenvectors[np.abs(eigenvectors) < 1e-10] = 0
+  negative_mask = eigenvalues < 0
+  timescales = 1 / eigenvalues
+  print(network.species)
+  print(eigenvalues)
+  print(eigenvectors)
+  # print(timescales)
+  # print(jacobian)
+  t = 1  # seconds
+  coefficients = np.linalg.inv(eigenvectors) @ number_densities
+  print("coefficients")
+  print(coefficients)
+  print(f"direct, t={t}")
+  exponentials = np.array([np.exp(e_val * t) for e_val in eigenvalues])
+  direct = (coefficients * exponentials) @ eigenvectors.T
+  print(direct)
+  print(f"steady state, t={steady_time:.3f}")
+  print(steady)
+  axes.plot(np.log10(np.array([t, t, t])), np.log10(direct), 'rs',
+            mfc='none')
+
+  # Matrix exponential
+  A = expm(jacobian * t)
+  print("matrix exp")
+  # print(jacobian)
+  # print(A)
+  # print(number_densities)
+  mexp = A @ number_densities
+  axes.plot(np.log10([t, t, t]), np.log10(mexp), 'rP')
+
   plt.show()
-  exit()
-  # print("Equilibria nullspaces")
-  # print(f"Complex: {complex_nullspace.shape}")
-  # # print(network.laplacian_matrix)
-  # print(f"Species: {species_nullspace.shape}")
-  # # print(species_laplacian)
-  # # print(complex_nullspace)
-  # # print(species_nullspace)
-
-  # # Nullspace is Exp(Z^T Ln(x)) := y
-  # # Need to invert this relationship to get 'x'
-  # # x = EXP((Z^T)^-1 Ln(y))
-  # # First check if 'Z' is orthogonal
-  # y = complex_nullspace
-  # Z = network.complex_composition_matrix
-  # y = np.log(y)
-
-  # # Compute complex balance from Matrix Tree theorem
-  # print(network.complex_laplacian.shape)
-  # print(network.species_laplacian.shape)
-  # print(network.compute_complex_balance(300))
-  # rho = cofactor_matrix(network.complex_laplacian)[0]
-  # x = np.exp(np.linalg.pinv(Z.T) @ np.log(rho))
-  # print(x)
-
-  # # Try getting species balance directly
-  # print(network.compute_species_balance(300))
-
   # exit()
-  # if is_orthogonal(Z):
-  #   y = Z @ y
-  # else:
-  #   # Costly! Can't invert a non-square matrix!!!
-  #   y = np.linalg.inv(Z.T) @ y
-  # x = np.exp(y)
-
-  # print(x)
-
-  # This is the same as 'x' here because the species are the same as the
-  # complexes
-  # However, won't this generalise to species matrix well? Since the complex
-
-  # Check network dynamics to see complex-balanced eqm and steady-states
-
-  # Normalising kinetics
-  # normalised_kinetics = network.create_kinetics_matrix(300, True)
+  # %%
 
   # Pathfinding
   # Find shortest path and 'k' shortest path between two species
@@ -303,3 +288,5 @@ if __name__ == "__main__":
   print(count)
   for path, length in zip(unique_paths, unique_lengths):
     print(path, length)
+
+# %%
