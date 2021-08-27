@@ -119,10 +119,11 @@ def plot_dynamics(ax, species, initial_densities, final_densities,
   ax.legend(ncol=2)
 
 
+# %%
 if __name__ == "__main__":
   # Initialising network
-  # krome_file = '../res/react-co-solar-umist12'
-  krome_file = '../res/ring-reaction'
+  krome_file = '../res/react-co-solar-umist12'
+  # krome_file = '../res/ring-reaction'
   # krome_file = '../res/quad-ring-reaction'
   # krome_file = '../res/T-network'
   # krome_file = '../res/L-network'
@@ -157,18 +158,20 @@ if __name__ == "__main__":
   print(f"Kinetics:       {network.complex_kinetics_matrix.shape}")
   print(f"Laplacian:      {network.complex_laplacian.shape}")
 
+  # %%
+  # Dynamics
   # TODO:
   # Scale with gas density!
-  # initial_number_densities = {
-  #     "H": 1e12,
-  #     "H2": 1e-4,
-  #     "OH": 1e-12,
-  #     "C": 10**(8.39),
-  #     "O": 10**(8.66),
-  #     "CH": 1e-12,
-  #     "CO": 1e-12,
-  #     "M": 1e11,
-  # }
+  initial_number_densities = {
+      "H": 1e12,
+      "H2": 1e-4,
+      "OH": 1e-12,
+      "C": 10**(8.39),
+      "O": 10**(8.66),
+      "CH": 1e-12,
+      "CO": 1e-12,
+      "M": 1e11,
+  }
 
   # initial_number_densities = {
   #     "A": 2,
@@ -182,11 +185,11 @@ if __name__ == "__main__":
   #     "B": 2,
   # }
 
-  initial_number_densities = {
-      "A": 3,
-      "B": 4,
-      "C": 1,
-  }
+  # initial_number_densities = {
+  #     "A": 3,
+  #     "B": 4,
+  #     "C": 1,
+  # }
 
   # TODO:
   # Add this to Dynamics to initialise number densities
@@ -232,7 +235,8 @@ if __name__ == "__main__":
   print(coefficients)
   print(f"direct, t={t}")
   exponentials = np.array([np.exp(e_val * t) for e_val in eigenvalues])
-  direct = (coefficients * exponentials) @ eigenvectors.T
+  # Left-multiply by eigenvectors!
+  direct = eigenvectors @ (coefficients * exponentials)
   print(direct)
   print(f"steady state, t={steady_time:.3f}")
   print(steady)
@@ -250,8 +254,8 @@ if __name__ == "__main__":
 
   plt.show()
   # exit()
-  # %%
 
+  # %%
   # Pathfinding
   # Find shortest path and 'k' shortest path between two species
   # source = 'C'
@@ -289,4 +293,10 @@ if __name__ == "__main__":
   for path, length in zip(unique_paths, unique_lengths):
     print(path, length)
 
-# %%
+  # %%
+  # Count instances of species in network
+  counts = network.network_species_count()
+  # TODO:
+  # Create a dict pretty_print() function that does this by default
+  for species, r_p in counts.items():
+    print(f"{species}: {r_p}")

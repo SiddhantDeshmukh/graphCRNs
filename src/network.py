@@ -279,6 +279,43 @@ class Network:
     return rho
 
   # ----------------------------------------------------------------------------
+  # Methods for counting
+  # ----------------------------------------------------------------------------
+  def count_reactant_instances(self, species: str) -> int:
+    # For a specified species, count the number of times it appears as a
+    # reactant and return the count
+    count = 0
+    for rxn in self.reactions:
+      if species in rxn.reactants:
+        count += 1
+    return count
+
+  def count_product_instances(self, species: str) -> int:
+    # For a specified species, count the number of times it appears as a
+    # product and return the count
+    count = 0
+    for rxn in self.reactions:
+      if species in rxn.products:
+        count += 1
+    return count
+
+  def network_species_count(self) -> Dict:
+    # Count the occurrence of reactant/product occurrences of species in
+    # network of reactions. Only counts each species once per reaction,
+    # e.g. H + H + H -> H2 yields 1 appearance of H on LHS and 1 appearance
+    # of H2 on RHS.
+    # TODO:
+    # Isn't this just from the adjacency matrix? Try to get it from that
+    # key (str, species) to List(int, int; reactant_count, product_count)
+    counts = {}
+    for s in self.species:
+      reactant_count = self.count_reactant_instances(s)
+      product_count = self.count_product_instances(s)
+      counts[s] = {"R": reactant_count, "P": product_count}
+
+    return counts
+
+  # ----------------------------------------------------------------------------
   # Methods for properties
   # ----------------------------------------------------------------------------
   @property
