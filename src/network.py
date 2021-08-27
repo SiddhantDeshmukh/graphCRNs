@@ -1,4 +1,5 @@
 from src.utilities import cofactor_matrix, normalise_2d
+from itertools import chain
 from typing import Dict, List
 from src.reaction import Reaction
 import networkx as nx
@@ -23,6 +24,10 @@ class Network:
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H
     # Also need to check this when creating the graph!
+    # self.complexes = sorted(list(set(chain.from_iterable(
+    #     [[rxn.reactant_complex, rxn.product_complex]
+    #      for rxn in self.reactions]))))
+
     complexes = []
     for rxn in self.reactions:
       complexes.append(rxn.reactant_complex)
@@ -33,34 +38,23 @@ class Network:
     self.species_graph = self.create_species_graph()
     self.complex_graph = self.create_complex_graph()
 
-    # Create incidence matrices from graphs
+    # Incidence matrices from graphs
+    # Species incidence matrix (m x r)
     self.species_incidence_matrix = nx.incidence_matrix(self.species_graph)
-    # nx incidence matrix does not give us what we want
-    # self.complex_incidence_matrix = nx.incidence_matrix(self.complex_graph)
+    # Complex incidence matrix (c x r)
     self.complex_incidence_matrix = self.create_complex_incidence_matrix()
-
     # Complex composition matrix (m x c)
     self.complex_composition_matrix = self.create_complex_composition_matrix()
-
     # Stoichiometric matrix (m x r)
     self.stoichiometric_matrix = self.complex_composition_matrix @ self.complex_incidence_matrix
-
     # Outgoing co-incidence matrix of reaction rates (r x c)
     self.complex_kinetics_matrix = self.create_complex_kinetics_matrix()
-
     # Outgoing co-incidence matrix of reaction rates (r x m)
     self.species_kinetics_matrix = self.create_species_kinetics_matrix()
-
     # Weighted Laplacian (transpose of conventional Laplacian) matrix (c x c)
     self.complex_laplacian = self.create_complex_laplacian_matrix()
-
     # Weighted Laplacian matrix (m x m)
     self.species_laplacian = self.create_species_laplacian_matrix()
-
-    # Potential graphs from defined incidence matrices
-    # self.complex_composition_graph = nx.from_numpy_matrix(
-    #     incidence_to_adjacency(self.complex_composition_matrix))
-    # self.complex_composition_graph = self.create_complex_composition_graph()
 
     # Properties
     self._temperature = temperature
@@ -119,7 +113,8 @@ class Network:
   # ----------------------------------------------------------------------------
   # Methods for creating graphs
   # ----------------------------------------------------------------------------
-
+  # TODO:
+  # Move graph creation into a generic functional script
   def create_species_graph(self, temperature=None) -> nx.MultiDiGraph:
     # Create graph of species
     species_graph = nx.MultiDiGraph()

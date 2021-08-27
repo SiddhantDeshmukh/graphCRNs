@@ -300,3 +300,9 @@ if __name__ == "__main__":
   # Create a dict pretty_print() function that does this by default
   for species, r_p in counts.items():
     print(f"{species}: {r_p}")
+
+# %%
+# TODO:
+# - Write docstrings
+# - Compartmentalise classes
+# - Refactor for 'temperature' property
