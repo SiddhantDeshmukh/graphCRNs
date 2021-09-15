@@ -242,13 +242,13 @@ class Network:
 
     # Given a certain temperature, update all matrices and graphs
     # that depend on it
-    print(f"Updating matrices with temperature {temperature} K")
+    # print(f"Updating matrices with temperature {temperature} K")
     self.complex_kinetics_matrix =\
         self.create_complex_kinetics_matrix(temperature)
     self.species_kinetics_matrix =\
         self.create_species_kinetics_matrix(temperature)
 
-    print(f"Updating graphs with temperature {temperature} K")
+    # print(f"Updating graphs with temperature {temperature} K")
     self.update_species_graph(temperature)
     self.update_complex_graph(temperature)
 
