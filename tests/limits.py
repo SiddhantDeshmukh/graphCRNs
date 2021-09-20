@@ -5,10 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.network import Network
 
-res_dir = '../res/'
-limit_file = f'{res_dir}/react-solar-umist12-limits'
-
-# network = Network.from_krome_file(limit_file)
 alpha = 2
 beta = 0.5
 gamma = 3
@@ -77,6 +73,8 @@ def compare_limits(rate: Callable, temperatures: np.ndarray,
   return rates
 
 
+# %%
+# Dummy rates for testing
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 # First plot fading functions applied to a few dummy reactions
 temperatures = np.logspace(1.3, 4.7, num=500)
@@ -104,3 +102,19 @@ for i, rate_function in enumerate(test_rates):
   axes[idx_x, idx_y].set_ylim(1e-3, np.max(rates["original"]) + 100)
 
 plt.show()
+
+# %%
+# CO network rates
+res_dir = '../res'
+limit_file = f'{res_dir}/react-solar-umist12'
+
+network = Network.from_krome_file(limit_file)
+print(len(network.reactions))  # 30 reactions
+nrows = 8
+ncols = 4
+
+fig, axes = plt.subplots(nrows, ncols)
+temperatures = np.logspace(1.3, 4.7, num=500)
+for i, reaction in enumerate(network.reactions):
+  idx_x = i // 2
+  idx_y = i % 2
