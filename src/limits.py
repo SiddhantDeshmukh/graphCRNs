@@ -1,6 +1,7 @@
 # Functions for evaluating rates with temperature limits
 from typing import Callable, Union
 import numpy as np
+from scipy.special import expit
 
 
 def accuracy_to_scale(accuracy: str) -> int:
@@ -9,21 +10,17 @@ def accuracy_to_scale(accuracy: str) -> int:
 
 
 def lower_limit_sigmoid(temperature: float, Tmin: float, scale=1) -> float:
-  try:
-    sigmoid = 1 / (1 + np.exp(-scale * (temperature - Tmin)))
-  except(RuntimeWarning):  # overflow in exp
-    sigmoid = 0
-
-  return sigmoid
+  if (temperature - Tmin) < -225:
+    return 0
+  else:
+    return expit(scale * (temperature - Tmin))
 
 
 def upper_limit_sigmoid(temperature: float, Tmax: float, scale=1) -> float:
-  try:
-    sigmoid = 1 / (1 + np.exp(scale * (temperature - Tmax)))
-  except(RuntimeWarning):  # overflow in exp
-    sigmoid = 0
-
-  return sigmoid
+  if (temperature - Tmax) > 225:
+    return 0
+  else:
+    return expit(scale * (Tmax - temperature))
 
 
 def fading_function(rate: Union[Callable, float], temperature: float,

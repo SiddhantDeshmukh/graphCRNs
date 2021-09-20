@@ -1,5 +1,6 @@
 # %%
 # Test temperature limits and fading functions
+from scipy.special import expit
 from typing import Callable, Dict
 import numpy as np
 import matplotlib.pyplot as plt
@@ -127,6 +128,7 @@ for i, reaction in enumerate(network.reactions):
                           label=f"{reaction.idx}: Limited")
   axes[idx_x, idx_y].plot(temperatures, unlimited_rates,
                           label=f"{reaction.idx}: Unlimited", ls='--')
+
   axes[idx_x, idx_y].axvline(reaction.min_temperature, c='k', ls='--')
   axes[idx_x, idx_y].axvline(reaction.max_temperature, c='k', ls='--')
 
