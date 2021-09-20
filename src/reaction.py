@@ -30,6 +30,13 @@ class Reaction:
     self.reactant_complex = create_complex(self.reactants)
     self.product_complex = create_complex(self.products)
 
+    self.idx = idx if idx else None
+    self.min_temperature = float(min_temperature)\
+        if min_temperature else None
+    self.max_temperature = float(max_temperature)\
+        if max_temperature else None
+    self.limit = limit if limit else None
+
     # Need to evaluate this rate expression for temperature, so keep it as
     # something we can 'eval'
     self.rate_expression = rate_expression
@@ -39,12 +46,10 @@ class Reaction:
     self.rate = self.evaluate_rate_expression(300)  # default
     self.mass_action_rate_expression = self.determine_mass_action_rate()
 
-    self.idx = idx if idx else None
-    self.min_temperature = min_temperature if min_temperature else None
-    self.max_temperature = max_temperature if max_temperature else None
-    self.limit = limit if limit else None
-
   def __str__(self) -> str:
+    return f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
+
+  def description(self) -> str:
     output = f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
     output += f"\tRate: {self.rate_expression}"
     if self.idx:
@@ -52,8 +57,8 @@ class Reaction:
 
     return output
 
-  def __call__(self, temperature: float) -> float:
-    return self.evaluate_rate_expression(temperature)
+  def __call__(self, temperature: float, use_limit=True) -> float:
+    return self.evaluate_rate_expression(temperature, use_limit=use_limit)
 
   def calcluate_stoichiometry(self) -> Dict:
     # Write out stoichiometry for the reaction
@@ -75,13 +80,13 @@ class Reaction:
 
     return reactant_stoichiometry, product_stoichiometry
 
-  def evaluate_rate_expression(self, temperature=None):
+  def evaluate_rate_expression(self, temperature=None, use_limit=True):
     # Evaluate (potentially temperature-dependent) rate expression
     # WARNING: Eval is evil!
     # TODO: Sanitise input
     expression = self.rate_expression.replace("Tgas", str(temperature))
     rate = eval(expression)
-    if self.limit:
+    if use_limit and self.limit:
       rate = limit_dict[self.limit](rate, temperature, self.min_temperature,
                                     self.max_temperature,
                                     scale_dict[self.limit],
