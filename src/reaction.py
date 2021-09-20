@@ -4,6 +4,7 @@
 # format. Need a Reaction class and a Network class for sure
 from typing import Dict, List
 from math import exp  # used in 'eval'
+from .limits import limit_dict, scale_dict
 
 
 # Order list alphabetically so that complex combinations work out
@@ -14,7 +15,8 @@ def create_complex(lst): return ' + '.join(sorted(lst))
 
 class Reaction:
   def __init__(self, reactants: List, products: List, rate_expression: str,
-               idx=None, min_temperature=None, max_temperature=None) -> None:
+               idx=None, min_temperature=None, max_temperature=None,
+               limit=None) -> None:
     self.reactants = reactants
     self.products = products
 
@@ -40,6 +42,7 @@ class Reaction:
     self.idx = idx if idx else None
     self.min_temperature = min_temperature if min_temperature else None
     self.max_temperature = max_temperature if max_temperature else None
+    self.limit = limit if limit else None
 
   def __str__(self) -> str:
     output = f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
@@ -48,6 +51,9 @@ class Reaction:
       output += f"\tIndex = {self.idx}"
 
     return output
+
+  def __call__(self, temperature: float) -> float:
+    return self.evaluate_rate_expression(temperature)
 
   def calcluate_stoichiometry(self) -> Dict:
     # Write out stoichiometry for the reaction
@@ -72,8 +78,14 @@ class Reaction:
   def evaluate_rate_expression(self, temperature=None):
     # Evaluate (potentially temperature-dependent) rate expression
     # WARNING: Eval is evil!
+    # TODO: Sanitise input
     expression = self.rate_expression.replace("Tgas", str(temperature))
     rate = eval(expression)
+    if self.limit:
+      rate = limit_dict[self.limit](rate, temperature, self.min_temperature,
+                                    self.max_temperature,
+                                    scale_dict[self.limit],
+                                    scale_dict[self.limit])
     return rate
 
   def determine_mass_action_rate(self):

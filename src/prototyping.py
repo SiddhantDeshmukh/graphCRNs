@@ -1,3 +1,5 @@
+# %%
+from itertools import product
 from typing import Dict, List
 from src.utilities import cofactor_matrix
 import matplotlib.pyplot as plt
@@ -11,52 +13,9 @@ import pydot
 import numpy as np
 from scipy.linalg import null_space
 import sympy
+from scipy.linalg import expm
 
-plt.style.use("standard-scientific")
-
-# # Simple network of a reversible reaction
-# # H + CH <-> C + H2
-# # k_forward = 5
-# # k_backward = 3
-# reactants = ['H', 'CH']
-# products = ['C', 'H2']
-# forward_rate = 5
-# reverse_rate = 3
-
-# forward_reaction = Reaction(
-#     reactants, products, rate_expression=f"{forward_rate}")
-# reverse_reaction = Reaction(
-#     products, reactants, rate_expression=f"{reverse_rate}")
-
-# network = Network([forward_reaction, reverse_reaction])
-# # Move kinetics matrix and Laplacian matrix into 'Network'
-# kinetics_matrix = np.zeros((2, 2))
-# for i, rxn in enumerate(network.reactions):
-#   for j, complex in enumerate(network.complexes):
-#     if complex == rxn.reactant_complex:
-#       kinetics_matrix[i, j] = rxn.evaluate_rate_expression(300)
-#     else:
-#       kinetics_matrix[i, j] = 0
-
-# laplacian_matrix = -network.complex_incidence_matrix @ kinetics_matrix
-
-# # Determine RHS vector Exp(Z.T Ln(x)), where 'x' is number densities
-# x = [1., 3., 2., 4.]  # strictly non-negative
-# rhs = np.exp(network.complex_composition_matrix.T.dot(np.log(x)))
-# Z, D, K = network.complex_composition_matrix, network.complex_incidence_matrix, kinetics_matrix
-# dynamics_rhs = Z @ D @ K.dot(rhs)
-
-# print(x)
-# print(network.species)
-# print(dynamics_rhs)
-
-# Check this by hand!
-# Also make sure the list indices line up as expected with the array
-
-# print(network.species_incidence_matrix.shape)
-# print(kinetics_matrix)
-# print(network.complex_incidence_matrix)
-# print(laplacian_matrix)
+# plt.style.use("standard-scientific")
 
 
 def is_square(matrix: np.ndarray) -> bool:
@@ -87,7 +46,6 @@ def run_dynamics(network: Network, initial_number_densities: Dict,
   # print(f"x_0   = {dynamics.initial_number_densities}")
   # print(f"x_dot = {dynamics.dynamics_vector}")
 
-  # print(jacobian)
   initial_densities = dynamics.initial_number_densities
   final_densities = []
   for time in times:
@@ -118,194 +76,233 @@ def plot_dynamics(ax, species, initial_densities, final_densities,
   ax.legend(ncol=2)
 
 
-if __name__ == "__main__":
-  # Initialising network
-  # krome_file = '../res/react-co-solar-umist12'
-  krome_file = '../res/ring-reaction'
-  # krome_file = '../res/quad-ring-reaction'
-  # krome_file = '../res/T-network'
-  # krome_file = '../res/L-network'
-  # krome_file = '../res/diamond-network'
-  # krome_file = '../res/multi-species-line'
-  # krome_file = '../res/reverse'
-  # krome_file = '../res/reverse-3'
-  network = Network.from_krome_file(krome_file)
+# %%
+# Initialising network
+# krome_file = '../res/react-co-solar-umist12'
+krome_file = '../res/react-solar-umist12'
+# krome_file = '../res/ring-reaction'
+# krome_file = '../res/quad-ring-reaction'
+# krome_file = '../res/T-network'
+# krome_file = '../res/L-network'
+# krome_file = '../res/diamond-network'
+# krome_file = '../res/multi-species-line'
+# krome_file = '../res/reverse'
+# krome_file = '../res/reverse-3'
+network = Network.from_krome_file(krome_file)
 
-  print(f"{len(network.species)} Species")
-  # print(network.species)
-  print(f"{len(network.complexes)} Complexes")
-  # print(network.complexes)
-  print(f"{len(network.reactions)} Reactions")
-  # print("Rates")
-  # for rxn in network.reactions:
-  #   print(rxn.rate)
+print(f"{len(network.species)} Species")
+# print(network.species)
+print(f"{len(network.complexes)} Complexes")
+# print(network.complexes)
+print(f"{len(network.reactions)} Reactions")
+# print("Rates")
+# for rxn in network.reactions:
+#   print(rxn.rate)
 
-  to_pydot(network.species_graph).write_png("./species.png")
-  to_pydot(network.complex_graph).write_png("./complex.png")
+# to_pydot(network.species_graph).write_png("./species.png")
+# to_pydot(network.complex_graph).write_png("./complex.png")
 
-  # Check matrices
-  print("Adjacency matrices")
-  print(f"Species: {nx.to_numpy_array(network.species_graph).shape}")
-  print(f"Complex: {nx.to_numpy_array(network.complex_graph).shape}")
+# # Check matrices
+# print("Adjacency matrices")
+# print(f"Species: {nx.to_numpy_array(network.species_graph).shape}")
+# print(f"Complex: {nx.to_numpy_array(network.complex_graph).shape}")
 
-  print("Incidence matrices")
-  print(f"Species:        {network.species_incidence_matrix.shape}")
-  print(f"Complex:        {network.complex_incidence_matrix.shape}")
-  print(f"Composition:    {network.complex_composition_matrix.shape}")
-  print(f"Stoichiometric: {network.stoichiometric_matrix.shape}")
-  print(f"Kinetics:       {network.complex_kinetics_matrix.shape}")
-  print(f"Laplacian:      {network.complex_laplacian.shape}")
+# print("Incidence matrices")
+# print(f"Species:        {network.species_incidence_matrix.shape}")
+# print(f"Complex:        {network.complex_incidence_matrix.shape}")
+# print(f"Composition:    {network.complex_composition_matrix.shape}")
+# print(f"Stoichiometric: {network.stoichiometric_matrix.shape}")
+# print(f"Kinetics:       {network.complex_kinetics_matrix.shape}")
+# print(f"Laplacian:      {network.complex_laplacian.shape}")
 
-  # TODO:
-  # Scale with gas density!
-  # initial_number_densities = {
-  #     "H": 1e12,
-  #     "H2": 1e-4,
-  #     "OH": 1e-12,
-  #     "C": 10**(8.39),
-  #     "O": 10**(8.66),
-  #     "CH": 1e-12,
-  #     "CO": 1e-12,
-  #     "M": 1e11,
-  # }
+# Count instances of species in network
+counts = network.network_species_count()
+# TODO:
+# Create a dict pretty_print() function that does this by default
+for species, r_p in counts.items():
+  print(f"{species}: {r_p}")
 
-  # initial_number_densities = {
-  #     "A": 2,
-  #     "B": 3,
-  #     "C": 4,
-  #     "D": 5
-  # }
+# %%
+# Dynamics
+# TODO:
+# Scale with gas density!
+initial_number_densities = {
+    "H": 1e12,
+    "H2": 1e-4,
+    "OH": 1e-12,
+    "C": 10**(8.39),
+    "O": 10**(8.66),
+    "CH": 1e-12,
+    "CO": 1e-12,
+    "M": 1e11,
+}
 
-  # initial_number_densities = {
-  #     "A": 2,
-  #     "B": 2,
-  # }
+# initial_number_densities = {
+#     "A": 2,
+#     "B": 3,
+#     "C": 4,
+#     "D": 5
+# }
 
-  initial_number_densities = {
-      "A": 3,
-      "B": 4,
-      "C": 1,
-  }
+# initial_number_densities = {
+#     "A": 2,
+#     "B": 2,
+# }
 
-  # TODO:
-  # Add this to Dynamics to initialise number densities
-  number_densities = np.zeros(len(initial_number_densities.keys()))
+# initial_number_densities = {
+#     "A": 3,
+#     "B": 4,
+#     "C": 1,
+# }
+
+# Test network at different temperatures and densities, simulating atmosphere
+densities = np.logspace(-10, -6)
+# temperatures = np.logspace(2.47, 4.47)  # 300 - 30000 K
+temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
+times = np.logspace(-4, 4, num=50)
+colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
+
+fig, axes = plt.subplots(3, 3, figsize=(10, 12))
+# for i, (density, temperature) in enumerate(product(densities, temperatures)):
+for i, temperature in enumerate(temperatures):
+  idx_x = i // 3
+  idx_y = i % 3
+  # Initialise number densities
+  # TODO: Add density scaling
+  number_densities = np.zeros(len(network.species))
+  species = []
   for i, s in enumerate(network.species):
     number_densities[i] = initial_number_densities[s]
-    print(f"n_{s} = {number_densities[i]:.3e}")
+    species.append(s)
+  # Initialise dynamics at given temperature
+  dynamics = NetworkDynamics(
+      network, number_densities, temperature=temperature)
+  final_number_densities = []
+  for time in times:
+    final = dynamics.solve(time, number_densities)[0]
+    final_number_densities.append(final)
+  final_number_densities = np.array(final_number_densities).T
+  # Final
+  for s, n, c in zip(species, final_number_densities, colours):
+    axes[idx_x, idx_y].plot(np.log10(times), np.log10(n),
+                            label=s, color=c, ls='-')
+  axes[idx_x, idx_y].set_title(f"{temperature} K")
+  # # Initial
+  # for i, s in enumerate(network.species):
+  #   axes[idx_x, idx_y].plot(-4,
+  #                           np.log10(initial_number_densities[s]), 'kx')
 
-  # Each subplot is a different temperature
-  # Plot all species on same axes
-  fig, axes = plt.subplots(1, 1)
-  times = np.logspace(-4, 4, num=50)
-  # temperatures = [3000, 5000, 7500, 10000, 20000, 25000]
-  temperatures = [5000]
-  for temperature in temperatures:
-    print(f"Tgas = {temperature}")
-    initial, final, steady, steady_time = run_dynamics(
-        network, initial_number_densities, times, temperature)
-    plot_dynamics(axes, network.species, initial, final, steady, 1e-4, times,
-                  steady_time)
-    print(f"Temperature = {temperature} [K].")
-    print(f"Steady state reached in {steady_time} [s].")
+  axes[idx_x, idx_y].legend()
+  # axes.set_xlabel("log time [s]")
+  # axes.set_ylabel("log number density")
 
-  # Direct steady-state
-  dynamics = NetworkDynamics(network, initial_number_densities,
-                             temperature=temperature)
+plt.show()
 
-  jacobian = dynamics.evaluate_jacobian(temperature, number_densities)
-  # Jacobian timescales from eigenvalues
-  eigenvalues, eigenvectors = np.linalg.eig(jacobian)
-  eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
-  negative_mask = eigenvalues < 0
-  timescales = 1 / eigenvalues
-  print(eigenvalues)
-  print(eigenvectors)
-  # Jacobian nullspace
-  print(final[-1])
-  print(null_space(jacobian))
+# %%
+# TODO:
+# Add this to Dynamics to initialise number densities
+number_densities = np.zeros(len(initial_number_densities.keys()))
+for i, s in enumerate(network.species):
+  number_densities[i] = initial_number_densities[s]
+  print(f"n_{s} = {number_densities[i]:.3e}")
 
-  plt.show()
-  exit()
-  # print("Equilibria nullspaces")
-  # print(f"Complex: {complex_nullspace.shape}")
-  # # print(network.laplacian_matrix)
-  # print(f"Species: {species_nullspace.shape}")
-  # # print(species_laplacian)
-  # # print(complex_nullspace)
-  # # print(species_nullspace)
+# Each subplot is a different temperature
+# Plot all species on same axes
+fig, axes = plt.subplots(1, 1)
+times = np.logspace(-4, 4, num=50)
+# temperatures = [3000, 5000, 7500, 10000, 20000, 25000]
+temperatures = [5000]
+for temperature in temperatures:
+  print(f"Tgas = {temperature}")
+  initial, final, steady, steady_time = run_dynamics(
+      network, initial_number_densities, times, temperature)
+  plot_dynamics(axes, network.species, initial, final, steady, 1e-4, times,
+                steady_time)
+  print(f"Temperature = {temperature} [K].")
+  print(f"Steady state reached in {steady_time} [s].")
 
-  # # Nullspace is Exp(Z^T Ln(x)) := y
-  # # Need to invert this relationship to get 'x'
-  # # x = EXP((Z^T)^-1 Ln(y))
-  # # First check if 'Z' is orthogonal
-  # y = complex_nullspace
-  # Z = network.complex_composition_matrix
-  # y = np.log(y)
+# plt.savefig("./dynamics.png", bbox_inches="tight")
+# Manual calculation
+dynamics = NetworkDynamics(network, initial_number_densities,
+                           temperature=temperature)
+jacobian = dynamics.evaluate_jacobian(temperature, number_densities)
+# Jacobian timescales from eigenvalues
+eigenvalues, eigenvectors = np.linalg.eig(jacobian)
+eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
+eigenvectors[np.abs(eigenvectors) < 1e-10] = 0
+negative_mask = eigenvalues < 0
+timescales = 1 / eigenvalues
+print(network.species)
+print(eigenvalues)
+print(eigenvectors)
+# print(timescales)
+# print(jacobian)
+t = 1  # seconds
+coefficients = np.linalg.inv(eigenvectors) @ number_densities
+print("coefficients")
+print(coefficients)
+print(f"direct, t={t}")
+exponentials = np.array([np.exp(e_val * t) for e_val in eigenvalues])
+# Left-multiply by eigenvectors!
+direct = eigenvectors @ (coefficients * exponentials)
+print(direct)
+print(f"steady state, t={steady_time:.3f}")
+print(steady)
+axes.plot(np.log10(np.array([t, t, t])), np.log10(direct), 'rs',
+          mfc='none')
 
-  # # Compute complex balance from Matrix Tree theorem
-  # print(network.complex_laplacian.shape)
-  # print(network.species_laplacian.shape)
-  # print(network.compute_complex_balance(300))
-  # rho = cofactor_matrix(network.complex_laplacian)[0]
-  # x = np.exp(np.linalg.pinv(Z.T) @ np.log(rho))
-  # print(x)
+# Matrix exponential
+A = expm(jacobian * t)
+print("matrix exp")
+# print(jacobian)
+# print(A)
+# print(number_densities)
+mexp = A @ number_densities
+axes.plot(np.log10([t, t, t]), np.log10(mexp), 'rP')
 
-  # # Try getting species balance directly
-  # print(network.compute_species_balance(300))
+plt.show()
+# exit()
 
-  # exit()
-  # if is_orthogonal(Z):
-  #   y = Z @ y
-  # else:
-  #   # Costly! Can't invert a non-square matrix!!!
-  #   y = np.linalg.inv(Z.T) @ y
-  # x = np.exp(y)
+# %%
+# Pathfinding
+# Find shortest path and 'k' shortest path between two species
+# source = 'C'
+# target = 'CO'
+source = 'A'
+target = 'C'
+cutoff = 4
+shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
+                                     cutoff=cutoff)
 
-  # print(x)
+unique_paths = []
+unique_lengths = []
 
-  # This is the same as 'x' here because the species are the same as the
-  # complexes
-  # However, won't this generalise to species matrix well? Since the complex
+print("Paths and lengths")
+count = 0
+for path in shortest_paths:
+  total_length = 0
+  for i in range(len(path) - 1):
+    source, target = path[i], path[i+1]
+    edge = network.species_graph[source][target][0]
+    length = edge['weight']
+    total_length += length
+  # print(path, total_length)
 
-  # Check network dynamics to see complex-balanced eqm and steady-states
+  string_path = ','.join(path)
+  if not string_path in unique_paths:
+    unique_paths.append(string_path)
+    unique_lengths.append(total_length)
 
-  # Normalising kinetics
-  # normalised_kinetics = network.create_kinetics_matrix(300, True)
+  count += 1
+  if count >= 1000:
+    break
 
-  # Pathfinding
-  # Find shortest path and 'k' shortest path between two species
-  # source = 'C'
-  # target = 'CO'
-  source = 'A'
-  target = 'C'
-  cutoff = 4
-  shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
-                                       cutoff=cutoff)
+print(count)
+for path, length in zip(unique_paths, unique_lengths):
+  print(path, length)
 
-  unique_paths = []
-  unique_lengths = []
-
-  print("Paths and lengths")
-  count = 0
-  for path in shortest_paths:
-    total_length = 0
-    for i in range(len(path) - 1):
-      source, target = path[i], path[i+1]
-      edge = network.species_graph[source][target][0]
-      length = edge['weight']
-      total_length += length
-    # print(path, total_length)
-
-    string_path = ','.join(path)
-    if not string_path in unique_paths:
-      unique_paths.append(string_path)
-      unique_lengths.append(total_length)
-
-    count += 1
-    if count >= 1000:
-      break
-
-  print(count)
-  for path, length in zip(unique_paths, unique_lengths):
-    print(path, length)
+# %%
+# TODO:
+# - Write docstrings
+# - Compartmentalise classes
+# - Refactor for 'temperature' property

@@ -34,6 +34,8 @@ class NetworkDynamics():
     # Properties
     self._temperature = temperature
 
+  # TODO:
+  # Have number densities and initial number densities as properties?
   def setup_initial_number_densities(self, initial_number_densities: Union[Dict, List, np.ndarray]) -> np.ndarray:
     # Create the array of number densities with the same indexing as the species
     # in the network
@@ -62,7 +64,8 @@ class NetworkDynamics():
       expression = reaction.mass_action_rate_expression
       reactant_symbols = [
           f"n_{key}" for key in reaction.stoichiometry[0].keys()]
-      product_symbols = [f"n_{key}" for key in reaction.stoichiometry[1].keys()]
+      product_symbols = [
+          f"n_{key}" for key in reaction.stoichiometry[1].keys()]
       for symbol in reactant_symbols:
         if symbol in rate_dict.keys():
           rate_dict[symbol].append(f"-{expression}")

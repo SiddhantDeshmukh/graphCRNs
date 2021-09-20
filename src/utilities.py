@@ -30,3 +30,14 @@ def cofactor_matrix(matrix: np.ndarray) -> np.ndarray:
                      np.array(list(range(col))+list(range(col+1, ncols)))]
       C[row, col] = (-1)**(row+col) * np.linalg.det(minor)
   return C
+
+
+# -------------------------------------------------------------------------
+# Laplacian matrix utilities
+# -------------------------------------------------------------------------
+def compute_balance(laplacian: np.ndarray) -> np.ndarray:
+  # Using Kirchhoff's Matrix Tree theorem, compute the kernel of the Laplacian
+  # corresponding to a positive, complex-balanced equilibrium
+  # Only need first row of cofactor matrix!
+  rho = cofactor_matrix(laplacian)[0]
+  return rho

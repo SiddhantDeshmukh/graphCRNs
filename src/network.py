@@ -1,4 +1,5 @@
 from src.utilities import cofactor_matrix, normalise_2d
+from itertools import chain
 from typing import Dict, List
 from src.reaction import Reaction
 import networkx as nx
@@ -23,6 +24,10 @@ class Network:
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H
     # Also need to check this when creating the graph!
+    # self.complexes = sorted(list(set(chain.from_iterable(
+    #     [[rxn.reactant_complex, rxn.product_complex]
+    #      for rxn in self.reactions]))))
+
     complexes = []
     for rxn in self.reactions:
       complexes.append(rxn.reactant_complex)
@@ -33,34 +38,23 @@ class Network:
     self.species_graph = self.create_species_graph()
     self.complex_graph = self.create_complex_graph()
 
-    # Create incidence matrices from graphs
+    # Incidence matrices from graphs
+    # Species incidence matrix (m x r)
     self.species_incidence_matrix = nx.incidence_matrix(self.species_graph)
-    # nx incidence matrix does not give us what we want
-    # self.complex_incidence_matrix = nx.incidence_matrix(self.complex_graph)
+    # Complex incidence matrix (c x r)
     self.complex_incidence_matrix = self.create_complex_incidence_matrix()
-
     # Complex composition matrix (m x c)
     self.complex_composition_matrix = self.create_complex_composition_matrix()
-
     # Stoichiometric matrix (m x r)
     self.stoichiometric_matrix = self.complex_composition_matrix @ self.complex_incidence_matrix
-
     # Outgoing co-incidence matrix of reaction rates (r x c)
     self.complex_kinetics_matrix = self.create_complex_kinetics_matrix()
-
     # Outgoing co-incidence matrix of reaction rates (r x m)
     self.species_kinetics_matrix = self.create_species_kinetics_matrix()
-
     # Weighted Laplacian (transpose of conventional Laplacian) matrix (c x c)
     self.complex_laplacian = self.create_complex_laplacian_matrix()
-
     # Weighted Laplacian matrix (m x m)
     self.species_laplacian = self.create_species_laplacian_matrix()
-
-    # Potential graphs from defined incidence matrices
-    # self.complex_composition_graph = nx.from_numpy_matrix(
-    #     incidence_to_adjacency(self.complex_composition_matrix))
-    # self.complex_composition_graph = self.create_complex_composition_graph()
 
     # Properties
     self._temperature = temperature
@@ -80,6 +74,12 @@ class Network:
         'rate': [],
         'Tmin': [],
         'Tmax': [],
+        # limits are one of 'none', 'sharp', 'weak', 'medium', 'strong'
+        'Tmin_limit': [],
+        'Tmax_limit': [],
+        # TODO:
+        # Use accuracy to determine limit strength, add 'sigmoid' limit
+        'accuracy': []  # A, B, C, D, E (see UMIST12 nomenclature)
     }
 
     reactions = []
@@ -108,7 +108,9 @@ class Network:
                                     format_dict['rate'][0],
                                     idx=format_dict['idx'][0],
                                     min_temperature=format_dict['Tmin'],
-                                    max_temperature=format_dict['Tmax']))
+                                    max_temperature=format_dict['Tmax'],
+                                    min_temperature_limit=format_dict['Tmin_limit'],
+                                    max_temperature_limit=format_dict['Tmax_limit']))
 
         # Reset quantities
         for key in format_dict.keys():
@@ -119,7 +121,8 @@ class Network:
   # ----------------------------------------------------------------------------
   # Methods for creating graphs
   # ----------------------------------------------------------------------------
-
+  # TODO:
+  # Move graph creation into a generic functional script
   def create_species_graph(self, temperature=None) -> nx.MultiDiGraph:
     # Create graph of species
     species_graph = nx.MultiDiGraph()
@@ -247,13 +250,13 @@ class Network:
 
     # Given a certain temperature, update all matrices and graphs
     # that depend on it
-    print(f"Updating matrices with temperature {temperature} K")
+    # print(f"Updating matrices with temperature {temperature} K")
     self.complex_kinetics_matrix =\
         self.create_complex_kinetics_matrix(temperature)
     self.species_kinetics_matrix =\
         self.create_species_kinetics_matrix(temperature)
 
-    print(f"Updating graphs with temperature {temperature} K")
+    # print(f"Updating graphs with temperature {temperature} K")
     self.update_species_graph(temperature)
     self.update_complex_graph(temperature)
 
@@ -277,6 +280,43 @@ class Network:
     C = cofactor_matrix(self.species_laplacian)
     rho = C[0]
     return rho
+
+  # ----------------------------------------------------------------------------
+  # Methods for counting
+  # ----------------------------------------------------------------------------
+  def count_reactant_instances(self, species: str) -> int:
+    # For a specified species, count the number of times it appears as a
+    # reactant and return the count
+    count = 0
+    for rxn in self.reactions:
+      if species in rxn.reactants:
+        count += 1
+    return count
+
+  def count_product_instances(self, species: str) -> int:
+    # For a specified species, count the number of times it appears as a
+    # product and return the count
+    count = 0
+    for rxn in self.reactions:
+      if species in rxn.products:
+        count += 1
+    return count
+
+  def network_species_count(self) -> Dict:
+    # Count the occurrence of reactant/product occurrences of species in
+    # network of reactions. Only counts each species once per reaction,
+    # e.g. H + H + H -> H2 yields 1 appearance of H on LHS and 1 appearance
+    # of H2 on RHS.
+    # TODO:
+    # Isn't this just from the adjacency matrix? Try to get it from that
+    # key (str, species) to List(int, int; reactant_count, product_count)
+    counts = {}
+    for s in self.species:
+      reactant_count = self.count_reactant_instances(s)
+      product_count = self.count_product_instances(s)
+      counts[s] = {"R": reactant_count, "P": product_count}
+
+    return counts
 
   # ----------------------------------------------------------------------------
   # Methods for properties
