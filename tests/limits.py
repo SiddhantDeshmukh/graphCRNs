@@ -85,9 +85,9 @@ test_rates = [test_rate_1, test_rate_2, test_rate_3, test_rate_4]
 for i, rate_function in enumerate(test_rates):
   idx_x = i // 2
   idx_y = i % 2
-  rates = compare_limits(rate_function, temperatures, Tmin, Tmax)
+  limited_rates = compare_limits(rate_function, temperatures, Tmin, Tmax)
 
-  for key, rate in rates.items():
+  for key, rate in limited_rates.items():
     axes[idx_x, idx_y].plot(temperatures, rate, label=key)
 
   # Limits
@@ -99,7 +99,7 @@ for i, rate_function in enumerate(test_rates):
   axes[idx_x, idx_y].set_xscale("log")
   axes[idx_x, idx_y].set_yscale("log")
   axes[idx_x, idx_y].legend()
-  axes[idx_x, idx_y].set_ylim(1e-3, np.max(rates["original"]) + 100)
+  axes[idx_x, idx_y].set_ylim(1e-3, np.max(limited_rates["original"]) + 100)
 
 plt.show()
 
@@ -110,11 +110,33 @@ limit_file = f'{res_dir}/react-solar-umist12'
 
 network = Network.from_krome_file(limit_file)
 print(len(network.reactions))  # 30 reactions
-nrows = 8
-ncols = 4
+nrows = 6
+ncols = 6
 
-fig, axes = plt.subplots(nrows, ncols)
+fig, axes = plt.subplots(nrows, ncols, figsize=(32, 24), sharex=True)
 temperatures = np.logspace(1.3, 4.7, num=500)
 for i, reaction in enumerate(network.reactions):
-  idx_x = i // 2
-  idx_y = i % 2
+  idx_x = i // 6
+  idx_y = i % 6
+
+  limited_rates = [reaction(temperature, True) for temperature in temperatures]
+  unlimited_rates = [reaction(temperature, False)
+                     for temperature in temperatures]
+
+  axes[idx_x, idx_y].plot(temperatures, limited_rates,
+                          label=f"{reaction.idx}: Limited")
+  axes[idx_x, idx_y].plot(temperatures, unlimited_rates,
+                          label=f"{reaction.idx}: Unlimited", ls='--')
+  axes[idx_x, idx_y].axvline(reaction.min_temperature, c='k', ls='--')
+  axes[idx_x, idx_y].axvline(reaction.max_temperature, c='k', ls='--')
+
+  axes[idx_x, idx_y].set_title(str(reaction))
+  if idx_x == 4:
+    axes[idx_x, idx_y].set_xlabel("Temperature [K]")
+  if idx_y == 0:
+    axes[idx_x, idx_y].set_ylabel("Rate")
+  # axes[idx_x, idx_y].set_xscale("log")
+  axes[idx_x, idx_y].set_yscale("log")
+  axes[idx_x, idx_y].legend()
+
+plt.show()

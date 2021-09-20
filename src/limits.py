@@ -9,11 +9,21 @@ def accuracy_to_scale(accuracy: str) -> int:
 
 
 def lower_limit_sigmoid(temperature: float, Tmin: float, scale=1) -> float:
-  return 1 / (1 + np.exp(-scale * (temperature - Tmin)))
+  try:
+    sigmoid = 1 / (1 + np.exp(-scale * (temperature - Tmin)))
+  except(RuntimeWarning):  # overflow in exp
+    sigmoid = 0
+
+  return sigmoid
 
 
 def upper_limit_sigmoid(temperature: float, Tmax: float, scale=1) -> float:
-  return 1 / (1 + np.exp(scale * (temperature - Tmax)))
+  try:
+    sigmoid = 1 / (1 + np.exp(scale * (temperature - Tmax)))
+  except(RuntimeWarning):  # overflow in exp
+    sigmoid = 0
+
+  return sigmoid
 
 
 def fading_function(rate: Union[Callable, float], temperature: float,
@@ -25,7 +35,7 @@ def fading_function(rate: Union[Callable, float], temperature: float,
          upper_limit_sigmoid(temperature, Tmax, upper_scale) - 1)
   else:
     return rate * (lower_limit_sigmoid(temperature, Tmin, lower_scale) +
-                   upper_limit_sigmoid(temperature, Tmax, upper_scale), - 1)
+                   upper_limit_sigmoid(temperature, Tmax, upper_scale) - 1)
 
 
 def cutoff_function(rate: Callable, temperature: float,

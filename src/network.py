@@ -75,8 +75,7 @@ class Network:
         'Tmin': [],
         'Tmax': [],
         # limits are one of 'none', 'sharp', 'weak', 'medium', 'strong'
-        'Tmin_limit': [],
-        'Tmax_limit': [],
+        'limit': [],
         # TODO:
         # Use accuracy to determine limit strength, add 'sigmoid' limit
         'accuracy': []  # A, B, C, D, E (see UMIST12 nomenclature)
@@ -107,10 +106,9 @@ class Network:
           reactions.append(Reaction(format_dict['R'], format_dict['P'],
                                     format_dict['rate'][0],
                                     idx=format_dict['idx'][0],
-                                    min_temperature=format_dict['Tmin'],
-                                    max_temperature=format_dict['Tmax'],
-                                    min_temperature_limit=format_dict['Tmin_limit'],
-                                    max_temperature_limit=format_dict['Tmax_limit']))
+                                    min_temperature=format_dict['Tmin'][0],
+                                    max_temperature=format_dict['Tmax'][0],
+                                    limit=format_dict['limit'][0]))
 
         # Reset quantities
         for key in format_dict.keys():
