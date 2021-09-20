@@ -87,16 +87,6 @@ def run_dynamics(network: Network, initial_number_densities: Dict,
   # print(f"x_0   = {dynamics.initial_number_densities}")
   # print(f"x_dot = {dynamics.dynamics_vector}")
 
-  jacobian = dynamics.evaluate_jacobian(temperature, number_densities)
-  # Jacobian timescales from eigenvalues
-  eigenvalues, eigenvectors = np.linalg.eig(jacobian)
-  eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
-  negative_mask = eigenvalues < 0
-  timescales = 1 / eigenvalues
-  print(network.species)
-  print(eigenvalues)
-  print(eigenvectors)
-  print(timescales)
   # print(jacobian)
   initial_densities = dynamics.initial_number_densities
   final_densities = []
@@ -218,6 +208,22 @@ if __name__ == "__main__":
                   steady_time)
     print(f"Temperature = {temperature} [K].")
     print(f"Steady state reached in {steady_time} [s].")
+
+  # Direct steady-state
+  dynamics = NetworkDynamics(network, initial_number_densities,
+                             temperature=temperature)
+
+  jacobian = dynamics.evaluate_jacobian(temperature, number_densities)
+  # Jacobian timescales from eigenvalues
+  eigenvalues, eigenvectors = np.linalg.eig(jacobian)
+  eigenvalues[np.abs(eigenvalues) < 1e-10] = 0
+  negative_mask = eigenvalues < 0
+  timescales = 1 / eigenvalues
+  print(eigenvalues)
+  print(eigenvectors)
+  # Jacobian nullspace
+  print(final[-1])
+  print(null_space(jacobian))
 
   plt.show()
   exit()

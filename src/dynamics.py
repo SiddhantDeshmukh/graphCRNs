@@ -188,9 +188,9 @@ class NetworkDynamics():
       # Create RHS ZDK Exp(Z.T Ln(x))
       Z = self.network.complex_composition_matrix
       D = self.network.complex_incidence_matrix
-      rates_vector = self.create_rates_vector(y, temperature)
+      v = self.create_rates_vector(y, temperature)
 
-      return Z @ D @ rates_vector
+      return Z @ D @ v
 
     if create_jacobian:
       # Create the Jacobian matrix analytically
@@ -209,7 +209,6 @@ class NetworkDynamics():
     # TODO: Add better time-stepping control
     min_dt = 1e-6
     max_dt = 1e6
-    cfl = 0.9
     dt = initial_dt
 
     # TODO: Check for failure and return codes
@@ -254,11 +253,6 @@ class NetworkDynamics():
       dt = np.mean(timescales[:2])
 
       print(f"{n_iter + 1} / {max_iter}: dt = {dt}")
-      # print(timescales)
-      # print(
-      #     f"Current difference: {absolute_difference}, absolute tolerance: {eqm_atol}.")
-      # print(
-      #     f"Current ratio: {relative_difference}, relative tolerance: {eqm_rtol}.")
 
       if dt < min_dt:
         dt = min_dt
