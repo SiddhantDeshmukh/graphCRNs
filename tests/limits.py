@@ -75,34 +75,34 @@ def compare_limits(rate: Callable, temperatures: np.ndarray,
 
 
 # %%
-# Dummy rates for testing
-fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-# First plot fading functions applied to a few dummy reactions
-temperatures = np.logspace(1.3, 4.7, num=500)
-Tmin = 100
-Tmax = 23000
-test_rates = [test_rate_1, test_rate_2, test_rate_3, test_rate_4]
+# # Dummy rates for testing
+# fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+# # First plot fading functions applied to a few dummy reactions
+# temperatures = np.logspace(1.3, 4.7, num=500)
+# Tmin = 100
+# Tmax = 23000
+# test_rates = [test_rate_1, test_rate_2, test_rate_3, test_rate_4]
 
-for i, rate_function in enumerate(test_rates):
-  idx_x = i // 2
-  idx_y = i % 2
-  limited_rates = compare_limits(rate_function, temperatures, Tmin, Tmax)
+# for i, rate_function in enumerate(test_rates):
+#   idx_x = i // 2
+#   idx_y = i % 2
+#   limited_rates = compare_limits(rate_function, temperatures, Tmin, Tmax)
 
-  for key, rate in limited_rates.items():
-    axes[idx_x, idx_y].plot(temperatures, rate, label=key)
+#   for key, rate in limited_rates.items():
+#     axes[idx_x, idx_y].plot(temperatures, rate, label=key)
 
-  # Limits
-  axes[idx_x, idx_y].axvline(Tmin, c='k', ls='--')
-  axes[idx_x, idx_y].axvline(Tmax, c='k', ls='--')
+#   # Limits
+#   axes[idx_x, idx_y].axvline(Tmin, c='k', ls='--')
+#   axes[idx_x, idx_y].axvline(Tmax, c='k', ls='--')
 
-  axes[idx_x, idx_y].set_xlabel("Temperature [K]")
-  axes[idx_x, idx_y].set_ylabel("Rate")
-  axes[idx_x, idx_y].set_xscale("log")
-  axes[idx_x, idx_y].set_yscale("log")
-  axes[idx_x, idx_y].legend()
-  axes[idx_x, idx_y].set_ylim(1e-3, np.max(limited_rates["original"]) + 100)
+#   axes[idx_x, idx_y].set_xlabel("Temperature [K]")
+#   axes[idx_x, idx_y].set_ylabel("Rate")
+#   axes[idx_x, idx_y].set_xscale("log")
+#   axes[idx_x, idx_y].set_yscale("log")
+#   axes[idx_x, idx_y].legend()
+#   axes[idx_x, idx_y].set_ylim(1e-3, np.max(limited_rates["original"]) + 100)
 
-plt.show()
+# plt.show()
 
 # %%
 # CO network rates
@@ -124,10 +124,16 @@ for i, reaction in enumerate(network.reactions):
   unlimited_rates = [reaction(temperature, False)
                      for temperature in temperatures]
 
+  # Change limit to 'boundary' to compute boundary rate
+  reaction.limit = 'boundary'
+  boundary_rates = [reaction(temperature, True) for temperature in temperatures]
+
   axes[idx_x, idx_y].plot(temperatures, limited_rates,
                           label=f"{reaction.idx}: Limited")
   axes[idx_x, idx_y].plot(temperatures, unlimited_rates,
                           label=f"{reaction.idx}: Unlimited", ls='--')
+  axes[idx_x, idx_y].plot(temperatures, boundary_rates,
+                          label=f"{reaction.idx}: Boundary", ls=':')
 
   axes[idx_x, idx_y].axvline(reaction.min_temperature, c='k', ls='--')
   axes[idx_x, idx_y].axvline(reaction.max_temperature, c='k', ls='--')

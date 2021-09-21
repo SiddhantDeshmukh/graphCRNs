@@ -35,7 +35,7 @@ def fading_function(rate: Union[Callable, float], temperature: float,
                    upper_limit_sigmoid(temperature, Tmax, upper_scale) - 1)
 
 
-def cutoff_function(rate: Callable, temperature: float,
+def cutoff_function(rate: Union[Callable, float], temperature: float,
                     Tmin: float, Tmax: float) -> float:
   # Define the rate only between specified limits, zero otherwise
   if isinstance(temperature, np.ndarray):
@@ -48,17 +48,40 @@ def cutoff_function(rate: Callable, temperature: float,
   return out
 
 
+def boundary_function(rate: Callable, temperature: float,
+                      Tmin: float, Tmax: float) -> float:
+  # If temperature outside of limits, use the appropriate limit as the boundary
+  # value condition (constant extrapolation from the boundary)
+  if isinstance(temperature, np.ndarray):
+    out = np.zeros(len(temperature))
+    min_mask = (temperature < Tmin)
+    max_mask = (temperature > Tmax)
+    out[min_mask] = rate(Tmin)
+    out[max_mask] = rate(Tmax)
+  else:
+    if temperature < Tmin:
+      out = rate(Tmin)
+    elif temperature > Tmax:
+      out = rate(Tmax)
+    else:
+      out = rate(temperature)
+
+  return out
+
+
 limit_dict = {
     'weak': fading_function,
     'medium': fading_function,
     'strong': fading_function,
-    'sharp': cutoff_function
+    'sharp': cutoff_function,
+    'boundary': boundary_function
 }
 
 scale_dict = {
     'weak': 1,
     'medium': 25,
     'strong': 50,
+    'boundary': None,
     'A': 50,
     'B': 25,
     'C': 10,

@@ -86,11 +86,29 @@ class Reaction:
     # TODO: Sanitise input
     expression = self.rate_expression.replace("Tgas", str(temperature))
     rate = eval(expression)
+
+    # Check if rate should be limited
     if use_limit and self.limit:
-      rate = limit_dict[self.limit](rate, temperature, self.min_temperature,
-                                    self.max_temperature,
-                                    scale_dict[self.limit],
-                                    scale_dict[self.limit])
+      scale_limits = ['weak', 'medium', 'strong']
+      if self.limit in scale_limits:  # 'limit' uses 'scale'
+        rate = limit_dict[self.limit](rate, temperature, self.min_temperature,
+                                      self.max_temperature,
+                                      scale_dict[self.limit],
+                                      scale_dict[self.limit])
+      elif self.limit == 'boundary':
+        if temperature < self.min_temperature:
+          temperature = self.min_temperature
+        elif temperature > self.max_temperature:
+          temperature = self.max_temperature
+
+        expression = self.rate_expression.replace("Tgas", str(temperature))
+        rate = eval(expression)
+
+      else:
+        rate = limit_dict[self.limit](rate, temperature,
+                                      self.min_temperature,
+                                      self.max_temperature)
+
     return rate
 
   def determine_mass_action_rate(self):
