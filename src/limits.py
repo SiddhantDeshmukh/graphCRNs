@@ -35,7 +35,7 @@ def fading_function(rate: Union[Callable, float], temperature: float,
                    upper_limit_sigmoid(temperature, Tmax, upper_scale) - 1)
 
 
-def cutoff_function(rate: Union[Callable, float], temperature: float,
+def cutoff_function(rate: Callable, temperature: float,
                     Tmin: float, Tmax: float) -> float:
   # Define the rate only between specified limits, zero otherwise
   if isinstance(temperature, np.ndarray):

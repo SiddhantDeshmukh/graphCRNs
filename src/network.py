@@ -186,19 +186,15 @@ class Network:
 
     return complex_composition_matrix
 
-  def create_complex_kinetics_matrix(self, temperature=300, normalise_kinetics=False) -> np.ndarray:
+  def create_complex_kinetics_matrix(self, temperature=300, limit_rates=False) -> np.ndarray:
     # Create the (r x c) coindicidence matrix containing reaction rate constants
     # 'K' in: x_dot =  ZDK Exp(Z.T Ln(x))
     kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)))
     for i, rxn in enumerate(self.reactions):
       for j, complex in enumerate(self.complexes):
         if complex == rxn.reactant_complex:
-          kinetics_matrix[i, j] = rxn.evaluate_rate_expression(temperature)
-
-    # Normalise such that all rates are between 0, 1
-    if normalise_kinetics:
-      normalise_2d(kinetics_matrix)
-
+          kinetics_matrix[i, j] = rxn.evaluate_rate_expression(temperature,
+                                                               use_limit=limit_rates)
     return kinetics_matrix
 
   def create_species_kinetics_matrix(self, temperature=300, normalise_kinetics=False) -> np.ndarray:
@@ -315,6 +311,14 @@ class Network:
       counts[s] = {"R": reactant_count, "P": product_count}
 
     return counts
+
+  # ----------------------------------------------------------------------------
+  # Setters for reactions
+  # ----------------------------------------------------------------------------
+  def set_reaction_limit(self, limit: str):
+    # Set the limit type for each reaction in the network
+    for rxn in self.reactions:
+      rxn.limit = limit
 
   # ----------------------------------------------------------------------------
   # Methods for properties

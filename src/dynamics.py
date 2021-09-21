@@ -115,7 +115,7 @@ class NetworkDynamics():
     return jacobian
 
   def create_rates_vector(self, number_densities: np.ndarray,
-                          temperature=None) -> np.ndarray:
+                          temperature=None, limit_rates=False) -> np.ndarray:
     # Create the vector v(x) = K Exp(Z.T Ln(x)) that includes the stoichiometry
     # into reaction rates
     # 'number_densities' must have the same indexing as species!
@@ -124,12 +124,24 @@ class NetworkDynamics():
     #   exit(-1)
     Z = self.network.complex_composition_matrix
 
+    # Update kinetics matrix if temperature is provided
+    # TODO:
+    # Only allow temperature change in Dynamics, which automatically updates
+    # all matrices
     if temperature:
-      K = self.network.create_complex_kinetics_matrix(temperature)
+      K = self.network.create_complex_kinetics_matrix(temperature,
+                                                      limit_rates=limit_rates)
     else:
       K = self.network.complex_kinetics_matrix
 
-    rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
+    # Check if number densities are below minimum value of 1e-20 and set the
+    # rates to zero if so
+    boundary_mask = (number_densities <= 1e-20).nonzero()
+    rates_vector = np.zeros(len(number_densities))
+    rates_vector[boundary_mask] = 0
+    rates_vector[~boundary_mask] = K.dot(
+        np.exp(Z.T.dot(np.log(number_densities[~boundary_mask]))))
+
     return rates_vector
 
   def calculate_dynamics(self) -> np.ndarray:
@@ -141,14 +153,16 @@ class NetworkDynamics():
 
   def solve(self, timescale: float, initial_number_densities: np.ndarray,
             initial_time=0, create_jacobian=False, jacobian=None,
+            limit_rates=False,
             atol=1e-30, rtol=1e-4) -> np.ndarray:
     # TODO:
     # Add atol, rtol and other solver params
-    def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
+    def f(t: float, y: np.ndarray,
+          temperature=None, limit_rates=False) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
       Z = self.network.complex_composition_matrix
       D = self.network.complex_incidence_matrix
-      rates_vector = self.create_rates_vector(y, temperature)
+      rates_vector = self.create_rates_vector(y, temperature, limit_rates)
 
       return Z @ D @ rates_vector
 
@@ -171,6 +185,7 @@ class NetworkDynamics():
     # TODO: Check for failure and return codes
     number_densities = []
     while solver.successful() and solver.t < timescale:
+      solver.set_f_params(self.temperature, limit_rates)
       number_densities.append(solver.integrate(solver.t + dt))
 
     return number_densities

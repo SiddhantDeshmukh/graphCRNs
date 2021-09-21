@@ -104,6 +104,9 @@ class Reaction:
         expression = self.rate_expression.replace("Tgas", str(temperature))
         rate = eval(expression)
 
+      elif self.limit == 'sharp':
+        if temperature < self.min_temperature or temperature > self.max_temperature:
+          rate = 0
       else:
         rate = limit_dict[self.limit](rate, temperature,
                                       self.min_temperature,
