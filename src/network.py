@@ -1,4 +1,5 @@
-from src.utilities import cofactor_matrix, normalise_2d
+from src.utilities import cofactor_matrix, list_to_krome_format
+import fortranformat as ff
 from itertools import chain
 from typing import Dict, List
 from src.reaction import Reaction
@@ -88,6 +89,7 @@ class Network:
         # TODO: Fix this condition, since if empty lines are present in a file,
         # it stops reading (happens often when adding comments)
         if not line:
+          print(type(line), line)
           break
 
         if line.startswith("#"):
@@ -115,6 +117,42 @@ class Network:
           format_dict[key] = []
 
     return cls(reactions)
+
+  # ----------------------------------------------------------------------------
+  # Output
+  # ----------------------------------------------------------------------------
+  def to_krome_format(self, path: str):
+    # Write the Network to KROME-readable format
+    # Determine reaction formats
+    # 1. Group based on if temperature limits are present
+    limit_idxs = [i for i, rxn in enumerate(self.reactions)
+                  if rxn.min_temperature or rxn.max_temperature]
+
+    limit_reactions = [self.reactions[i] for i in limit_idxs]
+    unlimit_reactions = [self.reactions[i] for i in range(len(self.reactions))
+                         if not i in limit_idxs]
+
+    # 2. Group based on number of reactants / products
+    output = "# Automatically generated from Network\n"
+    if limit_reactions:
+      output += "\n# Reactions with temperature limits\n"
+      output += f"{list_to_krome_format(limit_reactions)}\n"
+    if unlimit_reactions:
+      output += "\n# Reactions without temperature limits\n"
+      output += f"{list_to_krome_format(unlimit_reactions)}\n"
+
+    with open(path, 'w', encoding='utf-8') as outfile:
+      outfile.write(output)
+
+  def to_cobold_format(self, path: str, with_limits=False):
+    # Write Network to CO5BOLD 'chem.dat' format (provided a FORTRAN format)
+    CHEM_FORMAT = "(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,A16)"
+    CHEM_LIMIT_FORMAT = "(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,2(1X,1PE8.2),A16)"
+    fformat = CHEM_LIMIT_FORMAT if with_limits else CHEM_FORMAT
+    writer = ff.FortranRecordWriter(fformat)
+    with open(path, 'w') as outfile:
+      for rxn in self.reactions:
+        writer.write(outfile, )
 
   # ----------------------------------------------------------------------------
   # Methods for creating graphs

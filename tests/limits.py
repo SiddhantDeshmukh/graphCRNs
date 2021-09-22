@@ -223,16 +223,20 @@ def run_and_plot(temperatures: List, times: List, network: Network,
   plt.savefig(filename, bbox_inches="tight")
 
 
-# Kinetics with limits
-temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
-times = np.logspace(-5, 5, num=100)
-colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
-for limit in ['boundary', 'sharp', 'weak']:
-  network.set_reaction_limit(limit)
-  print(f"Solving with {limit} limit.")
-  filename = f"../out/figs/solar_network_{limit}.png"
-  run_and_plot(temperatures, times, network, filename, limit_rates=True)
+network.to_krome_format('./test.ntw')
+test_network = Network.from_krome_file('./test.ntw')
+print([f"{reaction}\n" for reaction in test_network.reactions])
 
-print(f"Solving unlimited rates case.")
-filename = f"../out/figs/solar_network_unlimited.png"
-run_and_plot(temperatures, times, network, filename, limit_rates=False)
+# Kinetics with limits
+# # temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
+# # times = np.logspace(-5, 5, num=100)
+# # colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
+# # for limit in ['boundary', 'sharp', 'weak']:
+# #   network.set_reaction_limit(limit)
+# #   print(f"Solving with {limit} limit.")
+# #   filename = f"../out/figs/solar_network_{limit}.png"
+# #   run_and_plot(temperatures, times, network, filename, limit_rates=True)
+
+# # print(f"Solving unlimited rates case.")
+# # filename = f"../out/figs/solar_network_unlimited.png"
+# run_and_plot(temperatures, times, network, filename, limit_rates=False)

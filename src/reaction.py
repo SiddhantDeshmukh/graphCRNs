@@ -57,6 +57,27 @@ class Reaction:
 
     return output
 
+  def krome_str(self) -> str:
+    from src.utilities import to_fortran_str
+    # Comma-separated string as expected by KROME format
+    rxn_str = ""
+    if self.idx:
+      rxn_str += f"{self.idx},"
+
+    rxn_str += ','.join([r for r in self.reactants]) + ","
+    rxn_str += ','.join([p for p in self.products]) + ","
+    # TODO:
+    # Find a better way to replace 'e' -> 'd' while retaining 'exp'
+    rxn_str += f"{self.rate_expression.replace('e', 'd').replace('dxp', 'exp')},"
+
+    if self.min_temperature or self.max_temperature:
+      rxn_str += f"{to_fortran_str(self.min_temperature, '.3e')},"
+      rxn_str += f"{to_fortran_str(self.max_temperature, '.3e')},"
+      rxn_str += f"{self.limit},"
+
+    # Remove trailing comma
+    return rxn_str.rstrip(',')
+
   def __call__(self, temperature: float, use_limit=True) -> float:
     return self.evaluate_rate_expression(temperature, use_limit=use_limit)
 
