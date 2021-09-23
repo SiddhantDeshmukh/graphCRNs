@@ -1,6 +1,5 @@
 from typing import Union, Dict, List
 import numpy as np
-from sympy.utilities.iterables import numbered_symbols
 from src.network import Network
 from scipy.integrate import ode
 import sympy
@@ -136,11 +135,9 @@ class NetworkDynamics():
 
     # Check if number densities are below minimum value of 1e-20 and set the
     # rates to zero if so
-    boundary_mask = (number_densities <= 1e-20).nonzero()
-    rates_vector = np.zeros(len(number_densities))
-    rates_vector[boundary_mask] = 0
-    rates_vector[~boundary_mask] = K.dot(
-        np.exp(Z.T.dot(np.log(number_densities[~boundary_mask]))))
+    boundary_mask = (number_densities <= 1e-20)
+    number_densities[boundary_mask] = 1e-20
+    rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
 
     return rates_vector
 

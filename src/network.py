@@ -1,10 +1,11 @@
-from src.utilities import cofactor_matrix, list_to_krome_format
-import fortranformat as ff
-from itertools import chain
-from typing import Dict, List
-from src.reaction import Reaction
-import networkx as nx
 import numpy as np
+import networkx as nx
+from src.reaction import Reaction
+from typing import Dict, List
+from itertools import chain
+import fortranformat as ff
+from src.utilities import cofactor_matrix, list_to_krome_format,\
+    constants_from_rate, pad_list
 
 
 # TODO:
@@ -148,11 +149,22 @@ class Network:
     # Write Network to CO5BOLD 'chem.dat' format (provided a FORTRAN format)
     CHEM_FORMAT = "(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,A16)"
     CHEM_LIMIT_FORMAT = "(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,2(1X,1PE8.2),A16)"
+    output = ""
     fformat = CHEM_LIMIT_FORMAT if with_limits else CHEM_FORMAT
     writer = ff.FortranRecordWriter(fformat)
+    for rxn in self.reactions:
+      reactants = pad_list(rxn.reactants, 3)
+      products = pad_list(rxn.products, 4)
+      alpha, beta, gamma = constants_from_rate(rxn.rate_expression)
+      data = [rxn.idx, *reactants, *products, alpha, beta, gamma]
+      if with_limits:
+        data.append(rxn.min_temperature)
+        data.append(rxn.max_temperature)
+
+      output += writer.write(data) + "\n"
+
     with open(path, 'w') as outfile:
-      for rxn in self.reactions:
-        writer.write(outfile, )
+      outfile.write(output)
 
   # ----------------------------------------------------------------------------
   # Methods for creating graphs

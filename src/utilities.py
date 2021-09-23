@@ -105,6 +105,8 @@ def constants_from_rate(rate: str) -> List:
 
   alpha, beta, gamma = None, None, None
   if '*' in rate:
+    # TODO:
+    # This won't work since it'll split on '**'
     parts = rate.split("*")
     for part in parts:
       alpha, beta, gamma = constants_from_part(part)
@@ -112,3 +114,16 @@ def constants_from_rate(rate: str) -> List:
     alpha, beta, gamma = constants_from_part(rate)
 
   return alpha, beta, gamma
+
+# -------------------------------------------------------------------------
+# List utilities
+# -------------------------------------------------------------------------
+
+
+class PaddedList(list):
+  def ljust(self, n, fill_value=''):
+    return self + [fill_value] * (n - len(self))
+
+
+def pad_list(lst: List, n: int, fill_value='') -> PaddedList:
+  return PaddedList(lst).ljust(n, fill_value=fill_value)

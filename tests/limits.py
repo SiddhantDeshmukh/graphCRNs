@@ -208,35 +208,43 @@ def run_and_plot(temperatures: List, times: List, network: Network,
     dynamics = setup_dynamics(network, temperature)
     number_densities = solve_dynamics(dynamics, times, limit_rates=limit_rates)
 
+    total_number_density = np.sum(number_densities, axis=0)
+    hydrogen_number_density = number_densities[network.species.index('H')]
     for s, n, c in zip(network.species, number_densities, colours):
-      if s in ['C', 'O', 'H', 'M']:
-        continue
-      axes[idx_x, idx_y].plot(np.log10(times), np.log10(n),
+      # if s in ['C', 'O', 'H', 'M']:
+      #   continue
+      # Number density ratio
+      # axes[idx_x, idx_y].plot(np.log10(times), np.log10(n/total_number_density),
+      #                         label=s, color=c, ls='-')
+      # Abundance
+      abundance = 12 + np.log10(n / hydrogen_number_density)
+      axes[idx_x, idx_y].plot(np.log10(times), abundance,
                               label=s, color=c, ls='-')
     axes[idx_x, idx_y].set_title(f"{temperature} K")
     axes[idx_x, idx_y].legend()
     if idx_x == 2:
       axes[idx_x, idx_y].set_xlabel("log time [s]")
     if idx_y == 0:
-      axes[idx_x, idx_y].set_ylabel("log number density")
+      # axes[idx_x, idx_y].set_ylabel("log number density ratio")
+      axes[idx_x, idx_y].set_ylabel("Abundance")
 
   plt.savefig(filename, bbox_inches="tight")
 
 
 network.to_krome_format('./test.ntw')
-test_network = Network.from_krome_file('./test.ntw')
-print([f"{reaction}\n" for reaction in test_network.reactions])
+# network.to_cobold_format('./test.dat')
+# test_network = Network.from_krome_file('./test.ntw')
+# print([f"{reaction}\n" for reaction in test_network.reactions])
 
 # Kinetics with limits
-# # temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
-# # times = np.logspace(-5, 5, num=100)
-# # colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
-# # for limit in ['boundary', 'sharp', 'weak']:
-# #   network.set_reaction_limit(limit)
-# #   print(f"Solving with {limit} limit.")
-# #   filename = f"../out/figs/solar_network_{limit}.png"
-# #   run_and_plot(temperatures, times, network, filename, limit_rates=True)
-
-# # print(f"Solving unlimited rates case.")
-# # filename = f"../out/figs/solar_network_unlimited.png"
-# run_and_plot(temperatures, times, network, filename, limit_rates=False)
+temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
+times = np.logspace(-5, 3, num=50)
+colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
+print(f"Solving unlimited rates case.")
+filename = f"../out/figs/solar_network_unlimited.png"
+run_and_plot(temperatures, times, network, filename, limit_rates=False)
+for limit in ['boundary', 'weak', 'sharp']:
+  network.set_reaction_limit(limit)
+  print(f"Solving with {limit} limit.")
+  filename = f"../out/figs/solar_network_{limit}.png"
+  run_and_plot(temperatures, times, network, filename, limit_rates=True)
