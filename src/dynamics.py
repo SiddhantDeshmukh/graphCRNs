@@ -1,4 +1,5 @@
 from typing import Union, Dict, List
+from astropy.units.equivalencies import temperature
 import numpy as np
 from src.network import Network
 from scipy.integrate import ode
@@ -135,8 +136,10 @@ class NetworkDynamics():
 
     # Check if number densities are below minimum value of 1e-20 and set the
     # rates to zero if so
-    boundary_mask = (number_densities <= 1e-20)
-    number_densities[boundary_mask] = 1e-20
+    # TODO:
+    # Check ratio of number densities instead?
+    # boundary_mask = (number_densities <= 1e-20)
+    # number_densities[boundary_mask] = 1e-20
     rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
 
     return rates_vector
@@ -152,8 +155,6 @@ class NetworkDynamics():
             initial_time=0, create_jacobian=False, jacobian=None,
             limit_rates=False,
             atol=1e-30, rtol=1e-4) -> np.ndarray:
-    # TODO:
-    # Add atol, rtol and other solver params
     def f(t: float, y: np.ndarray,
           temperature=None, limit_rates=False) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
@@ -164,11 +165,13 @@ class NetworkDynamics():
       return Z @ D @ rates_vector
 
     if create_jacobian:
-      # Create the Jacobian matrix analytically
-      pass
+      # Use the analytical Jacobian stored in NetworkDynamics
+      jacobian = self.evaluate_jacobian
+
     if jacobian:
       solver = ode(f, jacobian).set_integrator("vode", method='bdf',
                                                atol=atol, rtol=rtol)
+      solver.set_jac_params(self.temperature, initial_number_densities)
     else:
       solver = ode(f).set_integrator("vode", method='bdf', atol=atol, rtol=rtol,
                                      with_jacobian=True)

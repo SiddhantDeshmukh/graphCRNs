@@ -189,10 +189,12 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
   final_number_densities = []
   # TODO:
   # Refactor 'dynamics' to use dynamics.number_densities instead of passing in
-  for time in times:
+  for i, time in enumerate(times):
     final = dynamics.solve(time, dynamics.number_densities,
+                           create_jacobian=True,
                            limit_rates=limit_rates)[0]
     final_number_densities.append(final)
+    print(f"Done {i+1} time of {len(times)}")
 
   final_number_densities = np.array(final_number_densities).T
   return final_number_densities
@@ -207,6 +209,8 @@ def run_and_plot(temperatures: List, times: List, network: Network,
     idx_y = i % 3
     dynamics = setup_dynamics(network, temperature)
     number_densities = solve_dynamics(dynamics, times, limit_rates=limit_rates)
+
+    print(f"Done temperature {i+1} of {len(temperatures)}")
 
     total_number_density = np.sum(number_densities, axis=0)
     hydrogen_number_density = number_densities[network.species.index('H')]
@@ -237,14 +241,15 @@ network.to_krome_format('./test.ntw')
 # print([f"{reaction}\n" for reaction in test_network.reactions])
 
 # Kinetics with limits
-temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
-times = np.logspace(-5, 3, num=50)
+# temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
+temperatures = [1000, 3000, 5000, 7500, 10000, 15000]
+times = np.logspace(-6, 6, num=10)
 colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
 print(f"Solving unlimited rates case.")
 filename = f"../out/figs/solar_network_unlimited.png"
 run_and_plot(temperatures, times, network, filename, limit_rates=False)
-for limit in ['boundary', 'weak', 'sharp']:
-  network.set_reaction_limit(limit)
-  print(f"Solving with {limit} limit.")
-  filename = f"../out/figs/solar_network_{limit}.png"
-  run_and_plot(temperatures, times, network, filename, limit_rates=True)
+# for limit in ['boundary', 'weak', 'sharp']:
+#   network.set_reaction_limit(limit)
+#   print(f"Solving with {limit} limit.")
+#   filename = f"../out/figs/solar_network_{limit}.png"
+#   run_and_plot(temperatures, times, network, filename, limit_rates=True)
