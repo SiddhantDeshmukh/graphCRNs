@@ -90,7 +90,7 @@ class Network:
         # TODO: Fix this condition, since if empty lines are present in a file,
         # it stops reading (happens often when adding comments)
         if not line:
-          print(type(line), line)
+          # print(type(line), line)
           break
 
         if line.startswith("#"):
@@ -165,6 +165,18 @@ class Network:
 
     with open(path, 'w') as outfile:
       outfile.write(output)
+
+  # ----------------------------------------------------------------------------
+  # String methods
+  # ----------------------------------------------------------------------------
+  def __str__(self) -> str:
+    return "\n".join([str(rxn) for rxn in self.reactions])
+
+  def description(self) -> str:
+    output = f"{len(self.reactions)} reactions with {len(self.species)} species.\n"
+    output += "\n".join([rxn.description() for rxn in self.reactions])
+
+    return output
 
   # ----------------------------------------------------------------------------
   # Methods for creating graphs

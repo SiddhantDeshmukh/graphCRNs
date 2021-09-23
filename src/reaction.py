@@ -50,10 +50,12 @@ class Reaction:
     return f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
 
   def description(self) -> str:
-    output = f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
-    output += f"\tRate: {self.rate_expression}"
+    output = ""
     if self.idx:
-      output += f"\tIndex = {self.idx}"
+      output += f"{self.idx}: "
+
+    output += f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
+    output += f"\tRate: {self.rate_expression}"
 
     return output
 
