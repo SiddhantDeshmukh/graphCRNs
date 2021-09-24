@@ -2,9 +2,10 @@
 # Need some kind of 'intelligent' reader, the idea is to use KROME format so we
 # read to find the 'format', then the lines after that have to follow this
 # format. Need a Reaction class and a Network class for sure
-from typing import Dict, List
+from typing import Dict, List, Union
 from math import exp  # used in 'eval'
 from .limits import limit_dict, scale_dict
+import numpy as np
 
 
 # Order list alphabetically so that complex combinations work out
@@ -144,6 +145,21 @@ class Reaction:
     for key, value in reactants.items():
       rate += f" * n_{key}"
       if abs(value) > 1:
-        rate += f"^{abs(value)}"
+        rate += f"**{abs(value)}"
 
     return rate
+
+  def evaluate_mass_action_rate(self, temperature: float,
+                                number_densities: Union[Dict, np.ndarray]) -> float:
+    # Provided a temperature and number densities for the reactants (dictionary
+    # containing all reactants or numpy array indexed the same as the reactants)
+    # compute the mass action rate
+    rate = self.determine_mass_action_rate().replace("Tgas", str(temperature))
+    if isinstance(number_densities, dict):
+      for r in self.reactants:
+        rate = rate.replace(f"n_{r}", str(number_densities[r]))
+    elif isinstance(number_densities, np.ndarray):
+      for i, r in enumerate(self.reactants):
+        rate = rate.replace(f"n_{r}", str(number_densities[i]))
+
+    return eval(rate)

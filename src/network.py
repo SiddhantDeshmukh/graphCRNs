@@ -1,27 +1,36 @@
 import numpy as np
 import networkx as nx
 from src.reaction import Reaction
-from typing import Dict, List
-from itertools import chain
+from typing import Dict, List, Union
+from itertools import product
 import fortranformat as ff
 from src.utilities import cofactor_matrix, list_to_krome_format,\
     constants_from_rate, pad_list
 
 
-# TODO:
-# Clean-up temperature implementation, use it as a private attribute
-
 class Network:
-  def __init__(self, reactions: List[Reaction], temperature=300) -> None:
+  def __init__(self, reactions: List[Reaction], temperature=300,
+               number_densities=None) -> None:
     self.reactions = sorted(reactions, key=lambda rxn: rxn.idx)
 
-    # Potential space saving with clever list comprehensions?
-    # Doing species and complexes in this way is redundant, should do complexes
-    # first and then reduce that to get the species
+    # Determine species and complexes present in each reaction
     species = []
+    complexes = []
     for rxn in self.reactions:
       species.extend(rxn.reactants + rxn.products)
+      complexes.append(rxn.reactant_complex)
+      complexes.append(rxn.product_complex)
+
     self.species = sorted(list(set(species)))
+    self.complexes = sorted(list(set(complexes)))
+
+    # Properties
+    self._temperature = temperature
+    if not number_densities:  # dummy values
+      number_densities = np.zeros(len(self.species))
+      for i, s in enumerate(self.species):
+        number_densities[i] = np.random.randint(1, 10)
+    self._number_densities = number_densities
 
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H
@@ -29,12 +38,6 @@ class Network:
     # self.complexes = sorted(list(set(chain.from_iterable(
     #     [[rxn.reactant_complex, rxn.product_complex]
     #      for rxn in self.reactions]))))
-
-    complexes = []
-    for rxn in self.reactions:
-      complexes.append(rxn.reactant_complex)
-      complexes.append(rxn.product_complex)
-    self.complexes = sorted(list(set(complexes)))
 
     # Create MultiDiGraphs for species and complexes using networkx
     self.species_graph = self.create_species_graph()
@@ -51,15 +54,8 @@ class Network:
     self.stoichiometric_matrix = self.complex_composition_matrix @ self.complex_incidence_matrix
     # Outgoing co-incidence matrix of reaction rates (r x c)
     self.complex_kinetics_matrix = self.create_complex_kinetics_matrix()
-    # Outgoing co-incidence matrix of reaction rates (r x m)
-    self.species_kinetics_matrix = self.create_species_kinetics_matrix()
     # Weighted Laplacian (transpose of conventional Laplacian) matrix (c x c)
     self.complex_laplacian = self.create_complex_laplacian_matrix()
-    # Weighted Laplacian matrix (m x m)
-    self.species_laplacian = self.create_species_laplacian_matrix()
-
-    # Properties
-    self._temperature = temperature
 
   @classmethod
   def from_krome_file(cls, krome_file: str):
@@ -183,25 +179,23 @@ class Network:
   # ----------------------------------------------------------------------------
   # TODO:
   # Move graph creation into a generic functional script
-  def create_species_graph(self, temperature=None) -> nx.MultiDiGraph:
+  def create_species_graph(self) -> nx.MultiDiGraph:
     # Create graph of species
     species_graph = nx.MultiDiGraph()
     for rxn in self.reactions:
-      # TODO: Optimise with itertools.product()
-      for r in rxn.reactants:
-        for p in rxn.products:
-          weight = rxn.evaluate_rate_expression(temperature) \
-              if temperature else rxn.rate
-          species_graph.add_edge(r, p, weight=weight)
+      for r, p in product(rxn.reactants, rxn.products):
+        weight = rxn.evaluate_mass_action_rate(self.temperature,
+                                               self.number_densities)
+        species_graph.add_edge(r, p, weight=weight)
 
     return species_graph
 
-  def create_complex_graph(self, temperature=None) -> nx.MultiDiGraph:
+  def create_complex_graph(self) -> nx.MultiDiGraph:
     # Create graph of complexes
     complex_graph = nx.MultiDiGraph()
     for rxn in self.reactions:
-      weight = rxn.evaluate_rate_expression(temperature) \
-          if temperature else rxn.rate
+      weight = rxn.evaluate_mass_action_rate(self.temperature,
+                                             self.number_densities)
       complex_graph.add_edge(rxn.reactant_complex,
                              rxn.product_complex, weight=weight)
 
@@ -248,29 +242,15 @@ class Network:
 
     return complex_composition_matrix
 
-  def create_complex_kinetics_matrix(self, temperature=300, limit_rates=False) -> np.ndarray:
+  def create_complex_kinetics_matrix(self, limit_rates=False) -> np.ndarray:
     # Create the (r x c) coindicidence matrix containing reaction rate constants
     # 'K' in: x_dot =  ZDK Exp(Z.T Ln(x))
     kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)))
     for i, rxn in enumerate(self.reactions):
       for j, complex in enumerate(self.complexes):
         if complex == rxn.reactant_complex:
-          kinetics_matrix[i, j] = rxn.evaluate_rate_expression(temperature,
+          kinetics_matrix[i, j] = rxn.evaluate_rate_expression(self.temperature,
                                                                use_limit=limit_rates)
-    return kinetics_matrix
-
-  def create_species_kinetics_matrix(self, temperature=300, normalise_kinetics=False) -> np.ndarray:
-    # Create (r x m) coincidence matrix containing reaction rate constants
-    # 'K' in: x_dot =  SK x
-    kinetics_matrix = np.zeros((len(self.reactions), len(self.species)))
-    for i, rxn in enumerate(self.reactions):
-      for j, species in enumerate(self.species):
-        if species in rxn.reactants:
-          # TODO:
-          # Should check if we've already been on the reactant side of a certain
-          # reaction since we don't need to do the same reaction more than once
-          kinetics_matrix[i, j] = rxn.evaluate_rate_expression(temperature)
-
     return kinetics_matrix
 
   def create_complex_laplacian_matrix(self) -> np.ndarray:
@@ -279,28 +259,22 @@ class Network:
     laplacian_matrix = -D @ K
     return laplacian_matrix
 
-  def create_species_laplacian_matrix(self) -> np.ndarray:
-    # Create (m x m) Laplacian matrix L := -SK
-    S, K = self.stoichiometric_matrix, self.species_kinetics_matrix
-    laplacian_matrix = -S @ K
-    return laplacian_matrix
-
   # ----------------------------------------------------------------------------
   # Methods for updating graphs
   # ----------------------------------------------------------------------------
 
-  def update_species_graph(self, temperature: float):
+  def update_species_graph(self):
     # Given a certain temperature, update the species Graph (weights)
-    self.species_graph = self.create_species_graph(temperature=temperature)
+    self.species_graph = self.create_species_graph()
 
-  def update_complex_graph(self, temperature: float):
+  def update_complex_graph(self):
     # Given a certain temperature, update the complex Graph (weights)
-    self.complex_graph = self.create_complex_graph(temperature=temperature)
+    self.complex_graph = self.create_complex_graph()
 
   # ----------------------------------------------------------------------------
   # Methods for updating attributes
   # ----------------------------------------------------------------------------
-  def update(self, temperature: float):
+  def update(self):
     # TODO:
     # Use temperature property instead of passing in
 
@@ -308,32 +282,21 @@ class Network:
     # that depend on it
     # print(f"Updating matrices with temperature {temperature} K")
     self.complex_kinetics_matrix =\
-        self.create_complex_kinetics_matrix(temperature)
-    self.species_kinetics_matrix =\
-        self.create_species_kinetics_matrix(temperature)
+        self.create_complex_kinetics_matrix()
 
     # print(f"Updating graphs with temperature {temperature} K")
-    self.update_species_graph(temperature)
-    self.update_complex_graph(temperature)
+    self.update_species_graph()
+    self.update_complex_graph()
 
   # ----------------------------------------------------------------------------
   # Methods for computing nullspaces
   # ----------------------------------------------------------------------------
-  def compute_complex_balance(self, temperature: float) -> np.ndarray:
+  def compute_complex_balance(self) -> np.ndarray:
     # Using Kirchhoff's Matrix Tree theorem, compute the kernel of the Laplacian
     # corresponding to a positive, complex-balanced equilibrium for a given
     # temperature
     # Only need first row of cofactor matrix!
     C = cofactor_matrix(self.complex_laplacian)
-    rho = C[0]
-    return rho
-
-  def compute_species_balance(self, temperature: float) -> np.ndarray:
-    # Using Kirchhoff's Matrix Tree theorem, compute the kernel of the Laplacian
-    # corresponding to a positive, complex-balanced equilibrium for a given
-    # temperature
-    # Only need first row of cofactor matrix!
-    C = cofactor_matrix(self.species_laplacian)
     rho = C[0]
     return rho
 
@@ -392,4 +355,19 @@ class Network:
   @temperature.setter
   def temperature(self, value: float):
     self._temperature = value
-    self.update(value)
+    self.update()
+
+  @property
+  def number_densities(self):
+    return self._number_densities
+
+  @number_densities.setter
+  def number_densities(self, value: Union[np.ndarray, Dict]):
+    if isinstance(value, np.ndarray):
+      # Same indexing as species
+      self._number_densities = value
+    elif isinstance(value, dict):
+      self._number_densities = np.zeros(len(self.species))
+      for i, s in enumerate(self.species):
+        self._number_densities[i] = value[s]
+    self.update()

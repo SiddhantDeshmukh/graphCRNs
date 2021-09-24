@@ -2,8 +2,14 @@
 # and timescales
 from itertools import product
 from typing import Dict, List, Union
+
+from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
 from src.network import Network
 import networkx as nx
+import matplotlib.pyplot as plt
+import numpy as np
+
+np.random.seed(42)
 
 
 def network_balance(species_count: Dict):
@@ -86,8 +92,34 @@ print("Network balance:")
 print("\n".join([f"{key}: {value}" for key, value in balance_dict.items()]))
 
 print("Pathfinding")
+initial_number_densities = {
+    "H": 1e12,
+    "H2": 1e-4,
+    "OH": 1e-12,
+    "C": 10**(8.39),
+    "O": 10**(8.66),
+    "CH": 1e-12,
+    "CO": 1e-12,
+    "M": 1e11,
+}
+
+gas_density = 1e-6  # [g cm^-3]
+hydrogen_density = gas_density_to_hydrogen_number_density(gas_density)
+
+# Index number densities same as network.species
+for i, s in enumerate(network.species):
+  initial_number_densities[s] = log_abundance_to_number_density(np.log10(initial_number_densities[s]),
+                                                                np.log10(hydrogen_density.value))
+
+network.number_densities = initial_number_densities
+print(initial_number_densities)
 sources = ['C', 'O']
 targets = ['CO', 'CH']
+
+# plt.figure()
+# nx.draw(network.species_graph)
+# plt.show()
+
 unique_paths, unique_lengths = find_network_paths(network, sources, targets)
 
 for key in unique_paths.keys():
