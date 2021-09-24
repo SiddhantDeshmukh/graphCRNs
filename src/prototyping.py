@@ -264,44 +264,6 @@ plt.show()
 # exit()
 
 # %%
-# Pathfinding
-# Find shortest path and 'k' shortest path between two species
-# source = 'C'
-# target = 'CO'
-source = 'A'
-target = 'C'
-cutoff = 4
-shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
-                                     cutoff=cutoff)
-
-unique_paths = []
-unique_lengths = []
-
-print("Paths and lengths")
-count = 0
-for path in shortest_paths:
-  total_length = 0
-  for i in range(len(path) - 1):
-    source, target = path[i], path[i+1]
-    edge = network.species_graph[source][target][0]
-    length = edge['weight']
-    total_length += length
-  # print(path, total_length)
-
-  string_path = ','.join(path)
-  if not string_path in unique_paths:
-    unique_paths.append(string_path)
-    unique_lengths.append(total_length)
-
-  count += 1
-  if count >= 1000:
-    break
-
-print(count)
-for path, length in zip(unique_paths, unique_lengths):
-  print(path, length)
-
-# %%
 # TODO:
 # - Write docstrings
 # - Compartmentalise classes
