@@ -35,20 +35,67 @@ def network_balance(species_count: Dict):
   return balance_dict
 
 
+def add_species_paths(network: Network, source: str, target: str):
+  # Add species nodes and edges (complex composition) into network graph
+  # source/target dependent: don't add edges to species other than the
+  # target species for any complex that contains the target species
+  G = network.complex_graph
+  edges_to_add = []
+
+  for i, s in enumerate(network.species):
+    # Add undirected (weight = 0) edges between each complex that contains
+    # a species UNLESS that complex contains the target species
+    for node in G.nodes():
+      # Only add target/source connection to node
+      if target in node or source in node:
+        if target in node:
+          edges_to_add.append((target, node, 0))
+        else:
+          edges_to_add.append((source, node, 0))
+        continue
+
+      # Add species connection to node
+      if s in node and not node in network.species:
+        edges_to_add.append((s, node, 0))
+  G.add_weighted_edges_from(edges_to_add)
+
+  return G
+
+
 def find_paths(network: Network, source: str, target: str, cutoff=4,
                max_paths=100) -> Union[List, List]:
   # Find the 'num_paths' shortest paths between 'target' and 'source' of max
   # length 'cutoff'
   unique_paths = []
   unique_lengths = []
-  shortest_paths = nx.all_simple_paths(network.species_graph, source, target,
+
+  plt.figure()
+
+  search_graph = add_species_paths(network, source, target)
+  edges, weights = zip(*nx.get_edge_attributes(search_graph, 'weight').items())
+
+  options = {
+      # "font_size": 24,
+      # "node_size": 2000,
+      "node_color": "white",
+      "edgelist": edges,
+      "edge_color": weights,
+      # "linewidths": 5,
+      # "width": 5,
+      "with_labels": True
+  }
+  nx.draw(search_graph, **options)
+
+  plt.show()
+  exit()
+  shortest_paths = nx.all_simple_paths(search_graph, source, target,
                                        cutoff=cutoff)
   count = 0
   for path in shortest_paths:
     total_length = 0
     for i in range(len(path) - 1):
       source, target = path[i], path[i+1]
-      edge = network.species_graph[source][target][0]
+      edge = search_graph[source][target][0]
       length = edge['weight']
       total_length += length
 
