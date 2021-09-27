@@ -76,6 +76,16 @@ def compare_limits(rate: Callable, temperatures: np.ndarray,
   return rates
 
 
+def setup_number_densities(number_densities_dict, hydrogen_density):
+  number_densities = np.zeros(len(network.species))
+  # Index number densities same as network.species
+  for i, s in enumerate(network.species):
+    n = log_abundance_to_number_density(np.log10(number_densities_dict[s]),
+                                        np.log10(hydrogen_density.value))
+    number_densities[i] = n
+
+  return number_densities
+
 # %%
 # # Dummy rates for testing
 # fig, axes = plt.subplots(2, 2, figsize=(16, 12))
@@ -106,59 +116,21 @@ def compare_limits(rate: Callable, temperatures: np.ndarray,
 
 # plt.show()
 
+
 # %%
 # # CO network rates
 res_dir = '../res'
-limit_file = f'{res_dir}/react-solar-umist12'
+# network_file = f'{res_dir}/react-solar-umist12'
+network_file = f'{res_dir}/catalyst_co.ntw'
 
-network = Network.from_krome_file(limit_file)
-print(len(network.reactions))  # 30 reactions
-# nrows = 6
-# ncols = 6
-
-# fig, axes = plt.subplots(nrows, ncols, figsize=(32, 24), sharex=True)
-# temperatures = np.logspace(1.3, 4.7, num=500)
-# for i, reaction in enumerate(network.reactions):
-#   idx_x = i // 6
-#   idx_y = i % 6
-
-#   limited_rates = [reaction(temperature, True) for temperature in temperatures]
-#   unlimited_rates = [reaction(temperature, False)
-#                      for temperature in temperatures]
-
-#   # Change limit to 'boundary' to compute boundary rate
-#   reaction.limit = 'boundary'
-#   boundary_rates = [reaction(temperature, True) for temperature in temperatures]
-
-#   axes[idx_x, idx_y].plot(temperatures, limited_rates,
-#                           label=f"{reaction.idx}: Limited")
-#   axes[idx_x, idx_y].plot(temperatures, unlimited_rates,
-#                           label=f"{reaction.idx}: Unlimited", ls='--')
-#   axes[idx_x, idx_y].plot(temperatures, boundary_rates,
-#                           label=f"{reaction.idx}: Boundary", ls=':')
-
-#   axes[idx_x, idx_y].axvline(reaction.min_temperature, c='k', ls='--')
-#   axes[idx_x, idx_y].axvline(reaction.max_temperature, c='k', ls='--')
-
-#   axes[idx_x, idx_y].set_title(str(reaction))
-#   if idx_x == 4:
-#     axes[idx_x, idx_y].set_xlabel("Temperature [K]")
-#   if idx_y == 0:
-#     axes[idx_x, idx_y].set_ylabel("Rate")
-#   # axes[idx_x, idx_y].set_xscale("log")
-#   axes[idx_x, idx_y].set_yscale("log")
-#   axes[idx_x, idx_y].legend()
-
-# plt.show()
-
-
-# %%
 initial_number_densities = {
     "H": 1e12,
     "H2": 1e-4,
     "OH": 1e-12,
-    "C": 10**(8.39),
-    "O": 10**(8.66),
+    "C": 10**(8.39),  # solar
+    "O": 10**(8.66),  # solar
+    # "C": 10**(8.66),  # C-rich
+    # "O": 10**(8.39),  # C-rich
     "CH": 1e-12,
     "CO": 1e-12,
     "M": 1e11,
@@ -167,10 +139,56 @@ initial_number_densities = {
 gas_density = 1e-6  # [g cm^-3]
 hydrogen_density = gas_density_to_hydrogen_number_density(gas_density)
 
+network = Network.from_krome_file(network_file)
 
+network.number_densities = setup_number_densities(initial_number_densities,
+                                                  hydrogen_density)
+print(len(network.reactions))  # 30 reactions
+nrows = 6
+ncols = 6
+
+fig, axes = plt.subplots(nrows, ncols, figsize=(32, 24), sharex=True)
+temperatures = np.logspace(1.3, 4.7, num=500)
+for i, reaction in enumerate(network.reactions):
+  idx_x = i // 6
+  idx_y = i % 6
+
+  limited_rates = [reaction(temperature, True) for temperature in temperatures]
+  unlimited_rates = [reaction(temperature, False)
+                     for temperature in temperatures]
+
+  # Change limit to 'boundary' to compute boundary rate
+  reaction.limit = 'boundary'
+  boundary_rates = [reaction(temperature, True) for temperature in temperatures]
+
+  # axes[idx_x, idx_y].plot(temperatures, limited_rates,
+  #                         label=f"{reaction.idx}: Limited")
+  axes[idx_x, idx_y].plot(temperatures, unlimited_rates,
+                          label=f"{reaction.idx}: Unlimited", ls='--')
+  # axes[idx_x, idx_y].plot(temperatures, boundary_rates,
+  #                         label=f"{reaction.idx}: Boundary", ls=':')
+
+  axes[idx_x, idx_y].set_ylim(1e-20, 1e0)
+
+  axes[idx_x, idx_y].axvline(reaction.min_temperature, c='k', ls='--')
+  axes[idx_x, idx_y].axvline(reaction.max_temperature, c='k', ls='--')
+
+  axes[idx_x, idx_y].set_title(str(reaction))
+  if idx_x == 4:
+    axes[idx_x, idx_y].set_xlabel("Temperature [K]")
+  if idx_y == 0:
+    axes[idx_x, idx_y].set_ylabel("Rate")
+  # axes[idx_x, idx_y].set_xscale("log")
+  axes[idx_x, idx_y].set_yscale("log")
+  axes[idx_x, idx_y].legend()
+
+# plt.show()
+# exit()
+
+
+# %%
 def setup_dynamics(network: Network, temperature: float):
   # Initialise number densities
-  # TODO: Add density scaling
   number_densities = np.zeros(len(network.species))
   # Index number densities same as network.species
   for i, s in enumerate(network.species):
@@ -191,7 +209,7 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
   # Refactor 'dynamics' to use dynamics.number_densities instead of passing in
   for i, time in enumerate(times):
     final = dynamics.solve(time, dynamics.number_densities,
-                           create_jacobian=True,
+                           create_jacobian=False,
                            limit_rates=limit_rates)[0]
     final_number_densities.append(final)
     print(f"Done {i+1} time of {len(times)}")
@@ -222,6 +240,7 @@ def run_and_plot(temperatures: List, times: List, network: Network,
       #                         label=s, color=c, ls='-')
       # Abundance
       abundance = 12 + np.log10(n / hydrogen_number_density)
+      axes[idx_x, idx_y].set_ylim(-13, 13)
       axes[idx_x, idx_y].plot(np.log10(times), abundance,
                               label=s, color=c, ls='-')
     axes[idx_x, idx_y].set_title(f"{temperature} K")
@@ -235,21 +254,23 @@ def run_and_plot(temperatures: List, times: List, network: Network,
   plt.savefig(filename, bbox_inches="tight")
 
 
-network.to_krome_format('./test.ntw')
+# network.to_krome_format('./test.ntw')
 # network.to_cobold_format('./test.dat')
 # test_network = Network.from_krome_file('./test.ntw')
 # print([f"{reaction}\n" for reaction in test_network.reactions])
 
 # Kinetics with limits
-# temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
-temperatures = [1000, 3000, 5000, 7500, 10000, 15000]
-times = np.logspace(-6, 6, num=10)
+# network = Network.from_krome_file("../res/simplified_co.ntw")
+temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
+# temperatures = [1000, 3000, 5000, 7500, 10000, 15000]
+times = np.logspace(-6, 3, num=100)
 colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
 print(f"Solving unlimited rates case.")
-filename = f"../out/figs/solar_network_unlimited.png"
+filename = f"../out/figs/solar_network_unlimited_simplified.png"
 run_and_plot(temperatures, times, network, filename, limit_rates=False)
 # for limit in ['boundary', 'weak', 'sharp']:
 #   network.set_reaction_limit(limit)
 #   print(f"Solving with {limit} limit.")
 #   filename = f"../out/figs/solar_network_{limit}.png"
 #   run_and_plot(temperatures, times, network, filename, limit_rates=True)
+plt.show()

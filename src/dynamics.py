@@ -4,6 +4,7 @@ import numpy as np
 from src.network import Network
 from scipy.integrate import ode
 import sympy
+from numba import jit
 
 
 # TODO:
@@ -94,6 +95,7 @@ class NetworkDynamics():
 
     return jacobian
 
+  @jit(nopython=True)
   def evaluate_jacobian(self, temperature: float,
                         number_densities: np.ndarray) -> np.ndarray:
     # Evaluate the 'jacobian_str' using sympy
@@ -129,8 +131,7 @@ class NetworkDynamics():
     # Only allow temperature change in Dynamics, which automatically updates
     # all matrices
     if temperature:
-      K = self.network.create_complex_kinetics_matrix(temperature,
-                                                      limit_rates=limit_rates)
+      K = self.network.create_complex_kinetics_matrix(limit_rates=limit_rates)
     else:
       K = self.network.complex_kinetics_matrix
 
