@@ -95,7 +95,7 @@ class NetworkDynamics():
 
     return jacobian
 
-  @jit(nopython=True)
+  # @jit(nopython=True)
   def evaluate_jacobian(self, temperature: float,
                         number_densities: np.ndarray) -> np.ndarray:
     # Evaluate the 'jacobian_str' using sympy

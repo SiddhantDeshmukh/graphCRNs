@@ -29,8 +29,8 @@ def create_functional_jacobian(dynamics: NetworkDynamics) -> np.ndarray:
   return jacobian
 
 
-def evaluate_jacobian(func_jac: np.ndarray,
-                      T: float, n: np.ndarray) -> np.ndarray:
+def evaluate_functional_jacobian(func_jac: np.ndarray,
+                                 T: float, n: np.ndarray) -> np.ndarray:
   # Evaluate the function Jacobian by calling each element with the provided
   # temperature and number densities
   jac = np.zeros_like(func_jac, dtype=float)
@@ -57,5 +57,7 @@ initial_number_densities = {
 network = Network.from_krome_file('../res/catalyst_co.ntw')
 dynamics = NetworkDynamics(network, initial_number_densities, temperature=5700)
 jac_func = create_functional_jacobian(dynamics)
-eval_jac = evaluate_jacobian(jac_func, 5700, dynamics.number_densities)
-print(eval_jac)
+for temperature in [300, 3000, 5000, 10000, 15000, 20000, 25000, 30000]:
+  dynamics.evaluate_jacobian(temperature, dynamics.number_densities)
+  eval_jac = evaluate_functional_jacobian(
+      jac_func, temperature, dynamics.number_densities)
