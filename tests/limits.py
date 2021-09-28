@@ -210,7 +210,8 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
   for i, time in enumerate(times):
     final = dynamics.solve(time, dynamics.number_densities,
                            create_jacobian=False,
-                           limit_rates=limit_rates)[0]
+                           limit_rates=limit_rates,
+                           atol=1e-10)[0]
     final_number_densities.append(final)
     print(f"Done {i+1} time of {len(times)}")
 
@@ -240,9 +241,17 @@ def run_and_plot(temperatures: List, times: List, network: Network,
       #                         label=s, color=c, ls='-')
       # Abundance
       abundance = 12 + np.log10(n / hydrogen_number_density)
-      axes[idx_x, idx_y].set_ylim(-13, 13)
+      # axes[idx_x, idx_y].set_ylim(-13, 13)
+      axes[idx_x, idx_y].set_ylim(-2, 13)
       axes[idx_x, idx_y].plot(np.log10(times), abundance,
                               label=s, color=c, ls='-')
+      # Plot problem area where M abundance is higher than 11
+      if s == 'M':
+        problem_mask = (abundance > 11.005)
+        if len(times[problem_mask]) > 0:
+          axes[idx_x, idx_y].axvline(np.log10(times)[problem_mask][0],
+                                     c='k', ls='--')
+
     axes[idx_x, idx_y].set_title(f"{temperature} K")
     axes[idx_x, idx_y].legend()
     if idx_x == 2:
