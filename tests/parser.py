@@ -1,4 +1,5 @@
 # Test sympy parsing vs function-Jacobian creation
+from numba import jit
 from itertools import product
 from src.network import Network
 from src.dynamics import NetworkDynamics
@@ -37,7 +38,6 @@ def evaluate_functional_jacobian(func_jac: np.ndarray,
   x, y = jac.shape
   for i, j in product(range(x), range(y)):
     jac[i, j] = func_jac[i, j](T, n)
-
   return jac
 
 
