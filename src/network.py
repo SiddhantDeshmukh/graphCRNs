@@ -237,8 +237,7 @@ class Network:
     for i, species in enumerate(self.species):
       for j, complex in enumerate(self.complexes):
         split_complex = [c.strip() for c in complex.split("+")]
-        if species in split_complex:
-          complex_composition_matrix[i, j] = 1
+        complex_composition_matrix[i, j] = split_complex.count(species)
 
     return complex_composition_matrix
 

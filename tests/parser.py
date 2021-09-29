@@ -54,10 +54,15 @@ initial_number_densities = {
     "M": 1e11,
 }
 
-network = Network.from_krome_file('../res/catalyst_co.ntw')
+# network = Network.from_krome_file('../res/catalyst_co.ntw')
+network = Network.from_krome_file('../res/simplified_co.ntw')
 dynamics = NetworkDynamics(network, initial_number_densities, temperature=5700)
 jac_func = create_functional_jacobian(dynamics)
-for temperature in [300, 3000, 5000, 10000, 15000, 20000, 25000, 30000]:
-  dynamics.evaluate_jacobian(temperature, dynamics.number_densities)
-  eval_jac = evaluate_functional_jacobian(
-      jac_func, temperature, dynamics.number_densities)
+# for temperature in [300, 3000, 5000, 10000, 15000, 20000, 25000, 30000]:
+#   dynamics.evaluate_jacobian(temperature, dynamics.number_densities)
+#   eval_jac = evaluate_functional_jacobian(
+#       jac_func, temperature, dynamics.number_densities)
+
+print(network.complex_composition_matrix)
+print(network.species)
+print(network.complexes)

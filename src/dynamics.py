@@ -60,6 +60,12 @@ class NetworkDynamics():
   def create_rate_dict(self) -> Dict:
     # Create the dictionary describing the time-dependent system of equations
     # d[X]/dt = x_1 + x_2 + ...
+    # TODO:
+    # Fix double-counting!!!
+    # TODO:
+    # Potentially build this from just evaluating ZDKExp(Z.TLn(x))?
+    # Put in 'n_{key}' for 'x', evaluate RHS symbolically and it should be
+    # the rates!
     rate_dict = {}  # keys are species
     for reaction in self.network.reactions:
       expression = reaction.mass_action_rate_expression

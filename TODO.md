@@ -4,6 +4,7 @@
 
 ### Solver
 
+- Fix 'rate_dict' feeding into Jacobian to avoid double-counting
 - Replace string Jacobian method in 'dynamics.py' with functional Jacobian
 - Run test cases across temperature regime with functional Jacobian
   - Potentially check if function can be compiled to improve runtime
