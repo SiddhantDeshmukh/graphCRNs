@@ -145,8 +145,8 @@ class NetworkDynamics():
     # rates to zero if so
     # TODO:
     # Check ratio of number densities instead?
-    # boundary_mask = (number_densities <= 1e-20)
-    # number_densities[boundary_mask] = 1e-20
+    boundary_mask = (number_densities <= 1e-10)
+    number_densities[boundary_mask] = 1e-10
     rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
 
     return rates_vector

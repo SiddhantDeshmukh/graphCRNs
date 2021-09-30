@@ -120,8 +120,9 @@ def setup_number_densities(number_densities_dict, hydrogen_density):
 # %%
 # # CO network rates
 res_dir = '../res'
-# network_file = f'{res_dir}/react-solar-umist12'
-network_file = f'{res_dir}/catalyst_co.ntw'
+network_file = f'{res_dir}/solar_co_w05.ntw'
+# network_file = f'{res_dir}/catalyst_co.ntw'
+# network_file = f'{res_dir}/mp_cno.ntw'
 
 initial_number_densities = {
     "H": 1e12,
@@ -129,10 +130,16 @@ initial_number_densities = {
     "OH": 1e-12,
     "C": 10**(8.39),  # solar
     "O": 10**(8.66),  # solar
+    "N": 10**(7.83),
     # "C": 10**(8.66),  # C-rich
     # "O": 10**(8.39),  # C-rich
     "CH": 1e-12,
     "CO": 1e-12,
+    "CN": 1e-12,
+    "NH": 1e-12,
+    "NO": 1e-12,
+    "C2": 1e-12,
+    "O2": 1e-12,
     "M": 1e11,
 }
 
@@ -147,40 +154,40 @@ print(len(network.reactions))  # 30 reactions
 nrows = 6
 ncols = 6
 
-fig, axes = plt.subplots(nrows, ncols, figsize=(32, 24), sharex=True)
-temperatures = np.logspace(1.3, 4.7, num=500)
-for i, reaction in enumerate(network.reactions):
-  idx_x = i // 6
-  idx_y = i % 6
+# fig, axes = plt.subplots(nrows, ncols, figsize=(32, 24), sharex=True)
+# temperatures = np.logspace(1.3, 4.7, num=500)
+# for i, reaction in enumerate(network.reactions):
+#   idx_x = i // 6
+#   idx_y = i % 6
 
-  limited_rates = [reaction(temperature, True) for temperature in temperatures]
-  unlimited_rates = [reaction(temperature, False)
-                     for temperature in temperatures]
+#   limited_rates = [reaction(temperature, True) for temperature in temperatures]
+#   unlimited_rates = [reaction(temperature, False)
+#                      for temperature in temperatures]
 
-  # Change limit to 'boundary' to compute boundary rate
-  reaction.limit = 'boundary'
-  boundary_rates = [reaction(temperature, True) for temperature in temperatures]
+#   # Change limit to 'boundary' to compute boundary rate
+#   reaction.limit = 'boundary'
+#   boundary_rates = [reaction(temperature, True) for temperature in temperatures]
 
-  # axes[idx_x, idx_y].plot(temperatures, limited_rates,
-  #                         label=f"{reaction.idx}: Limited")
-  axes[idx_x, idx_y].plot(temperatures, unlimited_rates,
-                          label=f"{reaction.idx}: Unlimited", ls='--')
-  # axes[idx_x, idx_y].plot(temperatures, boundary_rates,
-  #                         label=f"{reaction.idx}: Boundary", ls=':')
+#   # axes[idx_x, idx_y].plot(temperatures, limited_rates,
+#   #                         label=f"{reaction.idx}: Limited")
+#   axes[idx_x, idx_y].plot(temperatures, unlimited_rates,
+#                           label=f"{reaction.idx}: Unlimited", ls='--')
+#   # axes[idx_x, idx_y].plot(temperatures, boundary_rates,
+#   #                         label=f"{reaction.idx}: Boundary", ls=':')
 
-  axes[idx_x, idx_y].set_ylim(1e-20, 1e0)
+#   # axes[idx_x, idx_y].set_ylim(1e-20, 1e0)
 
-  axes[idx_x, idx_y].axvline(reaction.min_temperature, c='k', ls='--')
-  axes[idx_x, idx_y].axvline(reaction.max_temperature, c='k', ls='--')
+#   axes[idx_x, idx_y].axvline(reaction.min_temperature, c='k', ls='--')
+#   axes[idx_x, idx_y].axvline(reaction.max_temperature, c='k', ls='--')
 
-  axes[idx_x, idx_y].set_title(str(reaction))
-  if idx_x == 4:
-    axes[idx_x, idx_y].set_xlabel("Temperature [K]")
-  if idx_y == 0:
-    axes[idx_x, idx_y].set_ylabel("Rate")
-  # axes[idx_x, idx_y].set_xscale("log")
-  axes[idx_x, idx_y].set_yscale("log")
-  axes[idx_x, idx_y].legend()
+#   axes[idx_x, idx_y].set_title(str(reaction))
+#   if idx_x == 4:
+#     axes[idx_x, idx_y].set_xlabel("Temperature [K]")
+#   if idx_y == 0:
+#     axes[idx_x, idx_y].set_ylabel("Rate")
+#   # axes[idx_x, idx_y].set_xscale("log")
+#   axes[idx_x, idx_y].set_yscale("log")
+#   axes[idx_x, idx_y].legend()
 
 # plt.show()
 # exit()
@@ -210,8 +217,7 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
   for i, time in enumerate(times):
     final = dynamics.solve(time, dynamics.number_densities,
                            create_jacobian=False,
-                           limit_rates=limit_rates,
-                           atol=1e-10)[0]
+                           limit_rates=limit_rates)[0]
     final_number_densities.append(final)
     print(f"Done {i+1} time of {len(times)}")
 
@@ -229,7 +235,7 @@ def run_and_plot(temperatures: List, times: List, network: Network,
     dynamics = setup_dynamics(network, temperature)
     number_densities = solve_dynamics(dynamics, times, limit_rates=limit_rates)
 
-    print(f"Done temperature {i+1} of {len(temperatures)}")
+    print(f"Done T = {temperature} K: {i+1} of {len(temperatures)}")
 
     total_number_density = np.sum(number_densities, axis=0)
     hydrogen_number_density = number_densities[network.species.index('H')]
@@ -270,9 +276,9 @@ def run_and_plot(temperatures: List, times: List, network: Network,
 
 # Kinetics with limits
 # network = Network.from_krome_file("../res/simplified_co.ntw")
-temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
-# temperatures = [1000, 3000, 5000, 7500, 10000, 15000]
-times = np.logspace(-6, 3, num=100)
+# temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
+temperatures = [5000, 10000, 20000]
+times = np.logspace(-6, 3, num=10)
 colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
 print(f"Solving unlimited rates case.")
 filename = f"../out/figs/solar_network_unlimited_simplified.png"

@@ -20,18 +20,22 @@ M1,C,O,M,CO,M,,,7000,14000,2.14d-29 * (Tgas / 3d2)**(-3.08d00) * exp(2.11d03 / T
 42,H2,C,,CH,H,,,300,2500,6.64d-10 * exp(-1.17d04 / Tgas),weak
 48,H2,O,,OH,H,,,297,3532,3.14d-13 * (Tgas / 3d2)**(2.70d00) * exp(-3.15d03 / Tgas),weak
 66,C,OH,,O,CH,,,493,41000,2.25d-11 * (Tgas / 3d2)**(5.00d-01) * exp(-1.48d04 / Tgas),weak
-67,C,OH,,CO,H,,,10,300,1.10d-10 * (Tgas / 3d2)**(5.00d-01),weak
+67,C,OH,,CO,H,,,10,300,1.81d-11 * (Tgas / 3d2)**(5.00d-01),weak
 # Collisional disassociation
 4060,H2,H,,H,H,H,,1833,41000,4.67d-07 * (Tgas / 3d2)**(-1.00d00) * exp(-5.50d04 / Tgas),weak
 4061,CH,H,,C,H,H,,1340,41000,6.00d-09 * exp(-4.02d04 / Tgas),weak
 4062,OH,H,,O,H,H,,1696,41000,6.00d-09 * exp(-5.09d04 / Tgas),weak
-7002,CO,H,,C,O,H,,7000,15000,2.79d-03 * (Tgas / 3d2)**(-3.52d00) * exp(-1.287d05 / Tgas),weak
+#7002,CO,H,,C,O,H,,7000,15000,1.39d-46 * (Tgas / 3d2)**(2.28d01),weak
+7002,CO,H,,C,O,H,,7000,15000,2.79d-03* (Tgas / 3d2)**(-3.52) * exp(-1.287d05 / Tgas),weak
+#T1,CH,H,,C,O,H,,7000,15000,1.39d-46 * (Tgas / 3d2)**(1.60d01),weak
+#T2,OH,H,,C,O,H,,7000,15000,1.39d-46 * (Tgas / 3d2)**(1.80d01),weak
+#T3,H2,H,,C,O,H,,7000,15000,1.39d-46 * (Tgas / 3d2)**(2.28d01),weak
 # Disassociation - species exchange
 4069,H2,H2,,H2,H,H,,2803,41000,1.00d-08 * exp(-8.41d04 / Tgas),weak
 4070,H2,CH,,C,H2,H,,1340,41000,6.00d-09 * exp(-4.02d04 / Tgas),weak
 4071,H2,OH,,O,H2,H,,1696,41000,6.00d-09 * exp(-5.09d04 / Tgas),weak
 # Catalytic disassociation
 M2,CO,M,,O,C,M,,7000,14000,2.79d-03 * (Tgas / 3d2)**(-3.52d00) * exp(-1.287d05 / Tgas),weak
-M3,H2,M,,H,H,M,,1833,41000,4.67d-07 * (Tgas / 3d2)**(-1.00d00) * exp(-5.50d04 / Tgas),weak
-M4,CH,M,,C,H,M,,1340,41000,6.00d-09 * exp(-4.02d04 / Tgas),weak
-M5,OH,M,,O,H,M,,1696,41000,6.00d-09 * exp(-5.09d04 / Tgas),weak
+#M3,H2,M,,H,H,M,,1833,41000,4.67d-07 * (Tgas / 3d2)**(-1.00d00) * exp(-5.50d04 / Tgas),weak
+#M4,CH,M,,C,H,M,,1340,41000,6.00d-09 * exp(-4.02d04 / Tgas),weak
+#M5,OH,M,,O,H,M,,1696,41000,6.00d-09 * exp(-5.09d04 / Tgas),weak
