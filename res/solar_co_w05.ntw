@@ -40,7 +40,41 @@
 # Unused reactions
 #103,CH,O,CO,H,10,2000,6.60d-11,weak
 # Catalytic test reactions (collision-induced disassociation)
-@format:idx,R,R,P,P,P,Tmin,Tmax,rate,limit
+#@format:idx,R,R,P,P,P,Tmin,Tmax,rate,limit
 #T1,CH,M,C,H,M,1340,41000,6.0000d-09 * exp(-4.0200d04 / Tgas),weak
 #T2,OH,M,O,H,M,1696,41000,6.0000d-09 * exp(-5.0900d04 / Tgas),weak
 #T3,H2,M,H,H,M,1833,41000,4.6700d-07 * (Tgas / 3d2)**(-1.0000d00) * exp(-5.5000d04 / Tgas),weak
+## Test reactions for inclusion of C2, O2, N2, NH, CN, NO
+# Radiative association
+@format:idx,R,R,P,Tmin,Tmax,rate,limit
+3703,C,C,C2,10,41000,4.3600d-18 *  (Tgas / 3d2)**(3.5000d-01) * exp(-1.6130d02 / Tgas),weak
+3730,O,O,O2,10,300,4.9000d-20 * (Tgas / 3d2)**(1.5800d00),weak
+# Species exchange
+@format:idx,R,R,P,P,Tmin,Tmax,rate,limit
+11,H,C2,CH,C,1015,41000,4.6700d-10 * (Tgas / 3d2)**(5.0000d-01) * exp(-3.0450d04 / Tgas),weak
+24,H,O2,OH,O,250,4000,2.6100d-10 * exp(-8.156d03 / Tgas),weak
+52,H2,O2,OH,OH,300,2500,3.1600d-10 * exp(-2.1890d04 / Tgas),weak
+58,C,CH,C2,H,10,300,6.5900d-11,weak
+58,C,CH,C2,H,10,300,1.7300d-11 * (Tgas / 3d2)**(5.0000d-01),weak
+68,C,CN,C2,N,603,41000,4.9800d-10 * (Tgas / 3d2)**(1.8116d04),weak
+70,C,CO,C2,O,1934,41000,2.9400d-11 * (Tgas / 3d2)**(5.0000d-01) * exp(-5.8025d04),weak
+116,CH,O2,CO,OH,301,3000,7.6000d-12,weak
+132,N,C2,CN,C,10,300,5.0000d-11,weak
+144,N,O2,NO,O,200,14000,2.2600d-12 * (Tgas / 3d2)**(8.6000d-01) * exp(-3.1340d03 / Tgas),weak
+236,O,OH,O2,H,10,500,3.6900d-11 * (Tgas / 3d2)**(-2.7000d-01) * exp(-1.2900d01 / Tgas),weak
+236,O,OH,O2,H,158,5000,1.7700d-11 * exp(1.7800d02 / Tgas),weak
+240,O,C2,CO,C,10,8000,2.0000d-10 * (Tgas / 3d2)**(-1.2000d-01),weak
+261,O,NO,O2,N,200,5000,1.1800d-11 * exp(-2.0413d04 / Tgas),weak
+377,C2,O2,CO,CO,298,1300,1.5000d-11 * exp(-4.3000d03 / Tgas),weak
+382,CN,CN,N2,C2,3800,7000,2.6600d-09 * exp(-2.1638d04),weak
+392,CN,O2,NO,CO,13,1565,5.1200d-12 * (Tgas / 3d2)**(-4.9000d-01) * exp(5.2000d00 / Tgas),weak
+7601,NH,O2,NO,OH,298,3300,2.5400d-14 * (Tgas / 3d2)**(1.1800d00) * exp(-3.1200d02 / Tgas),weak
+# Radiative disassociation
+@format:idx,R,P,P,Tmin,Tmax,rate,limit
+3796,C2,C,C,10,41000,2.4000d-10 * exp(-2.6000d00 / Tgas),weak
+3831,O2,O,O,10,41000,7.9000d-10 * exp(-2.1000d00 / Tgas),weak
+# Collisional disassociation
+@format:idx,R,R,P,P,P,Tmin,Tmax,rate,limit
+4067,H,O2,O,O,H,1743,41000,6.0000d-09 * exp(-5.2300d04 / Tgas),weak
+4074,H2,O2,O,O,H2,1743,41000,6.0000d-09 * exp(-5.2300d04 / Tgas),weak
+7585,CH,O2,CO,O,H,301,3000,1.1400d-11,weak

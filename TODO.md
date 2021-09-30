@@ -4,16 +4,17 @@
 
 ### Solver
 
-- Fix 'rate_dict' feeding into Jacobian to avoid double-counting
-- Replace string Jacobian method in 'dynamics.py' with functional Jacobian
+* Fix 'rate_dict' feeding into Jacobian to avoid double-counting
+* Replace string Jacobian method in 'dynamics.py' with functional Jacobian
 - Run test cases across temperature regime with functional Jacobian
   - Potentially check if function can be compiled to improve runtime
 
 ### Network
 
+- Finalise solar CO network
+  - Add C2, N2, O2, CN, NO, NH to try to stabilise high-temperature behaviour
 - Finalise metal-poor CNO network
   - Create more complex network with O2, C2, N2
-- Finalise solar CO network
 
 ### Pathfinding
 

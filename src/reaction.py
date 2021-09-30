@@ -155,6 +155,10 @@ class Reaction:
     # containing all reactants or numpy array indexed the same as the reactants)
     # compute the mass action rate
     rate = self.determine_mass_action_rate().replace("Tgas", str(temperature))
+    # TODO:
+    # Regex replacement for 'n_*'! Otherwise 'n_O2' can get replaced by
+    # 'n_O', etc
+    print(rate)
     if isinstance(number_densities, dict):
       for r in self.reactants:
         rate = rate.replace(f"n_{r}", str(number_densities[r]))
@@ -162,4 +166,5 @@ class Reaction:
       for i, r in enumerate(self.reactants):
         rate = rate.replace(f"n_{r}", str(number_densities[i]))
 
+    print(rate)
     return eval(rate)

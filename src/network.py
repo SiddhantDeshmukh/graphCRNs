@@ -77,6 +77,8 @@ class Network:
         # TODO:
         # Use accuracy to determine limit strength, add 'sigmoid' limit
         'accuracy': []  # A, B, C, D, E (see UMIST12 nomenclature)
+        # TODO:
+        # Add implementation to read files that don't have all keys present
     }
 
     reactions = []
