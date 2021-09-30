@@ -127,6 +127,7 @@ network_file = f'{res_dir}/solar_co_w05.ntw'
 initial_number_densities = {
     "H": 1e12,
     "H2": 1e-4,
+    # "H2": 1e-12,
     "OH": 1e-12,
     "C": 10**(8.39),  # solar
     "O": 10**(8.66),  # solar

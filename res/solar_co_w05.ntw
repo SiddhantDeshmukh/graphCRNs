@@ -19,7 +19,6 @@
 66,C,OH,O,CH,493,41000,2.2500d-11 * (Tgas / 3d2)**(5.0000d-01) * exp(-1.4800d04 / Tgas),weak
 67,C,OH,CO,H,10,300,1.8100d-11 * (Tgas / 3d2)**(5.0000d-01),weak
 102,CH,O,OH,C,10,6000,2.5200d-11 * exp(-2.3810d03 / Tgas),weak
-#103,CH,O,CO,H,10,2000,6.60d-11,weak  # not used!
 104,CH,O,CO,H,2000,6000,1.0200d-10 * exp(-9.1400d02 / Tgas),weak
 # Collisional disassociation
 @format:idx,R,R,P,P,P,Tmin,Tmax,rate,limit
@@ -38,3 +37,10 @@
 4079,H,O,M,OH,M,10,300,4.3300d-32 * (Tgas / 3d2)**(-1.0000d00),weak
 5000,H,H,M,H2,M,1700,5000,6.4300d-33 * (Tgas / 3d2)**(-1.0000d00),weak
 4097,C,O,M,CO,M,7000,14000,2.1400d-29 * (Tgas / 3d2)**(-3.0800d00) * exp(-2.1140d03 / Tgas),weak
+# Unused reactions
+#103,CH,O,CO,H,10,2000,6.60d-11,weak
+# Catalytic test reactions (collision-induced disassociation)
+@format:idx,R,R,P,P,P,Tmin,Tmax,rate,limit
+#T1,CH,M,C,H,M,1340,41000,6.0000d-09 * exp(-4.0200d04 / Tgas),weak
+#T2,OH,M,O,H,M,1696,41000,6.0000d-09 * exp(-5.0900d04 / Tgas),weak
+#T3,H2,M,H,H,M,1833,41000,4.6700d-07 * (Tgas / 3d2)**(-1.0000d00) * exp(-5.5000d04 / Tgas),weak
