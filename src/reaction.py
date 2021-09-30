@@ -6,6 +6,7 @@ from typing import Dict, List, Union
 from math import exp  # used in 'eval'
 from .limits import limit_dict, scale_dict
 import numpy as np
+import re
 
 
 # Order list alphabetically so that complex combinations work out
@@ -43,7 +44,6 @@ class Reaction:
     self.rate_expression = rate_expression
     # Fortran -> Python format
     self.rate_expression = rate_expression.replace('d', 'e')
-
     self.rate = self.evaluate_rate_expression(300)  # default
     self.mass_action_rate_expression = self.determine_mass_action_rate()
 
@@ -158,13 +158,16 @@ class Reaction:
     # TODO:
     # Regex replacement for 'n_*'! Otherwise 'n_O2' can get replaced by
     # 'n_O', etc
-    print(rate)
+    pattern = r"n_[A-Z0-9]*"
     if isinstance(number_densities, dict):
       for r in self.reactants:
-        rate = rate.replace(f"n_{r}", str(number_densities[r]))
+        rate = re.sub(pattern,
+                      lambda s: f"{number_densities[s.group()[2:]]}",
+                      rate)
     elif isinstance(number_densities, np.ndarray):
       for i, r in enumerate(self.reactants):
-        rate = rate.replace(f"n_{r}", str(number_densities[i]))
+        rate = re.sub(pattern,
+                      lambda s: f"{number_densities[self.reactants.index(s.group()[2:])]}",
+                      rate)
 
-    print(rate)
     return eval(rate)

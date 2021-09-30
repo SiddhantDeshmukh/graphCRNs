@@ -141,6 +141,7 @@ initial_number_densities = {
     "NO": 1e-12,
     "C2": 1e-12,
     "O2": 1e-12,
+    "N2": 1e-12,
     "M": 1e11,
 }
 
@@ -240,7 +241,7 @@ def run_and_plot(temperatures: List, times: List, network: Network,
 
     total_number_density = np.sum(number_densities, axis=0)
     hydrogen_number_density = number_densities[network.species.index('H')]
-    for s, n, c in zip(network.species, number_densities, colours):
+    for s, n in zip(network.species, number_densities):
       # if s in ['C', 'O', 'H', 'M']:
       #   continue
       # Number density ratio
@@ -251,7 +252,7 @@ def run_and_plot(temperatures: List, times: List, network: Network,
       # axes[idx_x, idx_y].set_ylim(-13, 13)
       axes[idx_x, idx_y].set_ylim(-2, 13)
       axes[idx_x, idx_y].plot(np.log10(times), abundance,
-                              label=s, color=c, ls='-')
+                              label=s,  ls='-')
       # Plot problem area where M abundance is higher than 11
       if s == 'M':
         problem_mask = (abundance > 11.005)
