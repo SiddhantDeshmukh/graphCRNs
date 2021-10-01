@@ -5,6 +5,9 @@ from src.network import Network
 from scipy.integrate import ode
 import sympy
 from numba import jit
+import re
+from itertools import product
+from math import exp  # used in 'eval'
 
 
 # TODO:
@@ -20,6 +23,11 @@ class NetworkDynamics():
     self.symbols = [f"n_{s}" for s in self.species]
     if temperature:
       self.network.temperature = temperature
+
+    # Properties
+    self._temperature = temperature
+    # TODO:
+    # Number densities as properties
     self.initial_number_densities =\
         self.setup_initial_number_densities(initial_number_densities)
     self.number_densities = self.initial_number_densities.copy()
@@ -30,10 +38,7 @@ class NetworkDynamics():
 
     # Rates and Jacobian attributes
     self.rate_dict = self.create_rate_dict()
-    self.jacobian_str = self.create_jacobian()
-
-    # Properties
-    self._temperature = temperature
+    self.jacobian_func = self.create_jacobian()
 
   # TODO:
   # Have number densities and initial number densities as properties?
@@ -74,6 +79,18 @@ class NetworkDynamics():
       product_symbols = [
           f"n_{key}" for key in reaction.stoichiometry[1].keys()]
       for symbol in reactant_symbols:
+        # TODO:
+        # If symbol appears in both reactant and product sides, ignore it
+        # But also check it appears the same number of times, e.g.
+        # H2 + H2 -> H2 + H + H
+        # has 'H2' on both sides, but one side has one more so it's still
+        # a destruction
+        # Alternatively, just leave it and check for zero rates at the end
+        # Idea:
+        # Check if the opposite symbol exists in the dictionary-key list, and
+        # if so, remove it and don't add the new one since it means we're adding
+        # e.g. dict['A'] = 'B' ' - B'
+        # But again, might just be faster to catch them all at the end?
         if symbol in rate_dict.keys():
           rate_dict[symbol].append(f"-{expression}")
         else:
@@ -88,37 +105,60 @@ class NetworkDynamics():
     return rate_dict
 
   def create_jacobian(self) -> np.ndarray:
-    # Create the analytical Jacobian matrix as a 2D array of strings
-    # Uses sympy for the differential (which uses eval)
+    # Create a Jacobian where each entry is a Callable, taking in number densities
+    # as indexed in dynamics.network.species and a temperature
+    # TODO:
+    # Fix indexing for rate dict vs symbols/species
     num_species = len(self.species)
+    # Fill with function that returns zero instead?
     jacobian = np.zeros((num_species, num_species), dtype=object)
-    # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
-    for i, rate in enumerate(self.rate_dict.values()):
-      expression = " + ".join(rate)
-      for j, symbol in enumerate(self.symbols):
-        differential = sympy.diff(expression, symbol)
-        jacobian[i, j] = str(differential)
+    for i, s1 in enumerate(self.symbols):
+      # for i, (s, rate) in enumerate(self.rate_dict.items()):
+      expression = '+'.join(self.rate_dict[s1])
+      # expression = "+".join(rate)
+      for j, s2 in enumerate(self.symbols):
+        differential = sympy.diff(expression, s2)
+        rate = str(differential).replace("Tgas", "T")
+        pattern = r"_[A-Z0-9]*"
+        # TODO:
+        # Do the whole replacement with regex!
+        rate = re.sub(pattern,
+                      lambda s: f"[{self.species.index(s.group()[1:])}]",
+                      rate)
+        jacobian[i, j] = eval(f"lambda T, n: {rate}")
+
+    #   num_species = len(self.species)
+    # jacobian = np.zeros((num_species, num_species), dtype=object)
+    # # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
+    # for i, rate in enumerate(self.rate_dict.values()):
+    #   expression = " + ".join(rate)
+    #   for j, symbol in enumerate(self.symbols):
+    #     differential = sympy.diff(expression, symbol)
+    #     jacobian[i, j] = str(differential)
 
     return jacobian
 
   # @jit(nopython=True)
   def evaluate_jacobian(self, temperature: float,
                         number_densities: np.ndarray) -> np.ndarray:
-    # Evaluate the 'jacobian_str' using sympy
-    # Note that 'number_densities' must have the same indexing as
-    # network species
-    # TODO:
-    # Use some fancy code-gen to write the jacobian into C-like code since
-    # upon evaluation, we just need to pass in temperature and number densities
-    n_dict = {s: n for s, n in zip(self.symbols, number_densities)}
-    n_dict['Tgas'] = temperature
-    rows, cols = self.jacobian_str.shape
-    jacobian = np.zeros((rows, cols))
-    for i in range(rows):
-      for j in range(cols):
-        # Evaluate with temperature and number densities!
-        jacobian[i, j] = sympy.parse_expr(self.jacobian_str[i, j],
-                                          evaluate=True, local_dict=n_dict)
+    # # Evaluate the 'jacobian_str' using sympy
+    # # Note that 'number_densities' must have the same indexing as
+    # # network species
+    # n_dict = {s: n for s, n in zip(self.symbols, number_densities)}
+    # n_dict['Tgas'] = temperature
+    # rows, cols = self.jacobian_str.shape
+    # jacobian = np.zeros((rows, cols))
+    # for i in range(rows):
+    #   for j in range(cols):
+    #     # Evaluate with temperature and number densities!
+    #     jacobian[i, j] = sympy.parse_expr(self.jacobian_str[i, j],
+    #                                       evaluate=True, local_dict=n_dict)
+    # Evaluate the function Jacobian by calling each element with the provided
+    # temperature and number densities
+    jacobian = np.zeros_like(self.jacobian_func, dtype=float)
+    x, y = jacobian.shape
+    for i, j in product(range(x), range(y)):
+      jacobian[i, j] = self.jacobian_func[i, j](temperature, number_densities)
 
     return jacobian
 

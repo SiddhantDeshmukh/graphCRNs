@@ -1,4 +1,5 @@
 # Test sympy parsing vs function-Jacobian creation
+from typing import Dict
 from numba import jit
 from itertools import product
 from src.network import Network
@@ -41,28 +42,53 @@ def evaluate_functional_jacobian(func_jac: np.ndarray,
   return jac
 
 
+def symbolic_RHS(dynamics: NetworkDynamics, temperature: float):
+  # Symbolically create the RHS vector of rates ZDK Exp(Z.T Ln(x))
+  # WARNING: Does not sanitise input to eval!
+  dynamics.temperature = temperature
+  Z = dynamics.network.complex_composition_matrix
+  D = dynamics.network.complex_incidence_matrix
+  K = dynamics.network.complex_kinetics_matrix
+
+  # TODO:
+  # Do this symbolically with Sympy. It should only be called ONCE when
+  # creating the Jacobian function
+  S = Z @ D  # no symbols
+  # symbols are in 'number_densities'?
+  rates_vector = K.dot(np.exp(Z.T.dot(np.log(dynamics.number_densities))))
+
+  # symbolic vector
+  rhs = S.dot(rates_vector)
+
+
 initial_number_densities = {
     "H": 1e12,
     "H2": 1e-4,
+    # "H2": 1e-12,
     "OH": 1e-12,
-    "C": 10**(8.39),  # solar
-    "O": 10**(8.66),  # solar
-    # "C": 10**(8.66),  # C-rich
-    # "O": 10**(8.39),  # C-rich
+    # "C": 10**(8.39),  # solar
+    # "O": 10**(8.66),  # solar
+    "N": 10**(7.83),
+    "C": 10**(8.66),  # C-rich
+    "O": 10**(8.39),  # C-rich
     "CH": 1e-12,
     "CO": 1e-12,
+    "CN": 1e-12,
+    "NH": 1e-12,
+    "NO": 1e-12,
+    "C2": 1e-12,
+    "O2": 1e-12,
+    "N2": 1e-12,
     "M": 1e11,
 }
-
 # network = Network.from_krome_file('../res/catalyst_co.ntw')
-network = Network.from_krome_file('../res/simplified_co.ntw')
+network = Network.from_krome_file('../res/solar_co_w05.ntw')
 dynamics = NetworkDynamics(network, initial_number_densities, temperature=5700)
-jac_func = create_functional_jacobian(dynamics)
-# for temperature in [300, 3000, 5000, 10000, 15000, 20000, 25000, 30000]:
-#   dynamics.evaluate_jacobian(temperature, dynamics.number_densities)
-#   eval_jac = evaluate_functional_jacobian(
-#       jac_func, temperature, dynamics.number_densities)
+print(dynamics.number_densities)
+exit()
 
-print(network.complex_composition_matrix)
-print(network.species)
-print(network.complexes)
+for temperature in [300, 3000, 5000, 10000, 15000, 20000, 25000, 30000]:
+  dynamics.evaluate_jacobian(temperature, dynamics.number_densities)
+  for i, time in enumerate(np.logspace(-6, 3, num=50)):
+    dynamics.solve(time, dynamics.number_densities, create_jacobian=True)
+    print(f"Done time {i + 1} of 50.")

@@ -1,5 +1,6 @@
 # %%
 # Test temperature limits and fading functions
+from itertools import product
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
 from scipy.special import expit
 from typing import Callable, Dict, List
@@ -121,6 +122,7 @@ def setup_number_densities(number_densities_dict, hydrogen_density):
 # # CO network rates
 res_dir = '../res'
 network_file = f'{res_dir}/solar_co_w05.ntw'
+# network_file = f'{res_dir}/simplified_co.ntw'
 # network_file = f'{res_dir}/catalyst_co.ntw'
 # network_file = f'{res_dir}/mp_cno.ntw'
 
@@ -129,11 +131,11 @@ initial_number_densities = {
     "H2": 1e-4,
     # "H2": 1e-12,
     "OH": 1e-12,
-    # "C": 10**(8.39),  # solar
-    # "O": 10**(8.66),  # solar
+    "C": 10**(8.39),  # solar
+    "O": 10**(8.66),  # solar
     "N": 10**(7.83),
-    "C": 10**(8.66),  # C-rich
-    "O": 10**(8.39),  # C-rich
+    # "C": 10**(8.66),  # C-rich
+    # "O": 10**(8.39),  # C-rich
     "CH": 1e-12,
     "CO": 1e-12,
     "CN": 1e-12,
@@ -214,11 +216,16 @@ def setup_dynamics(network: Network, temperature: float):
 def solve_dynamics(dynamics: NetworkDynamics, times: List,
                    limit_rates=False) -> np.ndarray:
   final_number_densities = []
+  jac = dynamics.evaluate_jacobian(dynamics.temperature,
+                                   dynamics.number_densities)
+  print(jac[dynamics.species.index('M')])
+  print(jac[dynamics.species.index('H')])
+  input()
   # TODO:
   # Refactor 'dynamics' to use dynamics.number_densities instead of passing in
   for i, time in enumerate(times):
     final = dynamics.solve(time, dynamics.number_densities,
-                           create_jacobian=False,
+                           create_jacobian=True,
                            limit_rates=limit_rates)[0]
     final_number_densities.append(final)
     print(f"Done {i+1} time of {len(times)}")
@@ -271,16 +278,35 @@ def run_and_plot(temperatures: List, times: List, network: Network,
   plt.savefig(filename, bbox_inches="tight")
 
 
+def enumerated_product(*args):
+  # TODO:
+  # Move to utilities and reference
+  # https://stackoverflow.com/questions/56430745/enumerating-a-tuple-of-indices-with-itertools-product
+  yield from zip(product(*(range(len(x)) for x in args)), product(*args))
+
 # network.to_krome_format('./test.ntw')
 # network.to_cobold_format('./test.dat')
 # test_network = Network.from_krome_file('./test.ntw')
 # print([f"{reaction}\n" for reaction in test_network.reactions])
 
+
 # Kinetics with limits
 # network = Network.from_krome_file("../res/simplified_co.ntw")
-# temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
-temperatures = [5000, 10000, 20000]
+temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
+# temperatures = [5000, 10000, 20000]
 times = np.logspace(-6, 3, num=10)
+
+# # Test Jacobian
+# for (i, j), (temperature, times) in enumerated_product(temperatures, times):
+#   dynamics = setup_dynamics(network, temperature)
+#   print(dynamics.number_densities)
+#   for key, val in dynamics.rate_dict.items():
+#     print(f"{key}: {val}\n")
+#   print(dynamics.evaluate_jacobian(temperature, dynamics.number_densities))
+#   print(dynamics.species)
+#   print(dynamics.symbols)
+#   input()
+
 colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
 print(f"Solving unlimited rates case.")
 filename = f"../out/figs/solar_network_unlimited_simplified.png"
