@@ -201,7 +201,8 @@ class NetworkDynamics():
   def solve(self, timescale: float, initial_number_densities: np.ndarray,
             initial_time=0, create_jacobian=False, jacobian=None,
             limit_rates=False,
-            atol=1e-30, rtol=1e-4) -> np.ndarray:
+            atol=1e-30, rtol=1e-4,
+            **solver_kwargs) -> np.ndarray:
     def f(t: float, y: np.ndarray,
           temperature=None, limit_rates=False) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
@@ -215,13 +216,20 @@ class NetworkDynamics():
       # Use the analytical Jacobian stored in NetworkDynamics
       jacobian = self.evaluate_jacobian
 
+    # TODO:
+    # Experiment with 'min_step' and 'max_step' options
+
     if jacobian:
       solver = ode(f, jacobian).set_integrator("vode", method='bdf',
-                                               atol=atol, rtol=rtol)
+                                               atol=atol, rtol=rtol,
+                                               **solver_kwargs)
+      # TODO:
+      # Refactor number densities to be a property and set this as jac param
       solver.set_jac_params(self.temperature, initial_number_densities)
     else:
       solver = ode(f).set_integrator("vode", method='bdf', atol=atol, rtol=rtol,
-                                     with_jacobian=True)
+                                     with_jacobian=True,
+                                     **solver_kwargs)
 
     # Initial values
     solver.set_initial_value(initial_number_densities, initial_time)

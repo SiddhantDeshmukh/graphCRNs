@@ -27,10 +27,8 @@ class Network:
     # Properties
     self._temperature = temperature
     if not number_densities:  # dummy values
-      number_densities = np.zeros(len(self.species))
-      for i, s in enumerate(self.species):
-        number_densities[i] = np.random.randint(1, 10)
-    self._number_densities = number_densities
+      number_densities = {s: np.random.randint(1, 10) for s in species}
+    self._number_densities = number_densities  # Must be a Dict!
 
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H
@@ -81,14 +79,13 @@ class Network:
         # Add implementation to read files that don't have all keys present
     }
 
+    single_entry_keys = ['rate', 'Tmin', 'Tmax', 'limit', 'accuracy']
+
     reactions = []
     with open(krome_file, 'r', encoding='utf-8') as infile:
       while True:
         line = infile.readline().strip()
-        # TODO: Fix this condition, since if empty lines are present in a file,
-        # it stops reading (happens often when adding comments)
         if not line:
-          # print(type(line), line)
           break
 
         if line.startswith("#"):
@@ -104,12 +101,21 @@ class Network:
           for i, item in enumerate(rxn_format):
             format_dict[item].append(split_line[i])
 
+          # Clean up dictionary to pass to Reaction
+          for key in format_dict.keys():
+            # Empty lists are 'None'
+            if not format_dict[key]:
+              format_dict[key] = None
+            # Lists that should be single entries are unpacked
+            if key in single_entry_keys and format_dict[key]:
+              format_dict[key] = format_dict[key][0]
+
           reactions.append(Reaction(format_dict['R'], format_dict['P'],
-                                    format_dict['rate'][0],
-                                    idx=format_dict['idx'][0],
-                                    min_temperature=format_dict['Tmin'][0],
-                                    max_temperature=format_dict['Tmax'][0],
-                                    limit=format_dict['limit'][0]))
+                                    format_dict['rate'],
+                                    idx=format_dict['idx'],
+                                    min_temperature=format_dict['Tmin'],
+                                    max_temperature=format_dict['Tmax'],
+                                    limit=format_dict['limit']))
 
         # Reset quantities
         for key in format_dict.keys():
@@ -365,10 +371,8 @@ class Network:
   @number_densities.setter
   def number_densities(self, value: Union[np.ndarray, Dict]):
     if isinstance(value, np.ndarray):
-      # Same indexing as species
-      self._number_densities = value
+      # Create a dictionary, assuming same indexing of array as self.species
+      self._number_densities = {s: n for s, n in zip(self.species, value)}
     elif isinstance(value, dict):
-      self._number_densities = np.zeros(len(self.species))
-      for i, s in enumerate(self.species):
-        self._number_densities[i] = value[s]
+      self._number_densities = value
     self.update()

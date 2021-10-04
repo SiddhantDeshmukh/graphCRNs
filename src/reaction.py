@@ -150,7 +150,7 @@ class Reaction:
     return rate
 
   def evaluate_mass_action_rate(self, temperature: float,
-                                number_densities: Union[Dict, np.ndarray]) -> float:
+                                number_densities: Dict) -> float:
     # Provided a temperature and number densities for the reactants (dictionary
     # containing all reactants or numpy array indexed the same as the reactants)
     # compute the mass action rate
@@ -159,15 +159,15 @@ class Reaction:
     # Regex replacement for 'n_*'! Otherwise 'n_O2' can get replaced by
     # 'n_O', etc
     pattern = r"n_[A-Z0-9]*"
-    if isinstance(number_densities, dict):
-      for r in self.reactants:
-        rate = re.sub(pattern,
-                      lambda s: f"{number_densities[s.group()[2:]]}",
-                      rate)
-    elif isinstance(number_densities, np.ndarray):
-      for i, r in enumerate(self.reactants):
-        rate = re.sub(pattern,
-                      lambda s: f"{number_densities[self.reactants.index(s.group()[2:])]}",
-                      rate)
+    # if isinstance(number_densities, dict):
+    for r in self.reactants:
+      rate = re.sub(pattern,
+                    lambda s: f"{number_densities[s.group()[2:]]}",
+                    rate)
+    # elif isinstance(number_densities, np.ndarray):
+    #   for i, r in enumerate(self.reactants):
+    #     rate = re.sub(pattern,
+    #                   lambda s: f"{number_densities[self.reactants.index(s.group()[2:])]}",
+    #                   rate)
 
     return eval(rate)
