@@ -74,12 +74,13 @@ class Network:
         'limit': [],
         # TODO:
         # Use accuracy to determine limit strength, add 'sigmoid' limit
-        'accuracy': []  # A, B, C, D, E (see UMIST12 nomenclature)
+        'accuracy': [],  # A, B, C, D, E (see UMIST12 nomenclature)
+        'ref': []  # reference to rate
         # TODO:
         # Add implementation to read files that don't have all keys present
     }
 
-    single_entry_keys = ['rate', 'Tmin', 'Tmax', 'limit', 'accuracy']
+    single_entry_keys = ['rate', 'Tmin', 'Tmax', 'limit', 'accuracy', 'ref']
 
     reactions = []
     with open(krome_file, 'r', encoding='utf-8') as infile:
@@ -165,6 +166,7 @@ class Network:
         data.append(rxn.min_temperature)
         data.append(rxn.max_temperature)
 
+      data.append(rxn.reference)
       output += writer.write(data) + "\n"
 
     with open(path, 'w') as outfile:

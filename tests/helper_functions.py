@@ -53,7 +53,7 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
   for i, time in enumerate(times):
     solver_kwargs = {
         'min_step': None,
-        # 'max_step': time / 1e2
+        # 'max_step': time / 1e9
         'max_step': None
     }
 
@@ -87,30 +87,30 @@ def run_and_plot(temperatures: List, times: List, network: Network,
     # Total number density
     # axes[idx_x, idx_y].plot(np.log10(times), np.log10(total_number_density),
     #                         label="Total")
-    axes[idx_x, idx_y].plot(np.log10(times), total_number_density / total_number_density[0],
-                            label="Total")
+    # axes[idx_x, idx_y].plot(np.log10(times), total_number_density / total_number_density[0],
+    #                         label="Total")
     # axes[idx_x, idx_y].set_ylim(17, 18)
     hydrogen_number_density = number_densities[network.species.index('H')]
     for s, n in zip(network.species, number_densities):
       # if s in ['C', 'O', 'H', 'M']:
       #   continue
       # Number density ratio
-      axes[idx_x, idx_y].plot(np.log10(times), np.log10(n/total_number_density),
-                              label=s, ls='-')
+      # axes[idx_x, idx_y].plot(np.log10(times), np.log10(n/total_number_density),
+      #                         label=s, ls='-')
       # axes[idx_x, idx_y].plot(np.log10(times), np.log10(n),
       #                         label=s, ls='-')
       # Abundance
-      # abundance = 12 + np.log10(n / hydrogen_number_density)
+      abundance = 12 + np.log10(n / hydrogen_number_density)
       # axes[idx_x, idx_y].set_ylim(-13, 13)
-      # axes[idx_x, idx_y].set_ylim(-2, 13)
-      # axes[idx_x, idx_y].plot(np.log10(times), abundance,
-      #                         label=s,  ls='-')
+      axes[idx_x, idx_y].set_ylim(-2, 13)
+      axes[idx_x, idx_y].plot(np.log10(times), abundance,
+                              label=s,  ls='-')
       # Plot problem area where M abundance is higher than 11
-      # if s == 'M':
-      #   problem_mask = (abundance > 11.005)
-      #   if len(times[problem_mask]) > 0:
-      #     axes[idx_x, idx_y].axvline(np.log10(times)[problem_mask][0],
-      #                                c='k', ls='--')
+      if s == 'M':
+        problem_mask = (abundance > 11.005)
+        if len(times[problem_mask]) > 0:
+          axes[idx_x, idx_y].axvline(np.log10(times)[problem_mask][0],
+                                     c='k', ls='--')
 
     axes[idx_x, idx_y].set_title(f"{temperature} K")
     axes[idx_x, idx_y].legend()

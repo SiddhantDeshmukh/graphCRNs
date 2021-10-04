@@ -18,7 +18,7 @@ def create_complex(lst): return ' + '.join(sorted(lst))
 class Reaction:
   def __init__(self, reactants: List, products: List, rate_expression: str,
                idx=None, min_temperature=None, max_temperature=None,
-               limit=None) -> None:
+               limit=None, reference=None) -> None:
     self.reactants = reactants
     self.products = products
 
@@ -42,6 +42,8 @@ class Reaction:
     # Need to evaluate this rate expression for temperature, so keep it as
     # something we can 'eval'
     self.rate_expression = rate_expression
+    # Reference default is 'NONE'
+    self.reference = reference if reference else 'NONE'
     # Fortran -> Python format
     self.rate_expression = rate_expression.replace('d', 'e')
     self.rate = self.evaluate_rate_expression(300)  # default

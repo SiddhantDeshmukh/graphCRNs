@@ -2,6 +2,7 @@
 # Test temperature limits and fading functions
 from itertools import product
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
+from tests.helper_functions import run_and_plot
 from scipy.special import expit
 from typing import Callable, Dict, List
 import numpy as np
@@ -196,101 +197,6 @@ ncols = 6
 # plt.show()
 # exit()
 
-
-# %%
-def setup_dynamics(network: Network, temperature: float):
-  # Initialise number densities
-  number_densities = np.zeros(len(network.species))
-  # Index number densities same as network.species
-  for i, s in enumerate(network.species):
-    n = log_abundance_to_number_density(np.log10(initial_number_densities[s]),
-                                        np.log10(hydrogen_density.value))
-    number_densities[i] = n
-  # Initialise dynamics at given temperature
-  dynamics = NetworkDynamics(
-      network, number_densities, temperature=temperature)
-
-  return dynamics
-
-
-def solve_dynamics(dynamics: NetworkDynamics, times: List,
-                   limit_rates=False) -> np.ndarray:
-  final_number_densities = []
-  jac = dynamics.evaluate_jacobian(dynamics.temperature,
-                                   dynamics.number_densities)
-  # print(jac[dynamics.species.index('M')])
-  # print(jac[dynamics.species.index('H')])
-  # input()
-  # TODO:
-  # Refactor 'dynamics' to use dynamics.number_densities instead of passing in
-  for i, time in enumerate(times):
-    final = dynamics.solve(time, dynamics.number_densities,
-                           create_jacobian=True,
-                           limit_rates=limit_rates)[0]
-    final_number_densities.append(final)
-    print(f"Done {i+1} time of {len(times)}")
-
-  final_number_densities = np.array(final_number_densities).T
-  return final_number_densities
-
-
-def run_and_plot(temperatures: List, times: List, network: Network,
-                 filename: str, limit_rates=False):
-  fig, axes = plt.subplots(3, 3, figsize=(10, 12), sharex=True)
-  # for i, (density, temperature) in enumerate(product(densities, temperatures)):
-  for i, temperature in enumerate(temperatures):
-    idx_x = i // 3
-    idx_y = i % 3
-    dynamics = setup_dynamics(network, temperature)
-    number_densities = solve_dynamics(dynamics, times, limit_rates=limit_rates)
-
-    print(f"Done T = {temperature} K: {i+1} of {len(temperatures)}")
-
-    total_number_density = np.sum(number_densities, axis=0)
-    # Total number density
-    axes[idx_x, idx_y].plot(np.log10(times), np.log10(total_number_density),
-                            label="Total")
-    axes[idx_x, idx_y].set_ylim(17, 18)
-    hydrogen_number_density = number_densities[network.species.index('H')]
-    # for s, n in zip(network.species, number_densities):
-    # if s in ['C', 'O', 'H', 'M']:
-    #   continue
-    # Number density ratio
-    # axes[idx_x, idx_y].plot(np.log10(times), np.log10(n/total_number_density),
-    #                         label=s, ls='-')
-    # axes[idx_x, idx_y].plot(np.log10(times), np.log10(n),
-    #                         label=s, ls='-')
-    # Abundance
-    # abundance = 12 + np.log10(n / hydrogen_number_density)
-    # axes[idx_x, idx_y].set_ylim(-13, 13)
-    # axes[idx_x, idx_y].set_ylim(-2, 13)
-    # axes[idx_x, idx_y].plot(np.log10(times), abundance,
-    #                         label=s,  ls='-')
-    # Plot problem area where M abundance is higher than 11
-    # if s == 'M':
-    #   problem_mask = (abundance > 11.005)
-    #   if len(times[problem_mask]) > 0:
-    #     axes[idx_x, idx_y].axvline(np.log10(times)[problem_mask][0],
-    #                                c='k', ls='--')
-
-    axes[idx_x, idx_y].set_title(f"{temperature} K")
-    axes[idx_x, idx_y].legend()
-    if idx_x == 2:
-      axes[idx_x, idx_y].set_xlabel("log time [s]")
-    if idx_y == 0:
-      axes[idx_x, idx_y].set_ylabel("log number density")
-      # axes[idx_x, idx_y].set_ylabel("log number density ratio")
-      # axes[idx_x, idx_y].set_ylabel("Abundance")
-
-  plt.savefig(filename, bbox_inches="tight")
-
-
-def enumerated_product(*args):
-  # TODO:
-  # Move to utilities and reference
-  # https://stackoverflow.com/questions/56430745/enumerating-a-tuple-of-indices-with-itertools-product
-  yield from zip(product(*(range(len(x)) for x in args)), product(*args))
-
 # network.to_krome_format('./test.ntw')
 # network.to_cobold_format('./test.dat')
 # test_network = Network.from_krome_file('./test.ntw')
@@ -303,21 +209,13 @@ temperatures = [300, 1000, 3000, 5000, 7500, 10000, 15000, 20000, 30000]
 # temperatures = [5000, 10000, 20000]
 times = np.logspace(-6, 3, num=10)
 
-# # Test Jacobian
-# for (i, j), (temperature, times) in enumerated_product(temperatures, times):
-#   dynamics = setup_dynamics(network, temperature)
-#   print(dynamics.number_densities)
-#   for key, val in dynamics.rate_dict.items():
-#     print(f"{key}: {val}\n")
-#   print(dynamics.evaluate_jacobian(temperature, dynamics.number_densities))
-#   print(dynamics.species)
-#   print(dynamics.symbols)
-#   input()
 
+gas_density = 1e-6  # [g cm^-3]
 colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
 print(f"Solving unlimited rates case.")
 filename = f"../out/figs/solar_network_unlimited_simplified.png"
-run_and_plot(temperatures, times, network, filename, limit_rates=False)
+run_and_plot(temperatures, times, network, filename, initial_number_densities,
+             hydrogen_density, limit_rates=False)
 # for limit in ['boundary', 'weak', 'sharp']:
 #   network.set_reaction_limit(limit)
 #   print(f"Solving with {limit} limit.")

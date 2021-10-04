@@ -95,23 +95,31 @@ def constants_from_rate(rate: str) -> List:
   def constants_from_part(part: str):
     alpha, beta, gamma = None, None, None
     if part.strip()[0].isdigit():
+      print(part.strip()[0])
       alpha = part
-    elif '**' in part:
-      beta = re.sub(r'[()]', part.split('**')[-1])
+    elif '^' in part:
+      print(part)
+      beta = re.findall(r'[\(0-9\)]', part.split('^')[-1])
     elif part.strip().startswith('exp'):
-      gamma = part.split('/')[0].strip()[3:]
+      print(part)
+      gamma = float(part.split('/')[0].strip()[4:])
 
     return alpha, beta, gamma
 
   alpha, beta, gamma = None, None, None
+  # Change '**' to '^' for a unique identifier
+  rate = rate.replace('**', '^')
   if '*' in rate:
     # TODO:
     # This won't work since it'll split on '**'
     parts = rate.split("*")
+    print(parts)
     for part in parts:
       alpha, beta, gamma = constants_from_part(part)
   else:
     alpha, beta, gamma = constants_from_part(rate)
+
+  print(alpha, beta, gamma)
 
   return alpha, beta, gamma
 
