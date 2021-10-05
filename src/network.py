@@ -80,7 +80,8 @@ class Network:
         # Add implementation to read files that don't have all keys present
     }
 
-    single_entry_keys = ['rate', 'Tmin', 'Tmax', 'limit', 'accuracy', 'ref']
+    single_entry_keys = ['idx', 'rate', 'Tmin', 'Tmax',
+                         'limit', 'accuracy', 'ref']
 
     reactions = []
     with open(krome_file, 'r', encoding='utf-8') as infile:
@@ -139,16 +140,17 @@ class Network:
                          if not i in limit_idxs]
 
     # 2. Group based on number of reactants / products
-    output = "# Automatically generated from Network\n"
+    header = "#" * 80
+    output = f"{header}\n# Automatically generated from Network\n{header}"
     if limit_reactions:
-      output += "\n# Reactions with temperature limits\n"
+      output += "\n# Reactions with temperature limits"
       output += f"{list_to_krome_format(limit_reactions)}\n"
     if unlimit_reactions:
-      output += "\n# Reactions without temperature limits\n"
+      output += "\n# Reactions without temperature limits"
       output += f"{list_to_krome_format(unlimit_reactions)}\n"
 
     with open(path, 'w', encoding='utf-8') as outfile:
-      outfile.write(output)
+      outfile.write(output.rstrip())
 
   def to_cobold_format(self, path: str, with_limits=False):
     # Write Network to CO5BOLD 'chem.dat' format (provided a FORTRAN format)
@@ -161,10 +163,11 @@ class Network:
       reactants = pad_list(rxn.reactants, 3)
       products = pad_list(rxn.products, 4)
       alpha, beta, gamma = constants_from_rate(rxn.rate_expression)
-      data = [rxn.idx, *reactants, *products, alpha, beta, gamma]
+      data = [int(rxn.idx), *reactants, *products,
+              alpha, beta, gamma]
       if with_limits:
-        data.append(rxn.min_temperature)
-        data.append(rxn.max_temperature)
+        data.append(float(rxn.min_temperature))
+        data.append(float(rxn.max_temperature))
 
       data.append(rxn.reference)
       output += writer.write(data) + "\n"

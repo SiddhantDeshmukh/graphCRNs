@@ -70,10 +70,14 @@ def list_to_krome_format(reactions: List[Reaction]) -> str:
   # Write a list of reactions to a KROME-readable string
   output = ""
   old_format = ""
-  for rxn in reactions:
+  # TODO:
+  # Group reactions by num reactants and products
+  for i, rxn in enumerate(reactions):
     format_str = determine_krome_format(rxn)
     if old_format != format_str:  # new format
       old_format = format_str
+      if i > 0:
+        output += '#'
       output += f"\n## {len(rxn.reactants)} reactants, {len(rxn.products)} products\n"
       output += f"{format_str}\n"
 
@@ -92,35 +96,31 @@ def to_fortran_str(quantity: float, fmt='.2e') -> str:
 def constants_from_rate(rate: str) -> List:
   # Read Arrhenius rate and return alpha, beta, gamma, i.e.
   # r(T) = alpha * (Tgas/300)**beta * exp(-gamma / Tgas)
-  def constants_from_part(part: str):
-    alpha, beta, gamma = None, None, None
+  def constants_from_part(part: str, alpha=0., beta=0., gamma=0.):
     if part.strip()[0].isdigit():
-      print(part.strip()[0])
-      alpha = part
+      alpha = float(part)
     elif '^' in part:
-      print(part)
-      beta = re.findall(r'[\(0-9\)]', part.split('^')[-1])
+      beta = float(part.split('^')[-1].replace('(', '').replace(')', ''))
     elif part.strip().startswith('exp'):
-      print(part)
       gamma = float(part.split('/')[0].strip()[4:])
 
     return alpha, beta, gamma
 
-  alpha, beta, gamma = None, None, None
+  alpha, beta, gamma = 0., 0., 0.
   # Change '**' to '^' for a unique identifier
   rate = rate.replace('**', '^')
   if '*' in rate:
-    # TODO:
-    # This won't work since it'll split on '**'
     parts = rate.split("*")
-    print(parts)
     for part in parts:
-      alpha, beta, gamma = constants_from_part(part)
+      alpha, beta, gamma = constants_from_part(
+          part, alpha=alpha, beta=beta, gamma=gamma)
   else:
-    alpha, beta, gamma = constants_from_part(rate)
+    alpha, beta, gamma = constants_from_part(
+        rate, alpha=alpha, beta=beta, gamma=gamma)
 
-  print(alpha, beta, gamma)
-
+  # TODO:
+  # Use a regex pattern match to extract alpha, beta, gamma from the string
+  # instead of this nested-function-inheritance confusion
   return alpha, beta, gamma
 
 # -------------------------------------------------------------------------
