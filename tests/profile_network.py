@@ -87,6 +87,8 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
 
   # TODO:
   # Remove zero-length paths (these are "cheat" paths that skip reactions)
+  # - Fix secondary graphs, looks like it doesn't reset the complex graph
+  # because 'G = network.complex_graph' creates a reference!
 
   plt.figure()
 
@@ -120,8 +122,8 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
       length = edge['weight']
       total_length += length
 
-    string_path = ','.join(path)
-    if not string_path in unique_paths:
+    string_path = ' -> '.join(path)
+    if total_length > 0 and not string_path in unique_paths:
       unique_paths.append(string_path)
       unique_lengths.append(total_length)
 
