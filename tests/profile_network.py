@@ -49,7 +49,7 @@ def add_species_paths(network: Network, source: str, target: str):
     # Split the complex so we can match the parts instead of potentially
     # matching strings (e.g. 'H' would match 'in H2')
     complex_species = [c.strip() for c in complex.split('+')]
-    print(complex_species, source, target)
+    # print(complex_species, source, target)
     if target in complex_species:
       print(f"{complex} to {target} sink connection")
       edges_to_add.append((complex, target, 0))
@@ -66,7 +66,10 @@ def add_species_paths(network: Network, source: str, target: str):
     for complex in G.nodes():
       # Add species connection to node
       complex_species = [c.strip() for c in complex.split('+')]
-      if not complex in network.species and s in complex_species:
+      if not complex in network.species and not target in complex_species and s in complex_species:
+        # TODO:
+        # Don't connect to complex if the target is in it
+        # - is this actually what we want? think about the logic a bit more
         print(f"{s} to {complex} undirected connection")
         edges_to_add.append((s, complex, 0))
         edges_to_add.append((complex, s, 0))
@@ -81,6 +84,9 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   # length 'cutoff'
   unique_paths = []
   unique_lengths = []
+
+  # TODO:
+  # Remove zero-length paths (these are "cheat" paths that skip reactions)
 
   plt.figure()
 
