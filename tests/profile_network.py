@@ -39,24 +39,37 @@ def add_species_paths(network: Network, source: str, target: str):
   # Add species nodes and edges (complex composition) into network graph
   # source/target dependent: don't add edges to species other than the
   # target species for any complex that contains the target species
+  # Source node only has outgoing edges (source)
+  # Target node only has incoming edges (sink)
   G = network.complex_graph
   edges_to_add = []
 
-  for i, s in enumerate(network.species):
-    # Add undirected (weight = 0) edges between each complex that contains
-    # a species UNLESS that complex contains the target species
-    for node in G.nodes():
-      # Only add target/source connection to node
-      if target in node or source in node:
-        if target in node:
-          edges_to_add.append((target, node, 0))
-        else:
-          edges_to_add.append((source, node, 0))
-        continue
+  # Add source and target (sink) connections
+  for complex in G.nodes():
+    # Split the complex so we can match the parts instead of potentially
+    # matching strings (e.g. 'H' would match 'in H2')
+    complex_species = [c.strip() for c in complex.split('+')]
+    print(complex_species, source, target)
+    if target in complex_species:
+      print(f"{complex} to {target} sink connection")
+      edges_to_add.append((complex, target, 0))
 
+    # Add source connections
+    if source in complex_species:
+      print(f"{source} to {complex} source connection")
+      edges_to_add.append((source, complex, 0))
+
+  # Add helper species connections
+  for i, s in enumerate(network.species):
+    if s == target or s == source:
+      continue
+    for complex in G.nodes():
       # Add species connection to node
-      if s in node and not node in network.species:
-        edges_to_add.append((s, node, 0))
+      complex_species = [c.strip() for c in complex.split('+')]
+      if not complex in network.species and s in complex_species:
+        print(f"{s} to {complex} undirected connection")
+        edges_to_add.append((s, complex, 0))
+        edges_to_add.append((complex, s, 0))
   G.add_weighted_edges_from(edges_to_add)
 
   return G
@@ -85,9 +98,11 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
       "with_labels": True
   }
   nx.draw(search_graph, **options)
+  nx.spring_layout(search_graph)
 
+  print(source, target)
   plt.show()
-  exit()
+  # exit()
   shortest_paths = nx.all_simple_paths(search_graph, source, target,
                                        cutoff=cutoff)
   count = 0
@@ -118,6 +133,8 @@ def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,
   all_unique_paths = {}
   all_unique_lengths = {}
   for source, target in product(sources, targets):
+    if source == target:
+      continue
     key = f"{source}-{target}"
     paths, lengths = find_paths(network, source, target,
                                 cutoff=cutoff, max_paths=max_paths)
@@ -128,7 +145,8 @@ def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,
 
 
 network_dir = '../res'
-network_file = f"{network_dir}/react-solar-umist12"
+# network_file = f"{network_dir}/solar_co_w05.ntw"
+network_file = f"{network_dir}/co_test.ntw"
 # network_file = f"{network_dir}/mp_cno.ntw"
 network = Network.from_krome_file(network_file)
 
@@ -160,8 +178,10 @@ for i, s in enumerate(network.species):
 
 network.number_densities = initial_number_densities
 print(initial_number_densities)
-sources = ['C', 'O']
-targets = ['CO', 'CH']
+# sources = ['C', 'O']
+# targets = ['CO', 'CH']
+sources = ['H', 'H2']
+targets = ['H2', 'H']
 
 # plt.figure()
 # nx.draw(network.species_graph)
