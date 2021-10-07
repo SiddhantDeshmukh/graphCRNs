@@ -9,6 +9,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 
+from copy import copy, deepcopy
+
 np.random.seed(42)
 
 
@@ -41,7 +43,7 @@ def add_species_paths(network: Network, source: str, target: str):
   # target species for any complex that contains the target species
   # Source node only has outgoing edges (source)
   # Target node only has incoming edges (sink)
-  G = network.complex_graph
+  G = deepcopy(network.complex_graph)
   edges_to_add = []
 
   # Add source and target (sink) connections
@@ -84,11 +86,6 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   # length 'cutoff'
   unique_paths = []
   unique_lengths = []
-
-  # TODO:
-  # Remove zero-length paths (these are "cheat" paths that skip reactions)
-  # - Fix secondary graphs, looks like it doesn't reset the complex graph
-  # because 'G = network.complex_graph' creates a reference!
 
   plt.figure()
 
