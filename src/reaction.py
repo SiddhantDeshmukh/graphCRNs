@@ -80,6 +80,8 @@ class Reaction:
       rxn_str += f"{to_fortran_str(self.max_temperature, '.3e')},"
       rxn_str += f"{self.limit},"
 
+    rxn_str += self.reference
+
     # Remove trailing comma
     return rxn_str.rstrip(',')
 

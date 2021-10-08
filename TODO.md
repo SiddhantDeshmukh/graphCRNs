@@ -9,7 +9,9 @@
 ### Network
 
 - Finalise solar CO network
-- Finalise metal-poor CNO network
+
+* Finalise metal-poor CNO network
+
 - Run CO5BOLD models
 
 ### Pathfinding

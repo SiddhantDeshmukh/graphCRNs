@@ -118,7 +118,8 @@ class Network:
                                     idx=format_dict['idx'],
                                     min_temperature=format_dict['Tmin'],
                                     max_temperature=format_dict['Tmax'],
-                                    limit=format_dict['limit']))
+                                    limit=format_dict['limit'],
+                                    reference=format_dict['ref']))
 
         # Reset quantities
         for key in format_dict.keys():
@@ -155,7 +156,10 @@ class Network:
 
   def to_cobold_format(self, path: str, with_limits=False):
     # Write Network to CO5BOLD 'chem.dat' format (provided a FORTRAN format)
-    CHEM_FORMAT = "(I4, 5(A8, 1X), 2(1X, A4), 1X, 1PE8.2, 3X, 0PF5.2, 2X, 0PF8.1, A16)"
+    # NOTE:
+    # CHEM_FORMAT differs slightly from CO5BOLD provided format to allow for
+    # left-justification of strings and to then follow spacing convention
+    CHEM_FORMAT = "(I4,1X, 5(A8, 1X), 2(A4,1X), 1PE8.2, 3X, 0PF5.2, 2X, 0PF8.1, A16)"
     CHEM_LIMIT_FORMAT = "(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,2(1X,1PE8.2),A16)"
     output = ""
     fformat = CHEM_LIMIT_FORMAT if with_limits else CHEM_FORMAT
@@ -163,6 +167,15 @@ class Network:
     for rxn in self.reactions:
       reactants = pad_list(rxn.reactants, 3)
       products = pad_list(rxn.products, 4)
+      # Left-align by padding to 8 chars for reactants and first 2 products,
+      # and to 4 chars for last 2 products
+      # For some reason the list comprehension gets rid of the padded elements
+      for i, r in enumerate(reactants):
+        reactants[i] = r.ljust(8, ' ')
+      for i, p in enumerate(products):
+        width = 8 if i <= 1 else 4
+        products[i] = p.ljust(width, ' ')
+
       alpha, beta, gamma = constants_from_rate(rxn.rate_expression)
       data = [int(rxn.idx), *reactants, *products,
               alpha, beta, gamma]
@@ -170,7 +183,7 @@ class Network:
         data.append(float(rxn.min_temperature))
         data.append(float(rxn.max_temperature))
 
-      data.append(rxn.reference)
+      data.append(rxn.reference.ljust(16, ' '))
       output += writer.write(data) + "\n"
 
     with open(path, 'w') as outfile:
