@@ -102,7 +102,8 @@ def constants_from_rate(rate: str) -> List:
     elif '^' in part:
       beta = float(part.split('^')[-1].replace('(', '').replace(')', ''))
     elif part.strip().startswith('exp'):
-      gamma = float(part.split('/')[0].strip()[4:])
+      # Note minus sign: 'rate' has '-gamma' in it because of Arrhenius form
+      gamma = -float(part.split('/')[0].strip()[4:])
 
     return alpha, beta, gamma
 

@@ -111,6 +111,7 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   shortest_paths = nx.all_simple_paths(search_graph, source, target,
                                        cutoff=cutoff)
   count = 0
+  # Measure length of each path
   for path in shortest_paths:
     total_length = 0
     for i in range(len(path) - 1):
@@ -149,6 +150,16 @@ def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,
   return all_unique_paths, all_unique_lengths
 
 
+def reaction_from_str(rxn_str: str, network: Network):
+  # From the rxn string, find the first reaction in the provided Network that
+  # matches
+  for rxn in network.reactions:
+    if str(rxn) == rxn_str:
+      return rxn
+
+  return None
+
+
 network_dir = '../res'
 # network_file = f"{network_dir}/solar_co_w05.ntw"
 network_file = f"{network_dir}/co_test.ntw"
@@ -183,18 +194,60 @@ for i, s in enumerate(network.species):
 
 network.number_densities = initial_number_densities
 print(initial_number_densities)
-# sources = ['C', 'O']
-# targets = ['CO', 'CH']
-sources = ['H', 'H2']
-targets = ['H2', 'H']
+sources = ['H', 'H2', 'C']
+targets = ['H2', 'H', 'CH']
 
 # plt.figure()
 # nx.draw(network.species_graph)
 # plt.show()
 
-unique_paths, unique_lengths = find_network_paths(network, sources, targets)
+# unique_paths, unique_lengths = find_network_paths(network, sources, targets)
 
-for key in unique_paths.keys():
-  print(f"{len(unique_paths[key])} paths and lengths for {key}:")
-  for path, length in zip(unique_paths[key], unique_lengths[key]):
-    print("\n".join([f"  {path}\tLength = {length:.2e}"]))
+# for key in unique_paths.keys():
+#   print(f"{len(unique_paths[key])} paths and lengths for {key}:")
+#   for path, length in zip(unique_paths[key], unique_lengths[key]):
+#     print("\n".join([f"  {path}\tLength = {length:.2e}"]))
+
+# TODO:
+# - Parse reactions from the pathways, i.e. identify the rxn based on the string
+#   - Naturally leads to network pruning!
+# - Create a metric for network balancing
+#   - order current balance by number of occurrences
+# - Investigate zero- and one-deficiency
+
+
+# Network balancing
+# Current implementation just counts number of times species appears as
+# reactant/product, but this doesn't necessarily take into account the rate
+# e.g. if H shows up twice but it's in the same reaction on the reactant side.
+# mass-action law predicts a [H]^2 relation, not 2H if it had showed up once
+# in 2 separate reactions.
+# For this, then, it would be useful to profile the current network for a given
+# density-temperature cell and compute rates of change, final densities, and
+# balance based on rates. Can still have an "overall linear balance" metric that
+# simply counts species on L/RHS of reactions and orders based on how many times
+# the species appears
+
+# Current implementation:
+# Balance = n(P) - n(R)
+# + gives a simple linear picture of how many times species on L/RHS
+# - no picture on rates of change (mass-action not implemented)
+
+# New idea:
+# Balance = (n(P) - n(R)) / N
+# N = total number of occurrences of species X
+# OR
+# N = total number of occurrences of all species
+# Benefits of including all species is we can see which _species_ are dominating
+# the network; however we can already do this with the linear metric, just
+# adding up the n(P) and n(R) values.
+# Can try both metrics, at the end of the day the outcomes of this are to find
+# - which species dominate a given network
+# - missing symmetries for reactions (if certain species are "one-side-heavy")
+
+# New idea with rates:
+# Compute rates for given density-temperature cell and _then_ check balance
+# This balance is no longer the number of times a species appears on L/RHS but
+# instead d[X]/dt (which is just the RHS of the ODE system)
+# Then we can find dominant rates of change in a network at a given
+# density-temperature point

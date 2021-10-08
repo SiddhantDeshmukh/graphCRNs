@@ -1,0 +1,28 @@
+5377 H        CH                C        H2                 1.31e-10    0.00      80.0C  UMIST12
+5415 H        OH                O        H2                 6.99e-14    2.80    1950.0L  UMIST12
+5380 H        CO                OH       C                  1.10e-10    0.50   77700.0L  UMIST12    
+6124 H        C                 CH       PHOTON             1.00e-17    0.00       0.0L  UMIST12
+6125 H        O                 OH       PHOTON             9.90e-19   -0.38       0.0L  UMIST12
+ 142 H        H2                H        H        H         4.67e-07   -1.00   55000.0L  UMIST12    
+ 141 H        CH                C        H        H         6.00e-09    0.00   40200.0L  UMIST12
+ 145 H        OH                O        H        H         6.00e-09    0.00   50900.0L  UMIST12    
+4079 H        O        M        OH       M                  4.33e-32   -1.00       0.0L  300 2500ANIST
+5000 H        H        M        H2       M                  6.43E-33   -1.0        0.0         -      
+5001 H        H        H2       H2       H2                 9.00E-33   -0.6        0.0         -      
+5002 H        H        H        H2       H                  2.64E-30    0.0        0.0         -      
+5349 H2       C                 CH       H                  6.64e-10    0.00   11700.0M  UMIST12
+5362 H2       O                 OH       H                  3.14e-13    2.70    3150.0M  UMIST12
+ 135 H2       H2                H2       H        H         1.00e-08    0.00   84100.0L  UMIST12
+ 134 H2       CH                C        H2       H         6.00e-09    0.00   40200.0L  UMIST12    
+ 139 H2       OH                O        H2       H         6.00e-09    0.00   50900.0L  UMIST12    
+5201 C        OH                O        CH                 2.25e-11    0.50   14800.0L  UMIST12
+5200 C        OH                CO       H                  1.10e-10    0.00       0.0L  UMIST12
+6078 C        O                 CO       PHOTON             4.69e-19    1.52    -50.50C  UMIST12
+4097 C        O        M        CO       M                  2.14e-29   -3.08   -2114.0C 200010000BPD89
+7001 C        O        H        CO       H                  3.78E-29   -3.50       0.0         - AR96  
+7000 O        H        H        OH       H                  1.00E-32    0.0        0.0         - AR96 
+5312 CH       O                 OH       C                  2.52e-11    0.00    2381.0C  UMIST12
+5311 CH       O                 CO       H                  6.02e-11    0.10      -4.5L  UMIST12
+ 104 CH       O                 CO       H                  1.02e-10    0.00     914.0C 2000 6000ANIST
+4076 CO       M                 O        C        M         2.86e-03   -3.52  112700.0C 200010000BPD89
+7002 CO       H                 C        O        H         1.39E-46   22.80       0.0         - AR96 

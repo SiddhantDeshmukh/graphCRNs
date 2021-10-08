@@ -122,10 +122,10 @@ def setup_number_densities(number_densities_dict, hydrogen_density):
 # %%
 # # CO network rates
 res_dir = '../res'
-network_file = f'{res_dir}/solar_co_w05.ntw'
+# network_file = f'{res_dir}/solar_co_w05.ntw'
 # network_file = f'{res_dir}/simplified_co.ntw'
 # network_file = f'{res_dir}/catalyst_co.ntw'
-# network_file = f'{res_dir}/mp_cno.ntw'
+network_file = f'{res_dir}/cno.ntw'
 
 initial_number_densities = {
     "H": 1e12,

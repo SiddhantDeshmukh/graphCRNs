@@ -100,6 +100,7 @@ class Network:
 
         else:
           split_line = line.split(',')
+          # print(split_line, rxn_format)
           for i, item in enumerate(rxn_format):
             format_dict[item].append(split_line[i])
 
@@ -154,7 +155,7 @@ class Network:
 
   def to_cobold_format(self, path: str, with_limits=False):
     # Write Network to CO5BOLD 'chem.dat' format (provided a FORTRAN format)
-    CHEM_FORMAT = "(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,A16)"
+    CHEM_FORMAT = "(I4, 5(A8, 1X), 2(1X, A4), 1X, 1PE8.2, 3X, 0PF5.2, 2X, 0PF8.1, A16)"
     CHEM_LIMIT_FORMAT = "(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,2(1X,1PE8.2),A16)"
     output = ""
     fformat = CHEM_LIMIT_FORMAT if with_limits else CHEM_FORMAT
