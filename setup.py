@@ -11,7 +11,7 @@ setuptools.setup(
     description="A set of tools to investigate chemical reaction networks as graphs.",
     long_description=long_description,
     url="https://github.com/SiddhantDeshmukh/graphCRNs",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages('src'),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
