@@ -3,10 +3,10 @@ README.md
 TODO.md
 setup.py
 update.sh
-graphCRN.egg-info/PKG-INFO
-graphCRN.egg-info/SOURCES.txt
-graphCRN.egg-info/dependency_links.txt
-graphCRN.egg-info/top_level.txt
+graphcrn.egg-info/PKG-INFO
+graphcrn.egg-info/SOURCES.txt
+graphcrn.egg-info/dependency_links.txt
+graphcrn.egg-info/top_level.txt
 res/L-network
 res/T-network
 res/catalyst_co.ntw
