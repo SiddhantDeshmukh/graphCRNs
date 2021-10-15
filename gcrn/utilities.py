@@ -1,5 +1,5 @@
 from typing import List
-from src.reaction import Reaction
+from gcrn.reaction import Reaction
 import numpy as np
 import re
 

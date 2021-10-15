@@ -1,10 +1,10 @@
 import numpy as np
 import networkx as nx
-from src.reaction import Reaction
+from gcrn.reaction import Reaction
 from typing import Dict, List, Union
 from itertools import product
 import fortranformat as ff
-from src.utilities import cofactor_matrix, list_to_krome_format,\
+from gcrn.utilities import cofactor_matrix, list_to_krome_format,\
     constants_from_rate, pad_list
 
 

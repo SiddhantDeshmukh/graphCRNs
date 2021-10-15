@@ -1,7 +1,7 @@
 from typing import Union, Dict, List
 from astropy.units.equivalencies import temperature
 import numpy as np
-from src.network import Network
+from gcrn.network import Network
 from scipy.integrate import ode
 import sympy
 from numba import jit

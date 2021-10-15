@@ -1,4 +1,4 @@
-from src.reaction import Reaction
+from gcrn.reaction import Reaction
 from typing import List
 import numpy as np
 
