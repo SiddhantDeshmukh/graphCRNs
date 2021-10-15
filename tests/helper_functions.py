@@ -6,8 +6,8 @@ from sadtools.utilities.chemistryUtilities import log_abundance_to_number_densit
 from typing import Dict, List
 import numpy as np
 import matplotlib.pyplot as plt
-from src.network import Network
-from src.dynamics import NetworkDynamics
+from gcrn.network import Network
+from gcrn.dynamics import NetworkDynamics
 
 
 def enumerated_product(*args):

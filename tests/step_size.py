@@ -1,7 +1,7 @@
 # Test solver min/max step size to see if it improves stability
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
 from tests.helper_functions import run_and_plot, setup_number_densities, setup_dynamics, solve_dynamics
-from src.network import Network
+from gcrn.network import Network
 import numpy as np
 
 

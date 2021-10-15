@@ -4,7 +4,7 @@ from itertools import product
 from typing import Dict, List, Union
 
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
-from src.network import Network
+from gcrn.network import Network
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np

@@ -3,8 +3,8 @@ from itertools import product
 from typing import Dict
 import numpy as np
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
-from src.network import Network
-from src.dynamics import NetworkDynamics
+from gcrn.network import Network
+from gcrn.dynamics import NetworkDynamics
 
 
 def get_photospheric_conditions(temperature_resolution: int,

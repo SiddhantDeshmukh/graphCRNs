@@ -7,8 +7,8 @@ from scipy.special import expit
 from typing import Callable, Dict, List
 import numpy as np
 import matplotlib.pyplot as plt
-from src.network import Network
-from src.dynamics import NetworkDynamics
+from gcrn.network import Network
+from gcrn.dynamics import NetworkDynamics
 
 alpha = 2
 beta = 0.5

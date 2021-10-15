@@ -2,8 +2,8 @@
 from typing import Dict
 from numba import jit
 from itertools import product
-from src.network import Network
-from src.dynamics import NetworkDynamics
+from gcrn.network import Network
+from gcrn.dynamics import NetworkDynamics
 import numpy as np
 import sympy
 import re

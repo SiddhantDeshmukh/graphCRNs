@@ -1,5 +1,5 @@
 # Test network I/O
-from src.network import Network
+from gcrn.network import Network
 from os import system
 
 
