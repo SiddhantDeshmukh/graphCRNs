@@ -1,14 +1,14 @@
 # %%
 from itertools import product
 from typing import Dict, List
-from src.utilities import cofactor_matrix
+from gcrn.utilities import cofactor_matrix
 import matplotlib.pyplot as plt
-from src.dynamics import NetworkDynamics
+from gcrn.dynamics import NetworkDynamics
 import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.drawing.nx_pylab import draw, draw_networkx_edge_labels
 from networkx.drawing.nx_pydot import to_pydot
-from src.network import Network
+from gcrn.network import Network
 import pydot
 import numpy as np
 from scipy.linalg import null_space

@@ -63,7 +63,7 @@ class Reaction:
     return output
 
   def krome_str(self) -> str:
-    from src.utilities import to_fortran_str
+    from gcrn.utilities import to_fortran_str
     # Comma-separated string as expected by KROME format
     rxn_str = ""
     if self.idx:
