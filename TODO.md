@@ -8,10 +8,10 @@
 
 ### Network
 
-- Finalise solar CO network
-
-* Finalise metal-poor CNO network
-
+- Add method to init from chem.dat
+- Simplify CO network across CO5BOLD model
+- Finalise metal-poor CNO network
+  - N2, CN evolution flawed
 - Run CO5BOLD models
 
 ### Pathfinding

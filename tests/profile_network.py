@@ -11,7 +11,20 @@ import numpy as np
 
 from copy import copy, deepcopy
 
+from gcrn.reaction import Reaction
+
 np.random.seed(42)
+
+
+def find_reaction_in_network(source_complex: str, target_complex: str,
+                             network: Network) -> Reaction:
+  # Find the first reaction corresponding to 'source_complex -> target_complex'
+  # in 'network'. Used in pathfinding to relate paths back to reactions.
+  for rxn in network.reactions:
+    if rxn.reactant_complex == source_complex and rxn.product_complex == target_complex:
+      return rxn
+
+  return None
 
 
 def network_balance(species_count: Dict):
@@ -53,12 +66,12 @@ def add_species_paths(network: Network, source: str, target: str):
     complex_species = [c.strip() for c in complex.split('+')]
     # print(complex_species, source, target)
     if target in complex_species:
-      print(f"{complex} to {target} sink connection")
+      # print(f"{complex} to {target} sink connection")
       edges_to_add.append((complex, target, 0))
 
     # Add source connections
     if source in complex_species:
-      print(f"{source} to {complex} source connection")
+      # print(f"{source} to {complex} source connection")
       edges_to_add.append((source, complex, 0))
 
   # Add helper species connections
@@ -72,7 +85,7 @@ def add_species_paths(network: Network, source: str, target: str):
         # TODO:
         # Don't connect to complex if the target is in it
         # - is this actually what we want? think about the logic a bit more
-        print(f"{s} to {complex} undirected connection")
+        # print(f"{s} to {complex} undirected connection")
         edges_to_add.append((s, complex, 0))
         edges_to_add.append((complex, s, 0))
   G.add_weighted_edges_from(edges_to_add)
@@ -86,6 +99,7 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   # length 'cutoff'
   unique_paths = []
   unique_lengths = []
+  reaction_paths = []
 
   plt.figure()
 
@@ -102,11 +116,11 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
       # "width": 5,
       "with_labels": True
   }
-  nx.draw(search_graph, **options)
-  nx.spring_layout(search_graph)
+  # nx.draw(search_graph, **options)
+  # nx.spring_layout(search_graph)
 
-  print(source, target)
-  plt.show()
+  # print(source, target)
+  # plt.show()
   # exit()
   shortest_paths = nx.all_simple_paths(search_graph, source, target,
                                        cutoff=cutoff)
@@ -120,6 +134,19 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
       length = edge['weight']
       total_length += length
 
+    # Replace strings with reactions
+    rxn_path = []
+    for i, entry in enumerate(path):
+      if i == len(path) - 1:
+        continue
+      rxn = find_reaction_in_network(entry, path[i+1], network)
+      if rxn:
+        rxn_path.append(rxn)
+      else:
+        rxn_path.append(entry)
+
+    reaction_paths.append(rxn_path)
+
     string_path = ' -> '.join(path)
     if total_length > 0 and not string_path in unique_paths:
       unique_paths.append(string_path)
@@ -129,40 +156,33 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
     if count >= max_paths:
       break
 
-  return unique_paths, unique_lengths
+  return unique_paths, unique_lengths, reaction_paths
 
 
 def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,
                        max_paths=100) -> Union[Dict, Dict]:
-  # Find 'num_paths' paths with a max length of 'cutoff' between every source
-  # and target provided
+  # Find 'num_paths' paths with a max length of 'cutoff' between
+  # each source-target pair (zip(sources, targets))
+  # Hence, sources and targest should be the same length
   all_unique_paths = {}
   all_unique_lengths = {}
-  for source, target in product(sources, targets):
+  all_unique_rxn_paths = {}
+  for source, target in zip(sources, targets):
     if source == target:
       continue
     key = f"{source}-{target}"
-    paths, lengths = find_paths(network, source, target,
-                                cutoff=cutoff, max_paths=max_paths)
+    paths, lengths, rxn_paths = find_paths(network, source, target,
+                                           cutoff=cutoff, max_paths=max_paths)
     all_unique_paths[key] = paths
     all_unique_lengths[key] = lengths
+    all_unique_rxn_paths[key] = rxn_paths
 
-  return all_unique_paths, all_unique_lengths
-
-
-def reaction_from_str(rxn_str: str, network: Network):
-  # From the rxn string, find the first reaction in the provided Network that
-  # matches
-  for rxn in network.reactions:
-    if str(rxn) == rxn_str:
-      return rxn
-
-  return None
+  return all_unique_paths, all_unique_lengths, all_unique_rxn_paths
 
 
 network_dir = '../res'
-# network_file = f"{network_dir}/solar_co_w05.ntw"
-network_file = f"{network_dir}/co_test.ntw"
+network_file = f"{network_dir}/solar_co_w05.ntw"
+# network_file = f"{network_dir}/co_test.ntw"
 # network_file = f"{network_dir}/mp_cno.ntw"
 network = Network.from_krome_file(network_file)
 
@@ -194,19 +214,31 @@ for i, s in enumerate(network.species):
 
 network.number_densities = initial_number_densities
 print(initial_number_densities)
-sources = ['H', 'H2', 'C']
-targets = ['H2', 'H', 'CH']
+sources = ['H', 'H2', 'C', 'C', 'CH', 'CO']
+targets = ['H2', 'H', 'CH', 'CO', 'C', 'C']
 
 # plt.figure()
 # nx.draw(network.species_graph)
 # plt.show()
 
-# unique_paths, unique_lengths = find_network_paths(network, sources, targets)
+unique_paths, unique_lengths, rxn_paths =\
+    find_network_paths(network, sources, targets)
 
-# for key in unique_paths.keys():
-#   print(f"{len(unique_paths[key])} paths and lengths for {key}:")
-#   for path, length in zip(unique_paths[key], unique_lengths[key]):
-#     print("\n".join([f"  {path}\tLength = {length:.2e}"]))
+for key in unique_paths.keys():
+  print(f"{len(unique_paths[key])} paths and lengths for {key}:")
+  for path, length, rxn_path in zip(unique_paths[key], unique_lengths[key], rxn_paths[key]):
+    print("\n".join([f"  {path}\tLength = {length:.2e}"]))
+    # Cast elements of rxn_path to str
+    rxn_path = " -> ".join([f"{e.idx}" if isinstance(e,
+                           Reaction) else f"{str(e)}" for e in rxn_path])
+    print("\n".join([f"  {rxn_path}"]))
+
+# NOTE:
+# Reaction paths don't yet work properly since the iteration can go over the
+# product complex as the next reactant complex, and if it does not react,
+# the product complex is added a second time
+# Need to ensure appending a reaction to the list then removes the product
+# complex if that complex does not show up as a reactant complex
 
 # TODO:
 # - Parse reactions from the pathways, i.e. identify the rxn based on the string

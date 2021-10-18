@@ -11,7 +11,7 @@ from gcrn.utilities import cofactor_matrix, list_to_krome_format,\
 class Network:
   def __init__(self, reactions: List[Reaction], temperature=300,
                number_densities=None) -> None:
-    self.reactions = sorted(reactions, key=lambda rxn: rxn.idx)
+    self.reactions: List[Reaction] = sorted(reactions, key=lambda rxn: rxn.idx)
 
     # Determine species and complexes present in each reaction
     species = []
