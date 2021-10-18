@@ -136,15 +136,20 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
 
     # Replace strings with reactions
     rxn_path = []
+    had_prev_reaction = False
     for i, entry in enumerate(path):
       if i == len(path) - 1:
         continue
       rxn = find_reaction_in_network(entry, path[i+1], network)
       if rxn:
         rxn_path.append(rxn)
+        had_prev_reaction = True
       else:
-        rxn_path.append(entry)
-
+        if not had_prev_reaction:
+          rxn_path.append(entry)
+        had_prev_reaction = False
+    # Add final (target) species
+    rxn_path.append(path[-1])
     reaction_paths.append(rxn_path)
 
     string_path = ' -> '.join(path)
@@ -233,16 +238,9 @@ for key in unique_paths.keys():
                            Reaction) else f"{str(e)}" for e in rxn_path])
     print("\n".join([f"  {rxn_path}"]))
 
-# NOTE:
-# Reaction paths don't yet work properly since the iteration can go over the
-# product complex as the next reactant complex, and if it does not react,
-# the product complex is added a second time
-# Need to ensure appending a reaction to the list then removes the product
-# complex if that complex does not show up as a reactant complex
 
 # TODO:
-# - Parse reactions from the pathways, i.e. identify the rxn based on the string
-#   - Naturally leads to network pruning!
+# - Create network simplificatino pipeline
 # - Create a metric for network balancing
 #   - order current balance by number of occurrences
 # - Investigate zero- and one-deficiency
