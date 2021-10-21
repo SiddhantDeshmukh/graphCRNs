@@ -12,6 +12,7 @@ import numpy as np
 from copy import copy, deepcopy
 
 from gcrn.reaction import Reaction
+import re
 
 np.random.seed(42)
 
@@ -74,20 +75,25 @@ def add_species_paths(network: Network, source: str, target: str):
       # print(f"{source} to {complex} source connection")
       edges_to_add.append((source, complex, 0))
 
+  # NOTE 20/10/21:
+  # Upon reconsideration, I don't see why I need these helper species. They just
+  # allow jumps between species, but to answer the question "source -> target",
+  # I don't want any of these jumps!
+
   # Add helper species connections
-  for i, s in enumerate(network.species):
-    if s == target or s == source:
-      continue
-    for complex in G.nodes():
-      # Add species connection to node
-      complex_species = [c.strip() for c in complex.split('+')]
-      if not complex in network.species and not target in complex_species and s in complex_species:
-        # TODO:
-        # Don't connect to complex if the target is in it
-        # - is this actually what we want? think about the logic a bit more
-        # print(f"{s} to {complex} undirected connection")
-        edges_to_add.append((s, complex, 0))
-        edges_to_add.append((complex, s, 0))
+  # for i, s in enumerate(network.species):
+  #   if s == target or s == source:
+  #     continue
+  #   for complex in G.nodes():
+  #     # Add species connection to node
+  #     complex_species = [c.strip() for c in complex.split('+')]
+  #     if not complex in network.species and not target in complex_species and s in complex_species:
+  #       # TODO:
+  #       # Don't connect to complex if the target is in it
+  #       # - is this actually what we want? think about the logic a bit more
+  #       # print(f"{s} to {complex} undirected connection")
+  #       edges_to_add.append((s, complex, 0))
+  #       edges_to_add.append((complex, s, 0))
   G.add_weighted_edges_from(edges_to_add)
 
   return G
@@ -100,8 +106,6 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   unique_paths = []
   unique_lengths = []
   reaction_paths = []
-
-  plt.figure()
 
   search_graph = add_species_paths(network, source, target)
   edges, weights = zip(*nx.get_edge_attributes(search_graph, 'weight').items())
@@ -116,6 +120,7 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
       # "width": 5,
       "with_labels": True
   }
+  # plt.figure()
   # nx.draw(search_graph, **options)
   # nx.spring_layout(search_graph)
 
@@ -137,10 +142,13 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
     # Replace strings with reactions
     rxn_path = []
     had_prev_reaction = False
+    # print("new path")
+    # print(path)
     for i, entry in enumerate(path):
       if i == len(path) - 1:
         continue
       rxn = find_reaction_in_network(entry, path[i+1], network)
+      # print(f"{entry} -> {path[i+1]}:  {rxn}")
       if rxn:
         rxn_path.append(rxn)
         had_prev_reaction = True
@@ -150,12 +158,14 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
         had_prev_reaction = False
     # Add final (target) species
     rxn_path.append(path[-1])
-    reaction_paths.append(rxn_path)
+    # print(" -> ".join([f"{e.idx}" if isinstance(e, Reaction) else f"{str(e)}"
+    #                    for e in rxn_path]))
 
     string_path = ' -> '.join(path)
     if total_length > 0 and not string_path in unique_paths:
       unique_paths.append(string_path)
       unique_lengths.append(total_length)
+      reaction_paths.append(rxn_path)
 
     count += 1
     if count >= max_paths:
@@ -218,29 +228,52 @@ for i, s in enumerate(network.species):
                                                                 np.log10(hydrogen_density.value))
 
 network.number_densities = initial_number_densities
-print(initial_number_densities)
+network.temperature = 5000
+# print(initial_number_densities)
 sources = ['H', 'H2', 'C', 'C', 'CH', 'CO']
 targets = ['H2', 'H', 'CH', 'CO', 'C', 'C']
+# sources = ['H', 'H2']
+# targets = ['H2', 'H']
 
 # plt.figure()
 # nx.draw(network.species_graph)
 # plt.show()
 
-unique_paths, unique_lengths, rxn_paths =\
-    find_network_paths(network, sources, targets)
+unique_paths, unique_lengths, rxn_paths = find_network_paths(
+    network, sources, targets)
 
+rxn_idx_paths = {}
 for key in unique_paths.keys():
+  rxn_idx_paths[key] = []
   print(f"{len(unique_paths[key])} paths and lengths for {key}:")
   for path, length, rxn_path in zip(unique_paths[key], unique_lengths[key], rxn_paths[key]):
     print("\n".join([f"  {path}\tLength = {length:.2e}"]))
     # Cast elements of rxn_path to str
-    rxn_path = " -> ".join([f"{e.idx}" if isinstance(e,
-                           Reaction) else f"{str(e)}" for e in rxn_path])
-    print("\n".join([f"  {rxn_path}"]))
+    rxn_idx_path = " -> ".join([f"{e.idx}" if isinstance(e, Reaction)
+                                else f"{str(e)}" for e in rxn_path])
+    print("\n".join([f"  {rxn_idx_path}"]))
+    rxn_idx_paths[key].append(rxn_idx_path)
 
+
+# Count occurrences of rxn indices weighted by path length to find most
+# travelled pathways
+rxn_counts = {}
+for key in unique_paths.keys():
+  for path, length in zip(rxn_idx_paths[key], unique_lengths[key]):
+    # print(path, length)
+    rxn_idxs = re.findall(r" \d+ ", path)
+    for idx in rxn_idxs:
+      idx = idx.strip()
+      # print(path, rxn_idxs, idx)
+      if not idx in rxn_counts:
+        rxn_counts[idx] = 1
+      else:
+        rxn_counts[idx] += 1
+
+print("\n".join([f'{k}: {v}' for k, v in rxn_counts.items()]))
 
 # TODO:
-# - Create network simplificatino pipeline
+# - Create network simplification pipeline
 # - Create a metric for network balancing
 #   - order current balance by number of occurrences
 # - Investigate zero- and one-deficiency
