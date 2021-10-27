@@ -17,12 +17,21 @@ import re
 np.random.seed(42)
 
 
-def find_reaction_in_network(source_complex: str, target_complex: str,
-                             network: Network) -> Reaction:
+def find_reaction_from_complex(source_complex: str, target_complex: str,
+                               network: Network) -> Reaction:
   # Find the first reaction corresponding to 'source_complex -> target_complex'
   # in 'network'. Used in pathfinding to relate paths back to reactions.
   for rxn in network.reactions:
     if rxn.reactant_complex == source_complex and rxn.product_complex == target_complex:
+      return rxn
+
+  return None
+
+
+def find_reaction_from_idx(idx: int, network: Network) -> Reaction:
+  # Use the reaction index to find the corresponding Reaction in network
+  for rxn in network.reactions:
+    if rxn.idx == idx:
       return rxn
 
   return None
@@ -147,7 +156,7 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
     for i, entry in enumerate(path):
       if i == len(path) - 1:
         continue
-      rxn = find_reaction_in_network(entry, path[i+1], network)
+      rxn = find_reaction_from_complex(entry, path[i+1], network)
       # print(f"{entry} -> {path[i+1]}:  {rxn}")
       if rxn:
         rxn_path.append(rxn)
@@ -272,11 +281,25 @@ for key in unique_paths.keys():
 
 print("\n".join([f'{k}: {v}' for k, v in rxn_counts.items()]))
 
+# Iterate over many thermodynamic states to find the most favourable reactions
+# TODO:
+# Do this for finding pathways instead! It is more natural.
+
 # TODO:
 # - Create network simplification pipeline
 # - Create a metric for network balancing
 #   - order current balance by number of occurrences
 # - Investigate zero- and one-deficiency
+
+# NOTE:
+# - Just finding 'reaction counts' can be done independently of path lengths,
+#   it only depends on connections, not weights. Weight come into play when
+#   finding shortest paths! Hence finding shortest paths is doing both problems
+#   simultaneously, and I can keep track of the entire formation/disassociation
+#   path lengths. When calculating just the counts, I'm looking at the network
+#   as a whole to find which reactions are the most important. So these are two
+#   separate ways of viewing simplification which hopefully give the same result
+#   since they come from the same assumptions and also use the same inputs.
 
 
 # Network balancing

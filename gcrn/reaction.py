@@ -46,8 +46,13 @@ class Reaction:
     self.reference = reference if reference else 'NONE'
     # Fortran -> Python format
     self.rate_expression = rate_expression.replace('d', 'e')
+    self.eval_expression = self.create_eval_expression()
     self.rate = self.evaluate_rate_expression(300)  # default
     self.mass_action_rate_expression = self.determine_mass_action_rate()
+
+  def create_eval_expression(self):
+    expression = eval(f'lambda Tgas: {self.rate_expression}')
+    return expression
 
   def __str__(self) -> str:
     return f"{create_complex(self.reactants)} -> {create_complex(self.products)}"
@@ -111,9 +116,13 @@ class Reaction:
   def evaluate_rate_expression(self, temperature=None, use_limit=True):
     # Evaluate (potentially temperature-dependent) rate expression
     # WARNING: Eval is evil!
+    # TODO:
+    # Move the 'eval' into a constructor, we only need to construct the 'eval'
+    # expression once!
     # TODO: Sanitise input
-    expression = self.rate_expression.replace("Tgas", str(temperature))
-    rate = eval(expression)
+    # expression = self.rate_expression.replace("Tgas", str(temperature))
+    # rate = eval(expression)
+    rate = self.eval_expression(temperature)
 
     # Check if rate should be limited
     if use_limit and self.limit:
@@ -129,8 +138,9 @@ class Reaction:
         elif temperature > self.max_temperature:
           temperature = self.max_temperature
 
-        expression = self.rate_expression.replace("Tgas", str(temperature))
-        rate = eval(expression)
+        # expression = self.rate_expression.replace("Tgas", str(temperature))
+        # rate = eval(expression)
+        rate = self.eval_expression(temperature)
 
       elif self.limit == 'sharp':
         if temperature < self.min_temperature or temperature > self.max_temperature:

@@ -13,11 +13,13 @@ from math import exp  # used in 'eval'
 # TODO:
 # Clear up distinction between Network and NetworkDynamics
 # Where should temperature be represented? How to interface using it?
+# - Efficiency: Python is the slow part! Creating complex kinetics matrix in
+#   the rates vector is very slow!
 
 class NetworkDynamics():
   def __init__(self, network: Network,
                initial_number_densities: Union[Dict, List, np.ndarray],
-               temperature=300) -> None:
+               temperature=300, initialise_jacobian=False) -> None:
     self.network = network
     self.species = self.network.species
     self.symbols = [f"n_{s}" for s in self.species]
@@ -37,8 +39,9 @@ class NetworkDynamics():
     self.dynamics_vector = self.calculate_dynamics()
 
     # Rates and Jacobian attributes
-    self.rate_dict = self.create_rate_dict()
-    self.jacobian_func = self.create_jacobian()
+    if initialise_jacobian:
+      self.rate_dict = self.create_rate_dict()
+      self.jacobian_func = self.create_jacobian()
 
   # TODO:
   # Have number densities and initial number densities as properties?
@@ -155,6 +158,9 @@ class NetworkDynamics():
     #                                       evaluate=True, local_dict=n_dict)
     # Evaluate the function Jacobian by calling each element with the provided
     # temperature and number densities
+    if not self.jacobian_func:
+      self.rate_dict = self.create_rate_dict()
+      self.jacobian_func = self.create_jacobian()
     jacobian = np.zeros_like(self.jacobian_func, dtype=float)
     x, y = jacobian.shape
     for i, j in product(range(x), range(y)):
