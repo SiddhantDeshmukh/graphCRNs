@@ -6,6 +6,7 @@ from itertools import product
 import fortranformat as ff
 from gcrn.utilities import cofactor_matrix, list_to_krome_format,\
     constants_from_rate, pad_list
+from functools import lru_cache
 
 
 class Network:
@@ -38,12 +39,12 @@ class Network:
     #      for rxn in self.reactions]))))
 
     # Create MultiDiGraphs for species and complexes using networkx
-    self.species_graph = self.create_species_graph()
-    self.complex_graph = self.create_complex_graph()
+    self._species_graph = self.create_species_graph()
+    self._complex_graph = self.create_complex_graph()
 
     # Incidence matrices from graphs
     # Species incidence matrix (m x r)
-    self.species_incidence_matrix = nx.incidence_matrix(self.species_graph)
+    self.species_incidence_matrix = nx.incidence_matrix(self._species_graph)
     # Complex incidence matrix (c x r)
     self.complex_incidence_matrix = self.create_complex_incidence_matrix()
     # Complex composition matrix (m x c)
@@ -51,6 +52,7 @@ class Network:
     # Stoichiometric matrix (m x r)
     self.stoichiometric_matrix = self.complex_composition_matrix @ self.complex_incidence_matrix
     # Outgoing co-incidence matrix of reaction rates (r x c)
+    self.eval_kinetics_matrix, self.eval_kinetics_idxs = self.create_eval_kinetics_matrix()
     self.complex_kinetics_matrix = self.create_complex_kinetics_matrix()
     # Weighted Laplacian (transpose of conventional Laplacian) matrix (c x c)
     self.complex_laplacian = self.create_complex_laplacian_matrix()
@@ -268,15 +270,31 @@ class Network:
 
     return complex_composition_matrix
 
+  def create_eval_kinetics_matrix(self) -> np.ndarray:
+    # Create the (r x c) coindicidence matrix containing reaction objects
+    # 'K' in: x_dot =  ZDK Exp(Z.T Ln(x))
+    eval_kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)),
+                                    dtype=object)
+    eval_kinetics_idxs = []
+    for i, rxn in enumerate(self.reactions):
+      for j, complex in enumerate(self.complexes):
+        rhs = rxn if complex == rxn.reactant_complex else eval('lambda _: 0')
+        eval_kinetics_matrix[i, j] = rhs
+        eval_kinetics_idxs.append((i, j))
+    return eval_kinetics_matrix, eval_kinetics_idxs
+
   def create_complex_kinetics_matrix(self, limit_rates=False) -> np.ndarray:
     # Create the (r x c) coindicidence matrix containing reaction rate constants
     # 'K' in: x_dot =  ZDK Exp(Z.T Ln(x))
     kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)))
-    for i, rxn in enumerate(self.reactions):
-      for j, complex in enumerate(self.complexes):
-        if complex == rxn.reactant_complex:
-          kinetics_matrix[i, j] = rxn.evaluate_rate_expression(self.temperature,
-                                                               use_limit=limit_rates)
+    # TODO:
+    # Determine indices of filled kinetics matrix just once
+    # for i, rxn in enumerate(self.reactions):
+    #   for j, complex in enumerate(self.complexes):
+    #     kinetics_matrix[i, j] = self.eval_kinetics_matrix[i, j](
+    #         self.temperature)
+    for (i, j) in self.eval_kinetics_idxs:
+      kinetics_matrix[i, j] = self.eval_kinetics_matrix[i, j](self.temperature)
     return kinetics_matrix
 
   def create_complex_laplacian_matrix(self) -> np.ndarray:
@@ -300,7 +318,7 @@ class Network:
   # ----------------------------------------------------------------------------
   # Methods for updating attributes
   # ----------------------------------------------------------------------------
-  def update(self):
+  def _update(self):
     # TODO:
     # Use temperature property instead of passing in
 
@@ -310,9 +328,9 @@ class Network:
     self.complex_kinetics_matrix =\
         self.create_complex_kinetics_matrix()
 
-    # print(f"Updating graphs with temperature {temperature} K")
-    self.update_species_graph()
-    self.update_complex_graph()
+    # # print(f"Updating graphs with temperature {temperature} K")
+    # self.update_species_graph()
+    # self.update_complex_graph()
 
   # ----------------------------------------------------------------------------
   # Methods for computing nullspaces
@@ -381,7 +399,7 @@ class Network:
   @temperature.setter
   def temperature(self, value: float):
     self._temperature = value
-    self.update()
+    self._update()
 
   @property
   def number_densities(self):
@@ -394,4 +412,22 @@ class Network:
       self._number_densities = {s: n for s, n in zip(self.species, value)}
     elif isinstance(value, dict):
       self._number_densities = value
-    self.update()
+    self._update()
+
+  @property
+  def complex_graph(self):
+    self._complex_graph = self.create_complex_graph()
+    return self._complex_graph
+
+  @complex_graph.setter
+  def complex_graph(self, value: nx.Graph):
+    self._complex_graph = value
+
+  @property
+  def species_graph(self):
+    self._species_graph = self.create_species_graph()
+    return self._complex_graph
+
+  @complex_graph.setter
+  def species_grah(self, value: nx.Graph):
+    self._species_graph = value

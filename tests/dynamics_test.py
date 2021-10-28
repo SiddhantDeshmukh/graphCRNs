@@ -1,7 +1,8 @@
 from itertools import product
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
-from gcrn.helper_functions import setup_dynamics
+from gcrn.helper_functions import enumerated_product, setup_dynamics
 from gcrn.network import Network
+import numpy as np
 
 
 # Dummy network dynamics to profile efficiency
@@ -22,15 +23,17 @@ initial_number_densities = {
 
 network = Network.from_krome_file(network_file)
 
-temperatures = [3000, 5000, 10000]
-gas_densities = [1e-10, 1e-8, 1e-6]
+temperatures = np.linspace(3000, 15000, num=50)
+gas_densities = np.logspace(-12, -6, num=50)
 timescales = [100, 1000, 10000]
-for T, rho in product(temperatures, gas_densities):
-  print(f"Solving rho = {rho:.2e} [g/cm^3], T = {T} [K]")
+for (i, j), (T, rho) in enumerated_product(temperatures, gas_densities):
+  # print(f"Solving rho = {rho:.2e} [g/cm^3], T = {T} [K]")
   hydrogen_density = gas_density_to_hydrogen_number_density(rho)
 
   dynamics = setup_dynamics(network, 3000, initial_number_densities,
                             hydrogen_density)
   for timescale in timescales:
-    print(f"\tSolving t = {timescale} [s]")
+    # print(f"\tSolving t = {timescale} [s]")
     dynamics.solve(timescale, dynamics.initial_number_densities)
+  print(
+      f"Done {i+1} / {len(gas_densities)} densities, {j+1} / {len(temperatures)} temperatures")

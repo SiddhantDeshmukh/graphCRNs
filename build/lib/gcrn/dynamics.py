@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Union, Dict, List
 from astropy.units.equivalencies import temperature
 import numpy as np
@@ -34,8 +35,10 @@ class NetworkDynamics():
         self.setup_initial_number_densities(initial_number_densities)
     self.number_densities = self.initial_number_densities.copy()
 
-    self.rates_vector = self.create_rates_vector(self.number_densities,
-                                                 temperature=temperature)
+    self.rates_vector = eval(
+        f'lambda Z, K, n: K.dot(np.exp(Z.T.dot(np.log(n))))')
+    # self.rates_vector = self.create_rates_vector(self.number_densities,
+    #                                              temperature=temperature)
     self.dynamics_vector = self.calculate_dynamics()
 
     # Rates and Jacobian attributes
@@ -168,6 +171,7 @@ class NetworkDynamics():
 
     return jacobian
 
+  # @lru_cache(maxsize=128)
   def create_rates_vector(self, number_densities: np.ndarray,
                           temperature=None, limit_rates=False) -> np.ndarray:
     # Create the vector v(x) = K Exp(Z.T Ln(x)) that includes the stoichiometry
@@ -177,16 +181,7 @@ class NetworkDynamics():
     #   print("Error: number densities negative!")
     #   exit(-1)
     Z = self.network.complex_composition_matrix
-
-    # Update kinetics matrix if temperature is provided
-    # TODO:
-    # Only allow temperature change in Dynamics, which automatically updates
-    # all matrices
-    if temperature:
-      K = self.network.create_complex_kinetics_matrix(limit_rates=limit_rates)
-    else:
-      K = self.network.complex_kinetics_matrix
-
+    K = self.network.complex_kinetics_matrix
     # Check if number densities are below minimum value of 1e-20 and set the
     # rates to zero if so
     # TODO:
@@ -200,7 +195,9 @@ class NetworkDynamics():
   def calculate_dynamics(self) -> np.ndarray:
     # Calculate the RHS ZD v(x) = Sv(x)
     S = self.network.stoichiometric_matrix
-    dynamics_vector = S.dot(self.rates_vector)
+    Z = self.network.complex_composition_matrix
+    K = self.network.complex_kinetics_matrix
+    dynamics_vector = S.dot(self.rates_vector(Z, K, self.number_densities))
 
     return dynamics_vector
 
@@ -209,14 +206,17 @@ class NetworkDynamics():
             limit_rates=False,
             atol=1e-30, rtol=1e-4,
             **solver_kwargs) -> np.ndarray:
+    # @lru_cache(maxsize=128)
     def f(t: float, y: np.ndarray,
           temperature=None, limit_rates=False) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
+      if abs(temperature - self.network.temperature) > 1e-04:
+        self.network.temperature = temperature
+      S = self.network.stoichiometric_matrix
       Z = self.network.complex_composition_matrix
-      D = self.network.complex_incidence_matrix
-      rates_vector = self.create_rates_vector(y, temperature, limit_rates)
+      K = self.network.complex_kinetics_matrix
 
-      return Z @ D @ rates_vector
+      return S @ self.rates_vector(Z, K, y)
 
     if create_jacobian:
       # Use the analytical Jacobian stored in NetworkDynamics

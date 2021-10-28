@@ -1,6 +1,7 @@
 .gitignore
 README.md
 TODO.md
+install
 setup.py
 update.sh
 gcrn/__init__.py
@@ -43,6 +44,7 @@ res/reverse-3
 res/ring-reaction
 res/simplified_co.ntw
 res/solar_co_w05.ntw
+tests/dynamics_test.py
 tests/io.py
 tests/limits.py
 tests/parser.py

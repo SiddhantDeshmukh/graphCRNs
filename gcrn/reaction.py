@@ -90,7 +90,7 @@ class Reaction:
     # Remove trailing comma
     return rxn_str.rstrip(',')
 
-  def __call__(self, temperature: float, use_limit=True) -> float:
+  def __call__(self, temperature: float, use_limit=False) -> float:
     return self.evaluate_rate_expression(temperature, use_limit=use_limit)
 
   def calcluate_stoichiometry(self) -> Dict:
@@ -113,15 +113,10 @@ class Reaction:
 
     return reactant_stoichiometry, product_stoichiometry
 
-  def evaluate_rate_expression(self, temperature=None, use_limit=True):
+  def evaluate_rate_expression(self, temperature=None, use_limit=False):
     # Evaluate (potentially temperature-dependent) rate expression
     # WARNING: Eval is evil!
-    # TODO:
-    # Move the 'eval' into a constructor, we only need to construct the 'eval'
-    # expression once!
     # TODO: Sanitise input
-    # expression = self.rate_expression.replace("Tgas", str(temperature))
-    # rate = eval(expression)
     rate = self.eval_expression(temperature)
 
     # Check if rate should be limited
@@ -138,8 +133,6 @@ class Reaction:
         elif temperature > self.max_temperature:
           temperature = self.max_temperature
 
-        # expression = self.rate_expression.replace("Tgas", str(temperature))
-        # rate = eval(expression)
         rate = self.eval_expression(temperature)
 
       elif self.limit == 'sharp':
