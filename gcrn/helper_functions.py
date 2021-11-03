@@ -5,7 +5,28 @@ from typing import Dict, List
 import numpy as np
 import matplotlib.pyplot as plt
 from gcrn.network import Network
+from gcrn.reaction import Reaction
 from gcrn.dynamics import NetworkDynamics
+
+
+def find_reaction_from_complex(source_complex: str, target_complex: str,
+                               network: Network) -> Reaction:
+  # Find the first reaction corresponding to 'source_complex -> target_complex'
+  # in 'network'. Used in pathfinding to relate paths back to reactions.
+  for rxn in network.reactions:
+    if rxn.reactant_complex == source_complex and rxn.product_complex == target_complex:
+      return rxn
+
+  return None
+
+
+def find_reaction_from_idx(idx: int, network: Network) -> Reaction:
+  # Use the reaction index to find the corresponding Reaction in network
+  for rxn in network.reactions:
+    if rxn.idx == idx:
+      return rxn
+
+  return None
 
 
 def enumerated_product(*args):
