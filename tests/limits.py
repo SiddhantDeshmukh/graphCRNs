@@ -2,13 +2,13 @@
 # Test temperature limits and fading functions
 from itertools import product
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
-from tests.helper_functions import run_and_plot
 from scipy.special import expit
 from typing import Callable, Dict, List
 import numpy as np
 import matplotlib.pyplot as plt
 from gcrn.network import Network
 from gcrn.dynamics import NetworkDynamics
+from gcrn.helper_functions import run_and_plot
 
 alpha = 2
 beta = 0.5
@@ -212,10 +212,11 @@ times = np.logspace(-6, 3, num=10)
 
 gas_density = 1e-6  # [g cm^-3]
 colours = ['b', 'g', 'r', 'gold', 'purple', 'violet', 'sienna', 'teal']
+plot_species = ['CO', 'CH', 'CN', 'N2']
 print(f"Solving unlimited rates case.")
 filename = f"../out/figs/solar_network_unlimited_simplified.png"
 run_and_plot(temperatures, times, network, filename, initial_number_densities,
-             hydrogen_density, limit_rates=False)
+             hydrogen_density, plot_species, limit_rates=False)
 # for limit in ['boundary', 'weak', 'sharp']:
 #   network.set_reaction_limit(limit)
 #   print(f"Solving with {limit} limit.")

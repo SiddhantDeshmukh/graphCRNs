@@ -7,7 +7,8 @@ import numpy as np
 
 # Dummy network dynamics to profile efficiency
 res_dir = '../res'
-network_file = f'{res_dir}/solar_co_w05.ntw'
+# network_file = f'{res_dir}/solar_co_w05.ntw'
+network_file = f'{res_dir}/cno.ntw'
 
 initial_number_densities = {
     "H": 1e12,
@@ -15,11 +16,17 @@ initial_number_densities = {
     "OH": 1e-12,
     "C": 10**(8.39),  # solar
     "O": 10**(8.66),  # solar
+    "N": 10**(7.83),
     "CH": 1e-12,
     "CO": 1e-12,
+    "CN": 1e-12,
+    "NH": 1e-12,
+    "NO": 1e-12,
+    "C2": 1e-12,
+    "O2": 1e-12,
+    "N2": 1e-12,
     "M": 1e11,
 }
-
 
 network = Network.from_krome_file(network_file)
 

@@ -1,18 +1,34 @@
 # Profile a CRN to investigate species, reactant-product balance, pathfinding
 # and timescales
 from itertools import product
-from typing import Dict
+from typing import Dict, List
 
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
 from gcrn.network import Network
+from gcrn.dynamics import NetworkDynamics
 from gcrn.pathfinding import find_network_paths
 from gcrn.helper_functions import setup_number_densities
 import numpy as np
 
 from gcrn.reaction import Reaction
 import re
+from dataclasses import dataclass
 
 np.random.seed(42)
+
+
+@dataclass
+class PointPaths:
+  density: float
+  temperature: float
+  unique_paths: Dict
+  unique_lengths: Dict
+  rxn_paths: Dict
+  rxn_counts: Dict
+
+  # TODO:
+  # View rho-T grid from source-target perspective:
+  # foreach pair, order reactions based on path length
 
 
 def network_balance(species_count: Dict):
@@ -40,9 +56,9 @@ def network_balance(species_count: Dict):
 
 def main():
   network_dir = '../res'
-  network_file = f"{network_dir}/solar_co_w05.ntw"
+  # network_file = f"{network_dir}/solar_co_w05.ntw"
   # network_file = f"{network_dir}/co_test.ntw"
-  # network_file = f"{network_dir}/mp_cno.ntw"
+  network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
   species_count = network.network_species_count()
@@ -52,22 +68,36 @@ def main():
   print("\n".join([f"{key}: {value}" for key, value in balance_dict.items()]))
 
   print("Pathfinding")
+
   initial_number_densities = {
       "H": 1e12,
       "H2": 1e-4,
       "OH": 1e-12,
-      "C": 10**(8.39),
-      "O": 10**(8.66),
+      "C": 10**(8.39),  # solar
+      "O": 10**(8.66),  # solar
+      "N": 10**(7.83),
       "CH": 1e-12,
       "CO": 1e-12,
+      "CN": 1e-12,
+      "NH": 1e-12,
+      "NO": 1e-12,
+      "C2": 1e-12,
+      "O2": 1e-12,
+      "N2": 1e-12,
       "M": 1e11,
   }
-
-  sources = ['C', 'C', 'CH', 'CO', 'O', 'CO']
-  targets = ['CH', 'CO', 'C', 'C', 'CO', 'O']
-  # sources = ['H', 'H2']
-  # targets = ['H2', 'H']
-
+  source_targets = [
+      ('C', 'CO'),
+      ('C', 'CH'),
+      ('C', 'CN'),
+  ]
+  # reverse paths
+  source_targets += [(t, s) for s, t in source_targets]
+  source_target_pairs = [f'{s}-{t}' for s, t in source_targets]
+  sources, targets = [l[0] for l in source_targets], [l[1]
+                                                      for l in source_targets]
+  print(sources)
+  print(targets)
   # plt.figure()
   # nx.draw(network.species_graph)
   # plt.show()
@@ -75,15 +105,28 @@ def main():
   densities = np.logspace(-12, -6, num=10)
 
   rxn_counts = {}
+  rxn_tuple: List[PointPaths] = []
   for T, rho in product(temperatures, densities):
+    # print(f'rho = {rho:.3e}, T = {T:.3e}')
     network.temperature = T
     hydrogen_density = gas_density_to_hydrogen_number_density(rho)
     network.number_densities = \
         setup_number_densities(initial_number_densities,
                                hydrogen_density, network)
-
     # TODO:
+    # Move to networkdynamics init, ensuring number densities is an array
+    # indexed as species there (it is a dict in network)
+    n = np.zeros(len(network.species))
+    for i, s in enumerate(network.species):
+      n[i] = network.number_densities[s]
+
     # Solve dynamics for 100 seconds to get reasonable number densities
+    dynamics = NetworkDynamics(network, network.number_densities, T)
+    n = dynamics.solve(1e3, n)[0]
+
+    # Package back into dictionary for network
+    for i, s in enumerate(network.species):
+      network.number_densities[s] = n[i]
 
     # Find unique pathways for specified {source, target} pairs
     unique_paths, unique_lengths, rxn_paths = find_network_paths(
@@ -97,6 +140,7 @@ def main():
         rxn_idx_path = " -> ".join([f"{e.idx}" if isinstance(e, Reaction)
                                     else f"{str(e)}" for e in rxn_path])
         rxn_idx_paths[key].append(rxn_idx_path)
+        # print(rxn_idx_path)
 
     # Count occurrences of rxn indices weighted by path length to find most
     # travelled pathways
@@ -109,8 +153,31 @@ def main():
             rxn_counts[idx] = length
           else:
             rxn_counts[idx] += length
+    rxn_tuple.append(PointPaths(rho, T, unique_paths, unique_lengths,
+                                rxn_idx_paths, rxn_counts))
 
-  print("\n".join([f'{k}: {v}' for k, v in rxn_counts.items()]))
+  # print("\n".join([f'{k}: {v:.3e}' for k, v in rxn_counts.items()]))
+  # TODO:
+  # Fix sorting, sort dictionaries instead, add into PointPaths
+  for r in rxn_tuple:
+    for key in r.unique_lengths.keys():
+      # Sort by descending path length
+      lengths, paths, r_paths = map(list,
+                                    zip(*sorted(zip(r.unique_lengths[key],
+                                                    r.unique_paths[key],
+                                                    r.rxn_paths[key]))))
+      r.unique_lengths[key] = lengths
+      r.unique_paths[key] = paths
+      r.rxn_paths[key] = r_paths
+
+  n_rxns = 5  # find 'n' fastest pathways
+  for r in rxn_tuple:
+    print(f'{r.density:.3e}, {r.temperature:.3e}')
+    for pair in source_target_pairs:
+      print('\n'.join([f'\t{p}: {l:.3e}'
+            for p, l, rp in zip(r.unique_paths[pair][:n_rxns],
+                                r.unique_lengths[pair][:n_rxns],
+                                r.rxn_paths[pair][:n_rxns])]))
 
 
 if __name__ == "__main__":

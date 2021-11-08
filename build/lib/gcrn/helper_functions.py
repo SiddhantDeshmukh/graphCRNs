@@ -77,7 +77,7 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
     }
 
     final = dynamics.solve(time, dynamics.number_densities,
-                           create_jacobian=True,
+                           create_jacobian=False,
                            limit_rates=limit_rates,
                            **solver_kwargs)[0]
     final_number_densities.append(final)
@@ -89,7 +89,7 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
 
 def run_and_plot(temperatures: List, times: List, network: Network,
                  filename: str, initial_number_densities: Dict,
-                 hydrogen_density: float,
+                 hydrogen_density: float, plot_species: List,
                  limit_rates=False):
   fig, axes = plt.subplots(3, 3, figsize=(10, 12), sharex=True)
   # for i, (density, temperature) in enumerate(product(densities, temperatures)):
@@ -111,27 +111,28 @@ def run_and_plot(temperatures: List, times: List, network: Network,
     # axes[idx_x, idx_y].set_ylim(17, 18)
     # hydrogen_number_density = number_densities[network.species.index('H')]
     for s, n in zip(network.species, number_densities):
-      # TODO:
-      # Add bool switch to plot either abundance or number densities
-      # if s in ['C', 'O', 'H', 'M']:
-      #   continue
-      # Number density ratio
-      axes[idx_x, idx_y].plot(np.log10(times), np.log10(n/total_number_density),
-                              label=s, ls='-')
-      # axes[idx_x, idx_y].plot(np.log10(times), np.log10(n),
-      #                         label=s, ls='-')
-      # Abundance
-      # abundance = 12 + np.log10(n / hydrogen_number_density)
-      # axes[idx_x, idx_y].set_ylim(-13, 13)
-      # axes[idx_x, idx_y].set_ylim(-2, 13)
-      # axes[idx_x, idx_y].plot(np.log10(times), abundance,
-      #                         label=s,  ls='-')
-      # Plot problem area where M abundance is higher than 11
-      # if s == 'M':
-      #   problem_mask = (abundance > 11.005)
-      #   if len(times[problem_mask]) > 0:
-      #     axes[idx_x, idx_y].axvline(np.log10(times)[problem_mask][0],
-      #                                c='k', ls='--')
+      if s in plot_species:
+        # TODO:
+        # Add bool switch to plot either abundance or number densities
+        # if s in ['C', 'O', 'H', 'M']:
+        #   continue
+        # Number density ratio
+        axes[idx_x, idx_y].plot(np.log10(times), np.log10(n/total_number_density),
+                                label=s, ls='-')
+        # axes[idx_x, idx_y].plot(np.log10(times), np.log10(n),
+        #                         label=s, ls='-')
+        # Abundance
+        # abundance = 12 + np.log10(n / hydrogen_number_density)
+        # axes[idx_x, idx_y].set_ylim(-13, 13)
+        # axes[idx_x, idx_y].set_ylim(-2, 13)
+        # axes[idx_x, idx_y].plot(np.log10(times), abundance,
+        #                         label=s,  ls='-')
+        # Plot problem area where M abundance is higher than 11
+        # if s == 'M':
+        #   problem_mask = (abundance > 11.005)
+        #   if len(times[problem_mask]) > 0:
+        #     axes[idx_x, idx_y].axvline(np.log10(times)[problem_mask][0],
+        #                                c='k', ls='--')
 
     axes[idx_x, idx_y].set_title(f"{temperature} K")
     axes[idx_x, idx_y].legend()
