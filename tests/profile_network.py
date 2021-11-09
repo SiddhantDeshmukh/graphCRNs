@@ -191,7 +191,7 @@ def main():
   temperatures = np.linspace(3000, 15000, num=10)
   densities = np.logspace(-12, -6, num=10)
 
-  rxn_tuple: List[PointPaths] = []
+  points_list: List[PointPaths] = []
   for T, rho in product(temperatures, densities):
     # print(f'rho = {rho:.3e}, T = {T:.3e}')
     network.temperature = T
@@ -224,15 +224,12 @@ def main():
 
     all_rxn_counts = count_all_rxns(rxn_idx_paths)
     counts_by_pairs = count_rxns_by_pairs(rxn_idx_paths)
-    rxn_tuple.append(PointPaths(rho, T, unique_paths, unique_lengths,
-                                rxn_idx_paths, all_rxn_counts, counts_by_pairs))
+    points_list.append(PointPaths(rho, T, unique_paths, unique_lengths,
+                                  rxn_idx_paths, all_rxn_counts, counts_by_pairs))
 
-  # print("\n".join([f'{k}: {v:.3e}' for k, v in rxn_counts.items()]))
-  # TODO:
-  # Fix sorting, sort dictionaries instead, add into PointPaths
-  for r in rxn_tuple:
+  for r in points_list:
     for key in r.unique_lengths.keys():
-      # Sort by descending path length
+      # Sort by path length
       lengths, paths, r_paths = map(list,
                                     zip(*sorted(zip(r.unique_lengths[key],
                                                     r.unique_paths[key],
@@ -241,15 +238,31 @@ def main():
       r.unique_paths[key] = paths
       r.rxn_paths[key] = r_paths
 
+  # Most important paths by source-target pair
+  key_paths = {p: {} for p in source_target_pairs}
+  for pair in source_target_pairs:
+    for point in points_list:
+      for path in point.unique_paths[key]:
+        try:
+          key_paths[pair][path] += 1
+        except KeyError:
+          key_paths[pair][path] = 1
+
+  print("Most travelled pathways by source-target pair:")
+  for pair, paths in key_paths.items():
+    print(pair)
+    print("\n".join([f'\t{k}: {v}' for k, v in paths.items()]))
+
+  # Counts to determine important reactions and species (over all paths)
   total_counts = {}
-  for r in rxn_tuple:
+  for r in points_list:
     # print(f'{r.density:.3e}, {r.temperature:.3e}')
-    for pair in source_target_pairs:
-      counts = {}
-      # print('\n'.join([f'\t{rp}: {l:.3e}'
-      #       for p, l, rp in zip(r.unique_paths[pair][:n_rxns],
-      #                           r.unique_lengths[pair][:n_rxns],
-      #                           r.rxn_paths[pair][:n_rxns])]))
+    counts = {}
+    # for pair in source_target_pairs:
+    # print('\n'.join([f'\t{rp}: {l:.3e}'
+    #       for p, l, rp in zip(r.unique_paths[pair][:n_rxns],
+    #                           r.unique_lengths[pair][:n_rxns],
+    #                           r.rxn_paths[pair][:n_rxns])]))
     for k, v in r.all_rxn_counts.items():
       try:
         counts[k] += v
@@ -265,20 +278,22 @@ def main():
   # Sort by values
   total_counts = sort_dict(total_counts)
 
-  print(total_counts)
-  print(len(total_counts), len(network.reactions))
+  # print(total_counts)
+  print("Most important reactions / total reactions:")
+  print(f'{len(total_counts)} / {len(network.reactions)}')
 
   # Find most important species by looking up reactants of most important rxns
   species_counts = species_counts_from_rxn_counts(total_counts, network)
 
   # Sort by values
   species_counts = sort_dict(species_counts)
-  print(species_counts)
+  print("Total species counts across grid")
+  print("\n".join([f'{k}: {v}' for k, v in species_counts.items()]))
 
   # Counts by pairs across grid
   pair_counts = {p: {} for p in source_target_pairs}
   for pair in source_target_pairs:
-    for point in rxn_tuple:
+    for point in points_list:
       for k, v in point.pair_rxn_counts[pair].items():
         try:
           pair_counts[pair][k] += v
@@ -289,12 +304,19 @@ def main():
   pair_species_counts = {k: sort_dict(species_counts_from_rxn_counts(v, network))
                          for k, v in pair_counts.items()}
 
-  print(pair_species_counts)
+  print("Most important species by source-target pair:")
+  for pair, counts in pair_species_counts.items():
+    print(pair)
+    print("\n".join([f'\t{k}: {v}' for k, v in counts.items()]))
 
 
 if __name__ == "__main__":
   main()
 
+# NOTE:
+# All the counts for the pathways are the same, which is a little odd. Make sure
+# there's no copy shenanigans with lists going on when creating PointPaths and
+# counting instances
 
 # Iterate over many thermodynamic states to find the most favourable reactions
 # TODO:
