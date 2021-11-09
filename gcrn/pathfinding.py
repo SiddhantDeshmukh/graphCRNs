@@ -1,8 +1,10 @@
 from copy import deepcopy
+import re
 from typing import Union, List, Dict
 import networkx as nx
 from gcrn.network import Network
 from gcrn.helper_functions import find_reaction_from_complex
+from gcrn.reaction import Reaction
 
 
 def create_search_graph(network: Network, source: str, target: str):
@@ -77,21 +79,7 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
       total_length += length
 
     # Replace strings with reactions
-    rxn_path = []
-    had_prev_reaction = False
-    for i, entry in enumerate(path):
-      if i == len(path) - 1:
-        continue
-      rxn = find_reaction_from_complex(entry, path[i+1], network)
-      if rxn:
-        rxn_path.append(rxn)
-        had_prev_reaction = True
-      else:
-        if not had_prev_reaction:
-          rxn_path.append(entry)
-        had_prev_reaction = False
-    # Add final (target) species
-    rxn_path.append(path[-1])
+    rxn_path = rxn_path_from_path(path, network)
 
     string_path = ' -> '.join(path)
     if total_length > 0 and not string_path in unique_paths:
@@ -125,3 +113,68 @@ def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,
     all_unique_rxn_paths[key] = rxn_paths
 
   return all_unique_paths, all_unique_lengths, all_unique_rxn_paths
+
+
+# ==============================================================================
+# Utility functions for pathfinding, including string manipulation methods
+# ==============================================================================#
+def rxn_path_from_path(path: List[str], network: Network) -> List:
+  # Find the reaction associated with path segments and reformulate the path
+  # 'A -> B -> C' as 'A -> r1 -> r2 -> D', with 'A', 'C' as source, target
+  # terms, respectively, and reactions 'r1', 'r2' representing 'A -> B' and
+  # 'B -> C', respectively
+  rxn_path = []
+  had_prev_reaction = False
+  for i, entry in enumerate(path):
+    is_first_reaction = i == 0
+    if i == len(path) - 1:
+      continue
+    rxn = find_reaction_from_complex(entry, path[i+1], network)
+    if rxn:
+      # Add source species in case of single-substrate reaction
+      if is_first_reaction:
+        rxn_path.append(path[0])
+      rxn_path.append(rxn)
+      had_prev_reaction = True
+    else:
+      if not had_prev_reaction:
+        rxn_path.append(entry)
+      had_prev_reaction = False
+  # Add final (target) species
+  rxn_path.append(path[-1])
+
+  return rxn_path
+
+
+def rxn_idx_path_from_rxn_path(rxn_path: List[Reaction]) -> str:
+  # Replace the 'Reaction' objects in path with their indices if available
+  return " -> ".join([f"{e.idx}" if isinstance(e, Reaction)
+                      else f"{str(e)}" for e in rxn_path])
+
+
+def rxn_idx_paths_from_rxn_paths(rxn_paths: Dict) -> Dict:
+  # From a dictionary of paths with keys (traditionally) "source-target",
+  # evaluate each Reaction as its index if available
+  rxn_idx_paths = {}
+  for key in rxn_paths.keys():
+    rxn_idx_paths[key] = []
+    for rxn_path in rxn_paths[key]:
+      # Cast elements of rxn_path to str
+      rxn_idx_path = " -> ".join([f"{e.idx}" if isinstance(e, Reaction)
+                                  else f"{str(e)}" for e in rxn_path])
+      rxn_idx_paths[key].append(rxn_idx_path)
+
+  return rxn_idx_paths
+
+
+def species_in_path(path: List[str]) -> List[str]:
+  species = map(str.strip, path.split("->"))
+  return species
+
+
+def species_in_rxn_idx_path(rxn_idx_path: List[str]) -> List[str]:
+  species = rxn_idx_path[0]
+  rxn_species = re.findall(r"(?<=-> )\d+(?= ->)", rxn_idx_path)
+  species.append(*rxn_species)
+  species.append(rxn_idx_path)
+  return species

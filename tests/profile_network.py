@@ -6,8 +6,8 @@ from typing import Dict, List
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
 from gcrn.network import Network
 from gcrn.dynamics import NetworkDynamics
-from gcrn.pathfinding import find_network_paths
-from gcrn.helper_functions import setup_number_densities
+from gcrn.pathfinding import find_network_paths, rxn_idx_paths_from_rxn_paths
+from gcrn.helper_functions import setup_number_densities, find_reaction_from_idx
 import numpy as np
 
 from gcrn.reaction import Reaction
@@ -31,6 +31,11 @@ class PointPaths:
   # foreach pair, order reactions based on path length
 
 
+def sort_dict(d: Dict, reverse=True):
+  # Sort dictionary by values
+  return dict(sorted(d.items(), key=lambda x: x[1], reverse=reverse))
+
+
 def network_balance(species_count: Dict):
   # Compare the reactant and product sides of reactions and compute balance
   # between formation and disassociation reactions
@@ -52,6 +57,30 @@ def network_balance(species_count: Dict):
     balance_dict[key] = (balance, comment)
 
   return balance_dict
+
+
+def rxn_idxs_from_path(path: str) -> List[str]:
+  # From a path e.g. 'C -> 75 -> 244 -> CO' return indices of reactions
+  # in the order they appear [75, 244]
+  # For a single-path reaction, returns a list of one entry, e.g.
+  # 'C -> 76 -> CO': [76]
+  return re.findall(r"(?<=-> )\d+(?= ->)", path)
+
+
+def count_rxns(rxn_idx_paths: Dict) -> Dict:
+  # Count the occurrences of reactions in the specified dictionary of paths,
+  # returning a dictionary {rxn_idx: count}
+  rxn_counts = {}
+  for key in rxn_idx_paths.keys():
+    for path in rxn_idx_paths[key]:
+      rxn_idxs = rxn_idxs_from_path(path)
+      for idx in rxn_idxs:
+        if not idx in rxn_counts:
+          rxn_counts[idx] = 1
+        else:
+          rxn_counts[idx] += 1
+
+  return rxn_counts
 
 
 def main():
@@ -88,23 +117,23 @@ def main():
   }
   source_targets = [
       ('C', 'CO'),
-      ('C', 'CH'),
-      ('C', 'CN'),
+      ('O', 'CO'),
+      # ('C', 'CH'),
+      # ('C', 'CN'),
   ]
   # reverse paths
   source_targets += [(t, s) for s, t in source_targets]
   source_target_pairs = [f'{s}-{t}' for s, t in source_targets]
   sources, targets = [l[0] for l in source_targets], [l[1]
                                                       for l in source_targets]
-  print(sources)
-  print(targets)
+  # print(sources)
+  # print(targets)
   # plt.figure()
   # nx.draw(network.species_graph)
   # plt.show()
   temperatures = np.linspace(3000, 15000, num=10)
   densities = np.logspace(-12, -6, num=10)
 
-  rxn_counts = {}
   rxn_tuple: List[PointPaths] = []
   for T, rho in product(temperatures, densities):
     # print(f'rho = {rho:.3e}, T = {T:.3e}')
@@ -121,8 +150,10 @@ def main():
       n[i] = network.number_densities[s]
 
     # Solve dynamics for 100 seconds to get reasonable number densities
+    # TODO:
+    # Add timescale as a parameter
     dynamics = NetworkDynamics(network, network.number_densities, T)
-    n = dynamics.solve(1e3, n)[0]
+    n = dynamics.solve(1e2, n)[0]
 
     # Package back into dictionary for network
     for i, s in enumerate(network.species):
@@ -130,29 +161,11 @@ def main():
 
     # Find unique pathways for specified {source, target} pairs
     unique_paths, unique_lengths, rxn_paths = find_network_paths(
-        network, sources, targets)
+        network, sources, targets, cutoff=5, max_paths=5)
 
-    rxn_idx_paths = {}
-    for key in unique_paths.keys():
-      rxn_idx_paths[key] = []
-      for path, length, rxn_path in zip(unique_paths[key], unique_lengths[key], rxn_paths[key]):
-        # Cast elements of rxn_path to str
-        rxn_idx_path = " -> ".join([f"{e.idx}" if isinstance(e, Reaction)
-                                    else f"{str(e)}" for e in rxn_path])
-        rxn_idx_paths[key].append(rxn_idx_path)
-        # print(rxn_idx_path)
+    rxn_idx_paths = rxn_idx_paths_from_rxn_paths(rxn_paths)
 
-    # Count occurrences of rxn indices weighted by path length to find most
-    # travelled pathways
-    for key in unique_paths.keys():
-      for path, length in zip(rxn_idx_paths[key], unique_lengths[key]):
-        rxn_idxs = re.findall(r" \d+ ", path)
-        for idx in rxn_idxs:
-          idx = idx.strip()
-          if not idx in rxn_counts:
-            rxn_counts[idx] = length
-          else:
-            rxn_counts[idx] += length
+    rxn_counts = count_rxns(rxn_idx_paths)
     rxn_tuple.append(PointPaths(rho, T, unique_paths, unique_lengths,
                                 rxn_idx_paths, rxn_counts))
 
@@ -171,13 +184,40 @@ def main():
       r.rxn_paths[key] = r_paths
 
   n_rxns = 5  # find 'n' fastest pathways
+  total_counts = {}
   for r in rxn_tuple:
     print(f'{r.density:.3e}, {r.temperature:.3e}')
     for pair in source_target_pairs:
-      print('\n'.join([f'\t{p}: {l:.3e}'
+      print('\n'.join([f'\t{rp}: {l:.3e}'
             for p, l, rp in zip(r.unique_paths[pair][:n_rxns],
                                 r.unique_lengths[pair][:n_rxns],
                                 r.rxn_paths[pair][:n_rxns])]))
+    for k, v in r.rxn_counts.items():
+      if k in total_counts:
+        total_counts[k] += v
+      else:
+        total_counts[k] = v
+
+  # Sort by values
+  total_counts = sort_dict(total_counts)
+
+  print(total_counts)
+  print(len(total_counts), len(network.reactions))
+
+  # Find most important species by looking up reactants of most important rxns
+  species_counts = {}
+  for k, v in total_counts.items():
+    reactants = find_reaction_from_idx(k, network).reactants
+
+    for r in reactants:
+      if r in species_counts:
+        species_counts[r] += reactants.count(r) * v
+      else:
+        species_counts[r] = reactants.count(r) * v
+
+  # Sort by values
+  species_counts = sort_dict(species_counts)
+  print(species_counts)
 
 
 if __name__ == "__main__":
@@ -193,17 +233,6 @@ if __name__ == "__main__":
 # - Create a metric for network balancing
 #   - order current balance by number of occurrences
 # - Investigate zero- and one-deficiency
-
-# NOTE:
-# - Just finding 'reaction counts' can be done independently of path lengths,
-#   it only depends on connections, not weights. Weight come into play when
-#   finding shortest paths! Hence finding shortest paths is doing both problems
-#   simultaneously, and I can keep track of the entire formation/disassociation
-#   path lengths. When calculating just the counts, I'm looking at the network
-#   as a whole to find which reactions are the most important. So these are two
-#   separate ways of viewing simplification which hopefully give the same result
-#   since they come from the same assumptions and also use the same inputs.
-
 
 # Network balancing
 # Current implementation just counts number of times species appears as
