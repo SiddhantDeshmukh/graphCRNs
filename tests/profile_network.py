@@ -1,6 +1,7 @@
 # Profile a CRN to investigate species, reactant-product balance, pathfinding
 # and timescales
-from itertools import product
+from copy import deepcopy
+from itertools import product, chain
 from typing import Dict, List
 
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
@@ -24,7 +25,8 @@ class PointPaths:
   unique_paths: Dict
   unique_lengths: Dict
   rxn_paths: Dict
-  rxn_counts: Dict
+  all_rxn_counts: Dict
+  pair_rxn_counts: Dict
 
   # TODO:
   # View rho-T grid from source-target perspective:
@@ -59,6 +61,20 @@ def network_balance(species_count: Dict):
   return balance_dict
 
 
+def sum_dicts(d1: Dict, d2: Dict) -> Dict:
+  # Sum the values of common keys in 'd1', 'd2', and add all other unique values
+  d = {}
+  for k1, v1 in d1.items():
+    for k2, v2 in d2.items():
+      if k1 == k2:
+        d[k2] = v1 + v2
+      else:
+        d[k1] = v1
+        d[k2] = v2
+
+  return d
+
+
 def rxn_idxs_from_path(path: str) -> List[str]:
   # From a path e.g. 'C -> 75 -> 244 -> CO' return indices of reactions
   # in the order they appear [75, 244]
@@ -67,7 +83,32 @@ def rxn_idxs_from_path(path: str) -> List[str]:
   return re.findall(r"(?<=-> )\d+(?= ->)", path)
 
 
-def count_rxns(rxn_idx_paths: Dict) -> Dict:
+def count_rxns_for_paths(paths: List) -> Dict:
+  # Count the occurrences of reactions in the specified dictionary,
+  # returning a dictionary {rxn_idx: count}
+  counts = {}
+  for path in paths:
+    rxn_idxs = rxn_idxs_from_path(path)
+    for idx in rxn_idxs:
+      if not idx in counts:
+        counts[idx] = 1
+      else:
+        counts[idx] += 1
+
+  return counts
+
+
+def count_rxns_by_pairs(rxn_idx_paths: Dict) -> Dict:
+  # Count the occurrences of reactions in the specified dictionary of paths,
+  # returning a dictionary of dictionaries {pair: {rxn_idx: count}}
+  rxn_counts = {}
+  for key, paths in rxn_idx_paths.items():
+    rxn_counts[key] = count_rxns_for_paths(paths)
+
+  return rxn_counts
+
+
+def count_all_rxns(rxn_idx_paths: Dict) -> Dict:
   # Count the occurrences of reactions in the specified dictionary of paths,
   # returning a dictionary {rxn_idx: count}
   rxn_counts = {}
@@ -81,6 +122,22 @@ def count_rxns(rxn_idx_paths: Dict) -> Dict:
           rxn_counts[idx] += 1
 
   return rxn_counts
+
+
+def species_counts_from_rxn_counts(rxn_counts: Dict, network: Network) -> Dict:
+  # From a dict {rxn_idx: count}, find the associated reaction's reactant
+  # species and associate the count of the reaction with the count of the
+  # species
+  species_counts = {}
+  for k, v in rxn_counts.items():
+    reactants = find_reaction_from_idx(k, network).reactants
+    for r in reactants:
+      if r in species_counts:
+        species_counts[r] += reactants.count(r) * v
+      else:
+        species_counts[r] = reactants.count(r) * v
+
+  return species_counts
 
 
 def main():
@@ -165,9 +222,10 @@ def main():
 
     rxn_idx_paths = rxn_idx_paths_from_rxn_paths(rxn_paths)
 
-    rxn_counts = count_rxns(rxn_idx_paths)
+    all_rxn_counts = count_all_rxns(rxn_idx_paths)
+    counts_by_pairs = count_rxns_by_pairs(rxn_idx_paths)
     rxn_tuple.append(PointPaths(rho, T, unique_paths, unique_lengths,
-                                rxn_idx_paths, rxn_counts))
+                                rxn_idx_paths, all_rxn_counts, counts_by_pairs))
 
   # print("\n".join([f'{k}: {v:.3e}' for k, v in rxn_counts.items()]))
   # TODO:
@@ -183,19 +241,25 @@ def main():
       r.unique_paths[key] = paths
       r.rxn_paths[key] = r_paths
 
-  n_rxns = 5  # find 'n' fastest pathways
   total_counts = {}
   for r in rxn_tuple:
-    print(f'{r.density:.3e}, {r.temperature:.3e}')
+    # print(f'{r.density:.3e}, {r.temperature:.3e}')
     for pair in source_target_pairs:
-      print('\n'.join([f'\t{rp}: {l:.3e}'
-            for p, l, rp in zip(r.unique_paths[pair][:n_rxns],
-                                r.unique_lengths[pair][:n_rxns],
-                                r.rxn_paths[pair][:n_rxns])]))
-    for k, v in r.rxn_counts.items():
-      if k in total_counts:
+      counts = {}
+      # print('\n'.join([f'\t{rp}: {l:.3e}'
+      #       for p, l, rp in zip(r.unique_paths[pair][:n_rxns],
+      #                           r.unique_lengths[pair][:n_rxns],
+      #                           r.rxn_paths[pair][:n_rxns])]))
+    for k, v in r.all_rxn_counts.items():
+      try:
+        counts[k] += v
+      except KeyError:
+        counts[k] = v
+
+    for k, v in counts.items():
+      try:
         total_counts[k] += v
-      else:
+      except KeyError:
         total_counts[k] = v
 
   # Sort by values
@@ -205,19 +269,27 @@ def main():
   print(len(total_counts), len(network.reactions))
 
   # Find most important species by looking up reactants of most important rxns
-  species_counts = {}
-  for k, v in total_counts.items():
-    reactants = find_reaction_from_idx(k, network).reactants
-
-    for r in reactants:
-      if r in species_counts:
-        species_counts[r] += reactants.count(r) * v
-      else:
-        species_counts[r] = reactants.count(r) * v
+  species_counts = species_counts_from_rxn_counts(total_counts, network)
 
   # Sort by values
   species_counts = sort_dict(species_counts)
   print(species_counts)
+
+  # Counts by pairs across grid
+  pair_counts = {p: {} for p in source_target_pairs}
+  for pair in source_target_pairs:
+    for point in rxn_tuple:
+      for k, v in point.pair_rxn_counts[pair].items():
+        try:
+          pair_counts[pair][k] += v
+        except KeyError:
+          pair_counts[pair][k] = v
+
+  # Species count by pairs
+  pair_species_counts = {k: sort_dict(species_counts_from_rxn_counts(v, network))
+                         for k, v in pair_counts.items()}
+
+  print(pair_species_counts)
 
 
 if __name__ == "__main__":
