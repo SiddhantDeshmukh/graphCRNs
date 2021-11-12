@@ -1,4 +1,5 @@
 from copy import deepcopy
+import re
 from typing import Union, List, Dict
 import networkx as nx
 from gcrn.network import Network
@@ -164,3 +165,16 @@ def rxn_idx_paths_from_rxn_paths(rxn_paths: Dict) -> Dict:
       rxn_idx_paths[key].append(rxn_idx_path)
 
   return rxn_idx_paths
+
+
+def species_in_path(path: List[str]) -> List[str]:
+  species = map(str.strip, path.split("->"))
+  return species
+
+
+def species_in_rxn_idx_path(rxn_idx_path: List[str]) -> List[str]:
+  species = rxn_idx_path[0]
+  rxn_species = re.findall(r"(?<=-> )\d+(?= ->)", rxn_idx_path)
+  species.append(*rxn_species)
+  species.append(rxn_idx_path)
+  return species

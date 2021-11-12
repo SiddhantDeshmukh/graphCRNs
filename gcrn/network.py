@@ -213,8 +213,9 @@ class Network:
     species_graph = nx.MultiDiGraph()
     for rxn in self.reactions:
       for r, p in product(rxn.reactants, rxn.products):
-        weight = rxn.evaluate_mass_action_rate(self.temperature,
-                                               self.number_densities)
+        # Weight is timescale (inverse rate)
+        weight = 1 / rxn.evaluate_mass_action_rate(self.temperature,
+                                                   self.number_densities)
         species_graph.add_edge(r, p, weight=weight)
 
     return species_graph
@@ -223,8 +224,9 @@ class Network:
     # Create graph of complexes
     complex_graph = nx.MultiDiGraph()
     for rxn in self.reactions:
-      weight = rxn.evaluate_mass_action_rate(self.temperature,
-                                             self.number_densities)
+      # Weight is timescale (inverse rate)
+      weight = 1 / rxn.evaluate_mass_action_rate(self.temperature,
+                                                 self.number_densities)
       complex_graph.add_edge(rxn.reactant_complex,
                              rxn.product_complex, weight=weight)
 

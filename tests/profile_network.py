@@ -318,6 +318,9 @@ if __name__ == "__main__":
 # there's no copy shenanigans with lists going on when creating PointPaths and
 # counting instances
 
+# TODO:
+# Write a test network to exploit the above!
+
 # Iterate over many thermodynamic states to find the most favourable reactions
 # TODO:
 # Do this for finding pathways instead! It is more natural.
