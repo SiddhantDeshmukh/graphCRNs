@@ -2,24 +2,11 @@
 
 ## Week of 27/09/21
 
-### Solver
-
-- Check if Jacobian function can be compiled to improve runtime
-
 ### Network
 
 - Add method to init from chem.dat
+- Create 'simplify' test
 - Simplify CO network across CO5BOLD model
-- Finalise metal-poor CNO network
-  - N2, CN evolution flawed
-- Run CO5BOLD models
-
-### Pathfinding
-
-- Run pathfinding for _final_ solar CO network in characteristic
-  regions of the solar photosphere (pick a few)
-- Reaction string -> Reaction lookup (or keep a reference to Reaction
-  when creating graph)
 
 ### Writeup
 

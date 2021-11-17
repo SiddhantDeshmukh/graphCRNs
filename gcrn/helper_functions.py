@@ -1,5 +1,5 @@
 from itertools import product
-from sadtools.utilities.chemistryUtilities import log_abundance_to_number_density
+from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
 from sadtools.utilities.abu_tools import load_abu, get_abundances
 from typing import Dict, List
 import numpy as np
@@ -36,12 +36,12 @@ def enumerated_product(*args):
   yield from zip(product(*(range(len(x)) for x in args)), product(*args))
 
 
-def setup_number_densities(number_densities_dict: Dict, hydrogen_density: float,
+def setup_number_densities(abundance_dict: Dict, hydrogen_density: float,
                            network: Network):
   number_densities = np.zeros(len(network.species))
   # Index number densities same as network.species
   for i, s in enumerate(network.species):
-    n = log_abundance_to_number_density(np.log10(number_densities_dict[s]),
+    n = log_abundance_to_number_density(np.log10(abundance_dict[s]),
                                         np.log10(hydrogen_density.value))
     number_densities[i] = n
 
@@ -49,12 +49,12 @@ def setup_number_densities(number_densities_dict: Dict, hydrogen_density: float,
 
 
 def setup_dynamics(network: Network, temperature: float,
-                   initial_number_densities: Dict, hydrogen_density: float):
+                   initial_abundances: Dict, hydrogen_density: float):
   # Initialise number densities
   number_densities = np.zeros(len(network.species))
   # Index number densities same as network.species
   for i, s in enumerate(network.species):
-    n = log_abundance_to_number_density(np.log10(initial_number_densities[s]),
+    n = log_abundance_to_number_density(np.log10(initial_abundances[s]),
                                         np.log10(hydrogen_density.value))
     number_densities[i] = n
   # Initialise dynamics at given temperature
@@ -146,7 +146,26 @@ def run_and_plot(temperatures: List, times: List, network: Network,
   plt.savefig(filename, bbox_inches="tight")
   plt.show()
 
-# -----------------------------------------------------------------------------
+
+def run_on_density_temperature_grid(density: np.ndarray,
+                                    temperature: np.ndarray,
+                                    timescales: List[float], network: Network,
+                                    initial_abundances: Dict):
+  # Run dynamics for specified Network and initial abundances for given
+  # timescale foreach (density, temperature) point.
+  # Returns a 4D array (density, temperature, time, species)
+  species = network.species
+  number_densities = np.zeros(
+      shape=(len(density), len(temperature), len(timescales), len(species)))
+  for (i, j), (rho, T) in enumerated_product(density, temperature):
+    hydrogen_density = gas_density_to_hydrogen_number_density(rho)
+    dynamics = setup_dynamics(network, T, initial_abundances, hydrogen_density)
+    n = solve_dynamics(dynamics, timescales)
+    number_densities[i, j] = n.T.copy()
+
+  return number_densities
+
+# ----------------------------------------------------------- ------------------
 # Timescale functions
 # -----------------------------------------------------------------------------
 

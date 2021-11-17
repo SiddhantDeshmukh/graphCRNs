@@ -1,4 +1,3 @@
-from itertools import product
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
 from gcrn.helper_functions import enumerated_product, setup_dynamics
 from gcrn.network import Network
