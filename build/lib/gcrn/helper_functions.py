@@ -1,3 +1,5 @@
+from copy import deepcopy
+from gcrn.pathfinding import PointPaths, compute_point_paths
 from itertools import product
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density, log_abundance_to_number_density
 from sadtools.utilities.abu_tools import load_abu, get_abundances
@@ -7,10 +9,16 @@ import matplotlib.pyplot as plt
 from gcrn.network import Network
 from gcrn.reaction import Reaction
 from gcrn.dynamics import NetworkDynamics
+import re
 
 
-def find_reaction_from_complex(source_complex: str, target_complex: str,
-                               network: Network) -> Reaction:
+def sort_dict(d: Dict, reverse=True):
+  # Sort dictionary by values
+  return dict(sorted(d.items(), key=lambda x: x[1], reverse=reverse))
+
+
+def reaction_from_complex(source_complex: str, target_complex: str,
+                          network: Network) -> Reaction:
   # Find the first reaction corresponding to 'source_complex -> target_complex'
   # in 'network'. Used in pathfinding to relate paths back to reactions.
   for rxn in network.reactions:
@@ -20,13 +28,78 @@ def find_reaction_from_complex(source_complex: str, target_complex: str,
   return None
 
 
-def find_reaction_from_idx(idx: int, network: Network) -> Reaction:
+def reaction_from_idx(idx: int, network: Network) -> Reaction:
   # Use the reaction index to find the corresponding Reaction in network
   for rxn in network.reactions:
     if rxn.idx == idx:
       return rxn
 
   return None
+
+
+def rxn_idxs_from_path(path: str) -> List[str]:
+  # From a path e.g. 'C -> 75 -> 244 -> CO' return indices of reactions
+  # in the order they appear [75, 244]
+  # For a single-path reaction, returns a list of one entry, e.g.
+  # 'C -> 76 -> CO': [76]
+  return re.findall(r"(?<=-> )\d+(?= ->)", path)
+
+
+def count_rxns_for_paths(paths: List) -> Dict:
+  # Count the occurrences of reactions in the specified dictionary,
+  # returning a dictionary {rxn_idx: count}
+  counts = {}
+  for path in paths:
+    rxn_idxs = rxn_idxs_from_path(path)
+    for idx in rxn_idxs:
+      if not idx in counts:
+        counts[idx] = 1
+      else:
+        counts[idx] += 1
+
+  return counts
+
+
+def species_counts_from_rxn_counts(rxn_counts: Dict, network: Network) -> Dict:
+  # From a dict {rxn_idx: count}, find the associated reaction's reactant
+  # species and associate the count of the reaction with the count of the
+  # species
+  species_counts = {}
+  for k, v in rxn_counts.items():
+    reactants = reaction_from_idx(k, network).reactants
+    for r in reactants:
+      if r in species_counts:
+        species_counts[r] += reactants.count(r) * v
+      else:
+        species_counts[r] = reactants.count(r) * v
+
+  return species_counts
+
+
+def count_rxns_by_pairs(rxn_idx_paths: Dict) -> Dict:
+  # Count the occurrences of reactions in the specified dictionary of paths,
+  # returning a dictionary of dictionaries {pair: {rxn_idx: count}}
+  rxn_counts = {}
+  for key, paths in rxn_idx_paths.items():
+    rxn_counts[key] = count_rxns_for_paths(paths)
+
+  return rxn_counts
+
+
+def count_all_rxns(rxn_idx_paths: Dict) -> Dict:
+  # Count the occurrences of reactions in the specified dictionary of paths,
+  # returning a dictionary {rxn_idx: count}
+  rxn_counts = {}
+  for key in rxn_idx_paths.keys():
+    for path in rxn_idx_paths[key]:
+      rxn_idxs = rxn_idxs_from_path(path)
+      for idx in rxn_idxs:
+        if not idx in rxn_counts:
+          rxn_counts[idx] = 1
+        else:
+          rxn_counts[idx] += 1
+
+  return rxn_counts
 
 
 def enumerated_product(*args):
@@ -81,7 +154,7 @@ def solve_dynamics(dynamics: NetworkDynamics, times: List,
                            limit_rates=limit_rates,
                            **solver_kwargs)[0]
     final_number_densities.append(final)
-    print(f"Done {i+1} time of {len(times)}")
+    # print(f"Done {i+1} time of {len(times)}")
 
   final_number_densities = np.array(final_number_densities).T
   return final_number_densities
@@ -164,6 +237,38 @@ def run_on_density_temperature_grid(density: np.ndarray,
     number_densities[i, j] = n.T.copy()
 
   return number_densities
+
+
+def density_temperature_grid_with_pathfinding(density: np.ndarray,
+                                              temperature: np.ndarray,
+                                              timescales: List[float],
+                                              network: Network,
+                                              initial_abundances: Dict,
+                                              sources: List, targets: List,
+                                              cutoff=5, max_paths=100):
+  # Run dynamics for specified network and initial abundances foreach
+  # (density, temperature, timescale) point and compute PointPaths instances
+  # at each point
+  species = network.species
+  number_densities = np.zeros(shape=(len(density), len(temperature),
+                                     len(timescales), len(species)))
+  all_point_paths: np.ndarray[PointPaths] = np.empty(shape=(len(density),
+                                                            len(temperature),
+                                                            len(timescales)),
+                                                     dtype=object)
+  for (i, j, k), (rho, T, t) in enumerated_product(density, temperature, timescales):
+    hydrogen_density = gas_density_to_hydrogen_number_density(rho)
+    dynamics = setup_dynamics(network, T, initial_abundances, hydrogen_density)
+    n = dynamics.solve(t, dynamics.number_densities,
+                       create_jacobian=False,
+                       limit_rates=False)[0]
+    number_densities[i, j, k] = n.T.copy()
+    all_point_paths[i, j, k] = deepcopy(compute_point_paths(network, sources, targets,
+                                                            rho, T, t,
+                                                            cutoff=cutoff,
+                                                            max_paths=max_paths))
+
+  return number_densities, all_point_paths
 
 # ----------------------------------------------------------- ------------------
 # Timescale functions

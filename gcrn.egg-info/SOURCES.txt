@@ -12,6 +12,7 @@ gcrn/limits.py
 gcrn/matrices.py
 gcrn/network.py
 gcrn/pathfinding.py
+gcrn/profiling.py
 gcrn/prototyping.py
 gcrn/reaction.py
 gcrn/utilities.py
@@ -50,6 +51,7 @@ tests/limits.py
 tests/parser.py
 tests/profile_network.py
 tests/rho_T_grid.py
+tests/simplify.py
 tests/step_size.py
 tests/test.dat
 tests/test.ntw

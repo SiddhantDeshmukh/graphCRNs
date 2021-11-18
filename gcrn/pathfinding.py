@@ -3,8 +3,46 @@ import re
 from typing import Union, List, Dict
 import networkx as nx
 from gcrn.network import Network
-from gcrn.helper_functions import find_reaction_from_complex
 from gcrn.reaction import Reaction
+from dataclasses import dataclass
+import matplotlib.pyplot as plt
+
+
+@dataclass
+class PointPaths:
+  density: float
+  temperature: float
+  time: float
+  unique_paths: Dict
+  unique_lengths: Dict
+  rxn_idx_paths: Dict
+  all_rxn_counts: Dict
+  pair_rxn_counts: Dict
+
+  # TODO:
+  # View rho-T grid from source-target perspective:
+  # foreach pair, order reactions based on path length
+  def sort(self, inplace=True):
+    # Sort each dict by lengths (ascending)
+    unique_lengths, unique_paths, rxn_idx_paths = {}, {}, {}
+    for key in self.unique_lengths.keys():
+      # Sort by path length
+      lengths, paths, r_paths = map(list,
+                                    zip(*sorted(zip(self.unique_lengths[key],
+                                                    self.unique_paths[key],
+                                                    self.rxn_paths[key]))))
+      unique_lengths[key] = lengths
+      unique_paths[key] = paths
+      rxn_idx_paths[key] = r_paths
+
+    if inplace:
+      self.unique_lengths = unique_lengths
+      self.unique_paths = unique_paths
+      self.rxn_idx_paths = rxn_idx_paths
+    else:
+      return PointPaths(self.density, self.temperature, self.time, unique_paths,
+                        unique_lengths, rxn_idx_paths, self.all_rxn_counts,
+                        self.pair_rxn_counts)
 
 
 def create_search_graph(network: Network, source: str, target: str):
@@ -49,16 +87,16 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
 
   # TODO:
   # Return the search
-  options = {
-      # "font_size": 24,
-      # "node_size": 2000,
-      "node_color": "white",
-      "edgelist": edges,
-      "edge_color": weights,
-      # "linewidths": 5,
-      # "width": 5,
-      "with_labels": True
-  }
+  # options = {
+  #     # "font_size": 24,
+  #     # "node_size": 2000,
+  #     "node_color": "white",
+  #     "edgelist": edges,
+  #     "edge_color": weights,
+  #     # "linewidths": 5,
+  #     # "width": 5,
+  #     "with_labels": True
+  # }
   # plt.figure()
   # nx.draw(search_graph, **options)
   # nx.spring_layout(search_graph)
@@ -115,10 +153,31 @@ def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,
   return all_unique_paths, all_unique_lengths, all_unique_rxn_paths
 
 
+def compute_point_paths(network: Network, sources: List, targets: List,
+                        density: float, temperature: float,
+                        timescale: float,
+                        cutoff=5, max_paths=100):
+  from gcrn.helper_functions import count_all_rxns, count_rxns_by_pairs
+  # Uses the number densities stored in 'network'!
+  paths, lengths, rxn_paths = find_network_paths(network, sources, targets,
+                                                 cutoff=cutoff,
+                                                 max_paths=max_paths)
+  rxn_idx_paths = rxn_idx_paths_from_rxn_paths(rxn_paths)
+  all_rxn_counts = count_all_rxns(rxn_idx_paths)
+  counts_by_pairs = count_rxns_by_pairs(rxn_idx_paths)
+
+  return PointPaths(density, temperature, timescale, deepcopy(paths),
+                    deepcopy(lengths), deepcopy(rxn_idx_paths),
+                    deepcopy(all_rxn_counts), deepcopy(counts_by_pairs))
+
+
 # ==============================================================================
 # Utility functions for pathfinding, including string manipulation methods
 # ==============================================================================#
+
+
 def rxn_path_from_path(path: List[str], network: Network) -> List:
+  from gcrn.helper_functions import reaction_from_complex
   # Find the reaction associated with path segments and reformulate the path
   # 'A -> B -> C' as 'A -> r1 -> r2 -> D', with 'A', 'C' as source, target
   # terms, respectively, and reactions 'r1', 'r2' representing 'A -> B' and
@@ -129,7 +188,7 @@ def rxn_path_from_path(path: List[str], network: Network) -> List:
     is_first_reaction = i == 0
     if i == len(path) - 1:
       continue
-    rxn = find_reaction_from_complex(entry, path[i+1], network)
+    rxn = reaction_from_complex(entry, path[i+1], network)
     if rxn:
       # Add source species in case of single-substrate reaction
       if is_first_reaction:
