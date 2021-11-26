@@ -8,6 +8,13 @@
 - Create 'simplify' test
 - Simplify CO network across CO5BOLD model
 
+### Simplification
+
+- Implement path flux analysis (PFA)
+- Test on dummy networks
+- Test on CO
+- Use on CNO
+
 ### Writeup
 
 - Graph CRN theory

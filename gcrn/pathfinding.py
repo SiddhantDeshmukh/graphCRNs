@@ -30,7 +30,7 @@ class PointPaths:
       lengths, paths, r_paths = map(list,
                                     zip(*sorted(zip(self.unique_lengths[key],
                                                     self.unique_paths[key],
-                                                    self.rxn_paths[key]))))
+                                                    self.rxn_idx_paths[key]))))
       unique_lengths[key] = lengths
       unique_paths[key] = paths
       rxn_idx_paths[key] = r_paths
@@ -45,6 +45,15 @@ class PointPaths:
                         self.pair_rxn_counts)
 
 
+def is_in_complex(complex: str, species: str) -> bool:
+  # Check if the species if present in any form in the complex, e.g.
+  # C in C + O -> True
+  # C in CH + O -> True
+  # C in OH + H2 -> False
+  complex_species = [c.strip() for c in complex.split('+')]
+  return any([species in c for c in complex_species])
+
+
 def create_search_graph(network: Network, source: str, target: str):
   # Add species nodes and edges (complex composition) into network graph
   # source/target dependent: don't add edges to species other than the
@@ -52,6 +61,13 @@ def create_search_graph(network: Network, source: str, target: str):
   # Source node only has outgoing edges (source)
   # Target node only has incoming edges (sink)
   G = deepcopy(network.complex_graph)
+  # plt.figure()
+  # options = {
+  #     "node_color": "white",
+  #     "with_labels": True
+  # }
+  # nx.draw(G, **options)
+  # nx.spring_layout(G)
   edges_to_add = []
 
   # Add source and target (sink) connections
@@ -69,8 +85,31 @@ def create_search_graph(network: Network, source: str, target: str):
       # print(f"{source} to {complex} source connection")
       edges_to_add.append((source, complex, 0))
 
+  # Add helper species connections
+  for i, s in enumerate(network.species):
+    if s == target or s == source:
+      continue
+    for complex in G.nodes():
+      # Add species connection to node
+      # To ensure 'continuity' from source -> target, only add connections that
+      # include the source in some form
+      # e.g. for C -> CO, include every connection that has a 'C' in it, but
+      # none that do not!
+      complex_species = [c.strip() for c in complex.split('+')]
+      # print(complex, s)
+      # print(complex_species)
+      if not complex in network.species and not target in complex_species and is_in_complex(complex, source) and s in complex_species:
+        # print(True)
+        edges_to_add.append((s, complex, 0))
+        edges_to_add.append((complex, s, 0))
+
   G.add_weighted_edges_from(edges_to_add)
 
+  # Keep only the largest connected component (i.e. remove all complexes that
+  # do not contribute to the current pathways)
+  # print([len(c) for c in sorted(nx.weakly_connected_components(G), key=len,
+  #                               reverse=True)])
+  G = G.subgraph(max(nx.weakly_connected_components(G), key=len))
   return G
 
 
@@ -83,10 +122,10 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   reaction_paths = []
 
   search_graph = create_search_graph(network, source, target)
-  edges, weights = zip(*nx.get_edge_attributes(search_graph, 'weight').items())
 
   # TODO:
   # Return the search
+  # edges, weights = zip(*nx.get_edge_attributes(search_graph, 'weight').items())
   # options = {
   #     # "font_size": 24,
   #     # "node_size": 2000,
@@ -97,9 +136,9 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   #     # "width": 5,
   #     "with_labels": True
   # }
-  # plt.figure()
+  # plt.figure(figsize=(12, 12))
   # nx.draw(search_graph, **options)
-  # nx.spring_layout(search_graph)
+  # nx.spectral_layout(search_graph)
 
   # print(source, target)
   # plt.show()
@@ -109,25 +148,34 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   count = 0
   # Measure length of each path
   for path in shortest_paths:
-    total_length = 0
-    for i in range(len(path) - 1):
-      source, target = path[i], path[i+1]
-      edge = search_graph[source][target][0]
-      length = edge['weight']
-      total_length += length
+    # TODO:
+    # Prune paths that do not include the 'source' in some form throughout
+    # What about 'target'? For destruction, e.g. CO -> C, CO will disappear!
+    species_in_path = [is_in_complex(p, source) or is_in_complex(p, target)
+                       for p in path]
+    if all(species_in_path):
+      # print(path, species_in_path)
 
-    # Replace strings with reactions
-    rxn_path = rxn_path_from_path(path, network)
+      # exit()
+      total_length = 0
+      for i in range(len(path) - 1):
+        curr, next = path[i], path[i+1]
+        edge = search_graph[curr][next][0]
+        length = edge['weight']
+        total_length += length
 
-    string_path = ' -> '.join(path)
-    if total_length > 0 and not string_path in unique_paths:
-      unique_paths.append(string_path)
-      unique_lengths.append(total_length)
-      reaction_paths.append(rxn_path)
+      # Replace strings with reactions
+      rxn_path = rxn_path_from_path(path, network)
+      string_path = ' -> '.join(path)
+      if total_length > 0 and not string_path in unique_paths:
+        unique_paths.append(string_path)
+        unique_lengths.append(total_length)
+        reaction_paths.append(rxn_path)
 
-    count += 1
-    if count >= max_paths:
-      break
+      # count += 1
+      count += total_length  # scale count by length
+      if count >= max_paths:
+        break
 
   return unique_paths, unique_lengths, reaction_paths
 

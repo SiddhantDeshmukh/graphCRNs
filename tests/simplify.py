@@ -29,7 +29,7 @@ def main():
 
   source_targets = [
       ('C', 'CO'),
-      # ('O', 'CO'),
+      ('O', 'CO'),
       ('C', 'CH'),
       ('O', 'OH'),
       ('H', 'H2'),

@@ -1,0 +1,18 @@
+C: {'R': 7, 'P': 7}
+CH: {'R': 5, 'P': 3}
+CO: {'R': 3, 'P': 5}
+H: {'R': 15, 'P': 14}
+H2: {'R': 7, 'P': 8}
+M: {'R': 4, 'P': 4}
+O: {'R': 9, 'P': 6}
+OH: {'R': 5, 'P': 6}
+Network balance:
+C: (0, 'Balanced')
+CH: (-2, 'Skewed towards reactants')
+CO: (2, 'Skewed towards products')
+H: (-1, 'Skewed towards reactants')
+H2: (1, 'Skewed towards products')
+M: (0, 'Balanced')
+O: (-3, 'Skewed towards reactants')
+OH: (1, 'Skewed towards products')
+Pathfinding

@@ -11,8 +11,6 @@ from gcrn.pathfinding import find_network_paths, rxn_idx_paths_from_rxn_paths,\
 from gcrn.helper_functions import setup_number_densities, count_all_rxns, count_rxns_by_pairs, species_counts_from_rxn_counts
 import numpy as np
 
-import re
-
 from gcrn.profiling import most_important_species_by_pairs, most_travelled_pair_paths, total_counts_across_paths
 
 np.random.seed(42)
@@ -57,9 +55,9 @@ def sum_dicts(d1: Dict, d2: Dict) -> Dict:
 
 def main():
   network_dir = '../res'
-  # network_file = f"{network_dir}/solar_co_w05.ntw"
+  network_file = f"{network_dir}/solar_co_w05.ntw"
   # network_file = f"{network_dir}/co_test.ntw"
-  network_file = f"{network_dir}/cno.ntw"
+  # network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
   species_count = network.network_species_count()
@@ -90,7 +88,7 @@ def main():
   source_targets = [
       ('C', 'CO'),
       ('O', 'CO'),
-      # ('C', 'CH'),
+      ('C', 'CH'),
       # ('C', 'CN'),
   ]
   # reverse paths
@@ -133,7 +131,7 @@ def main():
 
     # Find unique pathways for specified {source, target} pairs
     unique_paths, unique_lengths, rxn_paths = find_network_paths(
-        network, sources, targets, cutoff=5, max_paths=5)
+        network, sources, targets, cutoff=10, max_paths=100)
 
     rxn_idx_paths = rxn_idx_paths_from_rxn_paths(rxn_paths)
 
@@ -152,7 +150,7 @@ def main():
     print(pair)
     print("\n".join([f'\t{k}: {v}' for k, v in paths.items()]))
 
-  total_counts, species_counts = total_counts_across_paths(points_list)
+  total_counts, species_counts = total_counts_across_paths(points_list, network)
 
   print("Most important reactions / total reactions:")
   print(f'{len(total_counts)} / {len(network.reactions)}')

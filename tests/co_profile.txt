@@ -1,0 +1,139 @@
+C: {'R': 7, 'P': 7}
+CH: {'R': 5, 'P': 3}
+CO: {'R': 3, 'P': 5}
+H: {'R': 15, 'P': 14}
+H2: {'R': 7, 'P': 8}
+M: {'R': 4, 'P': 4}
+O: {'R': 9, 'P': 6}
+OH: {'R': 5, 'P': 6}
+Network balance:
+C: (0, 'Balanced')
+CH: (-2, 'Skewed towards reactants')
+CO: (2, 'Skewed towards products')
+H: (-1, 'Skewed towards reactants')
+H2: (1, 'Skewed towards products')
+M: (0, 'Balanced')
+O: (-3, 'Skewed towards reactants')
+OH: (1, 'Skewed towards products')
+Pathfinding
+Most travelled pathways by source-target pair:
+C-CO
+	C -> C + OH -> CO + H -> CO: 100
+	C -> C + H + O -> O -> CH + O -> CO + H -> CO: 100
+	C -> C + M + O -> O -> CH + O -> CO + H -> CO: 100
+	C -> C + O -> O -> CH + O -> CO + H -> CO: 100
+	C -> C + H -> CH -> CH + O -> CO + H -> CO: 100
+	C -> C + H + O -> O -> C + O -> CO: 100
+	C -> C + M + O -> O -> C + O -> CO: 100
+	C -> C + O -> CO: 100
+	C -> C + OH -> CH + O -> CO + H -> CO: 100
+	C -> C + OH -> CH + O -> O -> C + O -> CO: 100
+	C -> C + H + H -> H -> C + H + O -> CO + H -> CO: 100
+	C -> C + H + H2 -> H -> C + H + O -> CO + H -> CO: 100
+	C -> C + H + O -> CO + H -> CO: 100
+	C -> C + H -> H -> C + H + O -> CO + H -> CO: 100
+	C -> C + M + O -> O -> C + H + O -> CO + H -> CO: 100
+	C -> C + O -> O -> C + H + O -> CO + H -> CO: 100
+	C -> C + H + O -> O -> C + M + O -> CO + M -> CO: 100
+	C -> C + M + O -> CO + M -> CO: 100
+	C -> C + O -> O -> C + M + O -> CO + M -> CO: 100
+O-CO
+	O -> C + H + O -> C -> C + OH -> CO + H -> CO: 100
+	O -> C + M + O -> C -> C + OH -> CO + H -> CO: 100
+	O -> C + O -> C -> C + OH -> CO + H -> CO: 100
+	O -> H + O -> OH -> C + OH -> CO + H -> CO: 100
+	O -> CH + O -> CO + H -> CO: 100
+	O -> C + H + O -> C -> C + O -> CO: 100
+	O -> C + M + O -> C -> C + O -> CO: 100
+	O -> C + O -> CO: 100
+	O -> CH + O -> C + OH -> CO + H -> CO: 100
+	O -> CH + O -> C + OH -> C -> C + O -> CO: 100
+	O -> C + H + O -> CO + H -> CO: 100
+	O -> C + M + O -> C -> C + H + O -> CO + H -> CO: 100
+	O -> C + O -> C -> C + H + O -> CO + H -> CO: 100
+	O -> H + H + O -> H -> C + H + O -> CO + H -> CO: 100
+	O -> H + H2 + O -> H -> C + H + O -> CO + H -> CO: 100
+	O -> H + M + O -> H -> C + H + O -> CO + H -> CO: 100
+	O -> H + O -> H -> C + H + O -> CO + H -> CO: 100
+	O -> C + H + O -> C -> C + M + O -> CO + M -> CO: 100
+	O -> C + M + O -> CO + M -> CO: 100
+	O -> C + O -> C -> C + M + O -> CO + M -> CO: 100
+	O -> H + M + O -> M -> C + M + O -> CO + M -> CO: 100
+C-CH
+	C -> C + H + H2 -> H2 -> C + H2 -> CH + H -> CH: 100
+	C -> C + H2 -> CH + H -> CH: 100
+	C -> C + H + H -> H -> C + H -> CH: 100
+	C -> C + H + H2 -> H -> C + H -> CH: 100
+	C -> C + H + O -> H -> C + H -> CH: 100
+	C -> C + H -> CH: 100
+	C -> C + OH -> CO + H -> H -> C + H -> CH: 100
+	C -> C + OH -> CH + O -> CH: 100
+	C -> C + H + O -> CO + H -> H -> C + H -> CH: 100
+	C -> C + H + O -> CO + H -> C + OH -> CH + O -> CH: 100
+CO-C
+	CO -> CO + H -> C + OH -> C: 100
+	CO -> CO + H -> C + H + O -> C: 100
+	CO -> CO + M -> C + M + O -> C: 100
+CO-O
+	CO -> CO + H -> C + OH -> CH + O -> O: 100
+	CO -> CO + H -> C + H + O -> O: 100
+	CO -> CO + M -> C + M + O -> O: 100
+CH-C
+	CH -> CH + H -> C + H2 -> C: 100
+	CH -> CH + H -> C + H + H -> C: 100
+	CH -> CH + O -> C + OH -> C: 100
+	CH -> CH + O -> CO + H -> C + OH -> C: 100
+	CH -> CH + H2 -> C + H + H2 -> C: 100
+	CH -> CH + O -> CO + H -> C + H + O -> C: 100
+	CH -> CH + O -> C + OH -> CO + H -> C + H + O -> C: 100
+Most important reactions / total reactions:
+16 / 27
+Total species counts across grid
+C: 5200
+O: 4300
+H: 3300
+CH: 1500
+OH: 1300
+CO: 1000
+M: 900
+H2: 300
+Most important species by source-target pair:
+C-CO
+	O: 1800
+	C: 1700
+	H: 700
+	CH: 500
+	OH: 300
+	M: 300
+O-CO
+	C: 2000
+	O: 1900
+	H: 800
+	OH: 500
+	M: 400
+	CH: 300
+C-CH
+	C: 1300
+	H: 900
+	OH: 300
+	H2: 200
+	O: 200
+	CO: 100
+CO-C
+	CO: 300
+	H: 200
+	M: 100
+CO-O
+	CO: 300
+	H: 200
+	C: 100
+	OH: 100
+	M: 100
+CH-C
+	CH: 700
+	H: 500
+	O: 400
+	CO: 300
+	C: 100
+	OH: 100
+	H2: 100
