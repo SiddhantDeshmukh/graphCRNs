@@ -23,8 +23,8 @@ def plot_instance(axes, number_densities, network, network_key):
 def main():
   # 1. Define initial network (N0)
   network_dir = '../res'
-  network_file = f"{network_dir}/solar_co_w05.ntw"
-  # network_file = f"{network_dir}/cno.ntw"
+  # network_file = f"{network_dir}/solar_co_w05.ntw"
+  network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
   source_targets = [

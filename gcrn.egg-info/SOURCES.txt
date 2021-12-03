@@ -45,10 +45,13 @@ res/reverse-3
 res/ring-reaction
 res/simplified_co.ntw
 res/solar_co_w05.ntw
+tests/co_profile.txt
 tests/dynamics_test.py
 tests/io.py
 tests/limits.py
 tests/parser.py
+tests/pfa.py
+tests/profile.txt
 tests/profile_network.py
 tests/rho_T_grid.py
 tests/simplify.py

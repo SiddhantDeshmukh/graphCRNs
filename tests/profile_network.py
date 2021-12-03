@@ -10,6 +10,8 @@ from gcrn.pathfinding import find_network_paths, rxn_idx_paths_from_rxn_paths,\
     PointPaths
 from gcrn.helper_functions import setup_number_densities, count_all_rxns, count_rxns_by_pairs, species_counts_from_rxn_counts
 import numpy as np
+import matplotlib.pyplot as plt
+import networkx as nx
 
 from gcrn.profiling import most_important_species_by_pairs, most_travelled_pair_paths, total_counts_across_paths
 
@@ -55,11 +57,13 @@ def sum_dicts(d1: Dict, d2: Dict) -> Dict:
 
 def main():
   network_dir = '../res'
-  network_file = f"{network_dir}/solar_co_w05.ntw"
+  # network_file = f"{network_dir}/solar_co_w05.ntw"
   # network_file = f"{network_dir}/co_test.ntw"
-  # network_file = f"{network_dir}/cno.ntw"
+  network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
+  print(len(network.species))
+  print(len(network.reactions))
   species_count = network.network_species_count()
   balance_dict = network_balance(species_count)
   print("\n".join([f"{key}: {value}" for key, value in species_count.items()]))
@@ -98,72 +102,86 @@ def main():
                                                       for l in source_targets]
   # print(sources)
   # print(targets)
-  # plt.figure()
-  # nx.draw(network.species_graph)
-  # plt.show()
-  temperatures = np.linspace(3000, 15000, num=10)
-  densities = np.logspace(-12, -6, num=10)
+  plt.figure()
+  options = {
+      "node_color": "white",
+      "with_labels": True,
+      'font_size': 6,
+      'arrows': False,
+      'linewidths': 0,
+      'width': 0
 
-  points_list: List[PointPaths] = []
-  for T, rho in product(temperatures, densities):
-    # print(f'rho = {rho:.3e}, T = {T:.3e}')
-    network.temperature = T
-    hydrogen_density = gas_density_to_hydrogen_number_density(rho)
-    network.number_densities = \
-        setup_number_densities(initial_number_densities,
-                               hydrogen_density, network)
-    # TODO:
-    # Move to networkdynamics init, ensuring number densities is an array
-    # indexed as species there (it is a dict in network)
-    n = np.zeros(len(network.species))
-    for i, s in enumerate(network.species):
-      n[i] = network.number_densities[s]
+  }
+  pos = {}
+  num_nodes = len(network.species_graph.nodes)
+  for i, n in enumerate(network.species_graph.nodes):
+    x, y = i // num_nodes, i % num_nodes
+    pos[n] = (x, y)
+  nx.draw_random(network.species_graph,  **options)
+  plt.show()
+  # temperatures = np.linspace(3000, 15000, num=10)
+  # densities = np.logspace(-12, -6, num=10)
 
-    # Solve dynamics for 100 seconds to get reasonable number densities
-    # TODO:
-    # Add timescale as a parameter
-    dynamics = NetworkDynamics(network, network.number_densities, T)
-    n = dynamics.solve(1e2, n)[0]
+  # points_list: List[PointPaths] = []
+  # for T, rho in product(temperatures, densities):
+  #   # print(f'rho = {rho:.3e}, T = {T:.3e}')
+  #   network.temperature = T
+  #   hydrogen_density = gas_density_to_hydrogen_number_density(rho)
+  #   network.number_densities = \
+  #       setup_number_densities(initial_number_densities,
+  #                              hydrogen_density, network)
+  #   # TODO:
+  #   # Move to networkdynamics init, ensuring number densities is an array
+  #   # indexed as species there (it is a dict in network)
+  #   n = np.zeros(len(network.species))
+  #   for i, s in enumerate(network.species):
+  #     n[i] = network.number_densities[s]
 
-    # Package back into dictionary for network
-    for i, s in enumerate(network.species):
-      network.number_densities[s] = n[i]
+  #   # Solve dynamics for 100 seconds to get reasonable number densities
+  #   # TODO:
+  #   # Add timescale as a parameter
+  #   dynamics = NetworkDynamics(network, network.number_densities, T)
+  #   n = dynamics.solve(1e2, n)[0]
 
-    # Find unique pathways for specified {source, target} pairs
-    unique_paths, unique_lengths, rxn_paths = find_network_paths(
-        network, sources, targets, cutoff=10, max_paths=100)
+  #   # Package back into dictionary for network
+  #   for i, s in enumerate(network.species):
+  #     network.number_densities[s] = n[i]
 
-    rxn_idx_paths = rxn_idx_paths_from_rxn_paths(rxn_paths)
+  #   # Find unique pathways for specified {source, target} pairs
+  #   unique_paths, unique_lengths, rxn_paths = find_network_paths(
+  #       network, sources, targets, cutoff=10, max_paths=100)
 
-    all_rxn_counts = count_all_rxns(rxn_idx_paths)
-    counts_by_pairs = count_rxns_by_pairs(rxn_idx_paths)
-    points_list.append(PointPaths(rho, T, 1e2, unique_paths, unique_lengths,
-                                  rxn_idx_paths, all_rxn_counts, counts_by_pairs))
+  #   rxn_idx_paths = rxn_idx_paths_from_rxn_paths(rxn_paths)
 
-  for r in points_list:
-    r.sort()
+  #   all_rxn_counts = count_all_rxns(rxn_idx_paths)
+  #   counts_by_pairs = count_rxns_by_pairs(rxn_idx_paths)
+  #   points_list.append(PointPaths(rho, T, 1e2, unique_paths, unique_lengths,
+  #                                 rxn_idx_paths, all_rxn_counts, counts_by_pairs))
 
-  key_paths = most_travelled_pair_paths(points_list, source_target_pairs)
+  # for r in points_list:
+  #   r.sort()
 
-  print("Most travelled pathways by source-target pair:")
-  for pair, paths in key_paths.items():
-    print(pair)
-    print("\n".join([f'\t{k}: {v}' for k, v in paths.items()]))
+  # key_paths = most_travelled_pair_paths(points_list, source_target_pairs)
 
-  total_counts, species_counts = total_counts_across_paths(points_list, network)
+  # print("Most travelled pathways by source-target pair:")
+  # for pair, paths in key_paths.items():
+  #   print(pair)
+  #   print("\n".join([f'\t{k}: {v}' for k, v in paths.items()]))
 
-  print("Most important reactions / total reactions:")
-  print(f'{len(total_counts)} / {len(network.reactions)}')
-  print("Total species counts across grid")
-  print("\n".join([f'{k}: {v}' for k, v in species_counts.items()]))
+  # total_counts, species_counts = total_counts_across_paths(points_list, network)
 
-  pair_species_counts = most_important_species_by_pairs(points_list,
-                                                        source_target_pairs,
-                                                        network)
-  print("Most important species by source-target pair:")
-  for pair, counts in pair_species_counts.items():
-    print(pair)
-    print("\n".join([f'\t{k}: {v}' for k, v in counts.items()]))
+  # print("Most important reactions / total reactions:")
+  # print(f'{len(total_counts)} / {len(network.reactions)}')
+  # print("Total species counts across grid")
+  # print("\n".join([f'{k}: {v}' for k, v in species_counts.items()]))
+
+  # pair_species_counts = most_important_species_by_pairs(points_list,
+  #                                                       source_target_pairs,
+  #                                                       network)
+  # print("Most important species by source-target pair:")
+  # for pair, counts in pair_species_counts.items():
+  #   print(pair)
+  #   print("\n".join([f'\t{k}: {v}' for k, v in counts.items()]))
 
 
 if __name__ == "__main__":
