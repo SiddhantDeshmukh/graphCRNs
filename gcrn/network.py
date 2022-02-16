@@ -5,14 +5,15 @@ from typing import Dict, List, Union
 from itertools import product
 import fortranformat as ff
 from gcrn.utilities import cofactor_matrix, list_to_krome_format,\
-    constants_from_rate, pad_list
-from functools import lru_cache
+    constants_from_rate, pad_list, to_fortran_str
+from datetime import datetime
 
 
 class Network:
   def __init__(self, reactions: List[Reaction], temperature=300,
                number_densities=None) -> None:
     self.reactions: List[Reaction] = sorted(reactions, key=lambda rxn: rxn.idx)
+    self.find_duplicate_indices()
 
     # Determine species and complexes present in each reaction
     species = []
@@ -129,9 +130,44 @@ class Network:
 
     return cls(reactions)
 
+  @classmethod
+  def from_cobold_file(cls, cobold_file: str):
+    # Initialise Network object from Fortran fixed format cobold 'chem.dat' file
+    fformat = '(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,A16)'
+    reader = ff.FortranRecordReader(fformat)
+    reactions = []
+    with open(cobold_file, 'r') as infile:
+      while True:
+        line = infile.readline()
+        if not line:
+          break
+        # Each line is a separate reaction of form:
+        # idx R R R P P P P alpha beta gamma ref
+        idx, R1, R2, R3, P1, P2, P3, P4, alpha, beta, gamma, ref =\
+            [str(s).strip() for s in reader.read(line)]
+        alpha, beta, gamma = float(alpha), float(beta), float(gamma)
+        reactants = [r for r in [R1, R2, R3] if r]
+        products = [p for p in [P1, P2, P3, P4] if p]
+        rate_expression = ""
+        if alpha:
+          rate_expression += f'{to_fortran_str(float(alpha), fmt="1.4e")}'
+        if beta:
+          rate_expression += f' * (Tgas / 3d2)**({to_fortran_str(float(beta), fmt="1.4e")})'
+        if gamma:
+          if gamma > 0:
+            gamma_str = f'-{to_fortran_str(float(gamma), fmt="1.4e")}'
+          else:
+            gamma_str = f'{to_fortran_str(-float(gamma), fmt="1.4e")}'
+          rate_expression += f' * exp({gamma_str} / Tgas)'
+        reactions.append(Reaction(reactants, products, rate_expression, idx,
+                                  reference=ref))
+
+    return cls(reactions)
+
   # ----------------------------------------------------------------------------
   # Output
   # ----------------------------------------------------------------------------
+
   def to_krome_format(self, path: str):
     # Write the Network to KROME-readable format
     # Determine reaction formats
@@ -145,12 +181,16 @@ class Network:
 
     # 2. Group based on number of reactants / products
     header = "#" * 80
-    output = f"{header}\n# Automatically generated from Network\n{header}"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    output = f"{header}\n# Automatically generated on {timestamp}\n"
+    output += f'# {len(self.species)} species, {len(self.reactions)} reactions\n'
+    output += f'# of which {len(limit_reactions)} have temperature limits\n'
+    output += f'{header}\n'
     if limit_reactions:
-      output += "\n# Reactions with temperature limits"
+      output += "# Reactions with temperature limits\n"
       output += f"{list_to_krome_format(limit_reactions)}\n"
     if unlimit_reactions:
-      output += "\n# Reactions without temperature limits"
+      output += "# Reactions without temperature limits\n"
       output += f"{list_to_krome_format(unlimit_reactions)}\n"
 
     with open(path, 'w', encoding='utf-8') as outfile:
@@ -202,6 +242,31 @@ class Network:
     output += "\n".join([rxn.description() for rxn in self.reactions])
 
     return output
+
+  # ----------------------------------------------------------------------------
+  # Verification methods
+  # ----------------------------------------------------------------------------
+
+  def find_duplicate_indices(self):
+    # Check if mulitple reactions have the same index
+    duplicates = []
+    added_idxs = []
+    for i, rxn1 in enumerate(self.reactions):
+      for j, rxn2 in enumerate(self.reactions):
+        if i == j:
+          continue
+        if rxn1.idx == rxn2.idx:
+          if not rxn1.idx in added_idxs:
+            added_idxs.append(rxn1.idx)
+            duplicates.append((rxn1, rxn2))
+
+    if duplicates:
+      print(
+          f'Warning! {len(duplicates)} reactions with duplicate indices found:')
+      print(f'==================================================')
+      for duplicate in duplicates:
+        print('\n'.join([d.description() for d in duplicate]))
+        print(f'==================================================')
 
   # ----------------------------------------------------------------------------
   # Methods for creating graphs
@@ -278,23 +343,27 @@ class Network:
     eval_kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)),
                                     dtype=object)
     eval_kinetics_idxs = []
+    # TODO:
+    # Use a sparse array since most entries will be zero, and never evaluate
+    # the zero entries
     for i, rxn in enumerate(self.reactions):
       for j, complex in enumerate(self.complexes):
-        rhs = rxn if complex == rxn.reactant_complex else eval('lambda _: 0')
-        eval_kinetics_matrix[i, j] = rhs
-        eval_kinetics_idxs.append((i, j))
+        # rhs = rxn if complex == rxn.reactant_complex else eval('lambda _: 0')
+        # eval_kinetics_matrix[i, j] = rhs
+        # eval_kinetics_idxs.append((i, j))
+        if complex == rxn.reactant_complex:
+          eval_kinetics_matrix[i, j] = rxn
+          eval_kinetics_idxs.append((i, j))
+        else:
+          eval_kinetics_matrix[i, j] = 0.
+
+    # print(f"{len(eval_kinetics_idxs)} index pairs for {eval_kinetics_matrix.shape} matrix.")
     return eval_kinetics_matrix, eval_kinetics_idxs
 
   def create_complex_kinetics_matrix(self, limit_rates=False) -> np.ndarray:
     # Create the (r x c) coindicidence matrix containing reaction rate constants
     # 'K' in: x_dot =  ZDK Exp(Z.T Ln(x))
     kinetics_matrix = np.zeros((len(self.reactions), len(self.complexes)))
-    # TODO:
-    # Determine indices of filled kinetics matrix just once
-    # for i, rxn in enumerate(self.reactions):
-    #   for j, complex in enumerate(self.complexes):
-    #     kinetics_matrix[i, j] = self.eval_kinetics_matrix[i, j](
-    #         self.temperature)
     for (i, j) in self.eval_kinetics_idxs:
       kinetics_matrix[i, j] = self.eval_kinetics_matrix[i, j](self.temperature)
     return kinetics_matrix
@@ -321,18 +390,10 @@ class Network:
   # Methods for updating attributes
   # ----------------------------------------------------------------------------
   def _update(self):
-    # TODO:
-    # Use temperature property instead of passing in
-
-    # Given a certain temperature, update all matrices and graphs
-    # that depend on it
-    # print(f"Updating matrices with temperature {temperature} K")
+    # Update complex kinetics matrix
+    # NOTE: Graphs are NOT updated!
     self.complex_kinetics_matrix =\
         self.create_complex_kinetics_matrix()
-
-    # # print(f"Updating graphs with temperature {temperature} K")
-    # self.update_species_graph()
-    # self.update_complex_graph()
 
   # ----------------------------------------------------------------------------
   # Methods for computing nullspaces

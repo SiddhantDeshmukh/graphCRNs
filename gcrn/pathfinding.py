@@ -2,10 +2,12 @@ from copy import deepcopy
 import re
 from typing import Union, List, Dict
 import networkx as nx
+from numpy.core.numeric import Inf
 from gcrn.network import Network
 from gcrn.reaction import Reaction
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
+import sys
 
 
 @dataclass
@@ -75,14 +77,11 @@ def create_search_graph(network: Network, source: str, target: str):
     # Split the complex so we can match the parts instead of potentially
     # matching strings (e.g. 'H' would match 'in H2')
     complex_species = [c.strip() for c in complex.split('+')]
-    # print(complex_species, source, target)
     if target in complex_species:
-      # print(f"{complex} to {target} sink connection")
       edges_to_add.append((complex, target, 0))
 
     # Add source connections
     if source in complex_species:
-      # print(f"{source} to {complex} source connection")
       edges_to_add.append((source, complex, 0))
 
   # Add helper species connections
@@ -96,10 +95,7 @@ def create_search_graph(network: Network, source: str, target: str):
       # e.g. for C -> CO, include every connection that has a 'C' in it, but
       # none that do not!
       complex_species = [c.strip() for c in complex.split('+')]
-      # print(complex, s)
-      # print(complex_species)
       if not complex in network.species and not target in complex_species and is_in_complex(complex, source) and s in complex_species:
-        # print(True)
         edges_to_add.append((s, complex, 0))
         edges_to_add.append((complex, s, 0))
 
@@ -107,8 +103,6 @@ def create_search_graph(network: Network, source: str, target: str):
 
   # Keep only the largest connected component (i.e. remove all complexes that
   # do not contribute to the current pathways)
-  # print([len(c) for c in sorted(nx.weakly_connected_components(G), key=len,
-  #                               reverse=True)])
   G = G.subgraph(max(nx.weakly_connected_components(G), key=len))
   return G
 
@@ -178,6 +172,105 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
         break
 
   return unique_paths, unique_lengths, reaction_paths
+
+
+# !!!!!!!
+# TESTING
+# !!!!!!!
+def all_paths(network: Network, source: str, target: str,
+              cutoff=4, max_paths=100):
+  # Use a custom Dijkstra pathfinding alg to find paths on species-complex graph
+  # with rules of species-jumps
+  # Species-Complex graph:
+  # Complex graph with edge connections + 0-weight edge connections to all
+  # species if species in complex
+  # This should allow the graph to become fully connected if the reaction
+  # network in species is fully connected
+  # Additionally, we use one graph for the entire network regardless of
+  # {source,target}; the pathfinding takes care of zero-jumps
+  G = deepcopy(network.complex_graph)
+  edges_to_add = []
+  for complex in G.nodes():
+    if complex in network.species:
+      continue
+    # Split the complex so we can match the parts instead of potentially
+    # matching strings (e.g. 'H' would match 'in H2')
+    complex_species = [c.strip() for c in complex.split('+')]
+    # Add species-complex connections (zero-weight)
+    for s in network.species:
+      if s in complex_species:
+        edges_to_add.append((s, complex, 0))
+
+  G.add_weighted_edges_from(edges_to_add)
+
+  path_gen = nx.all_simple_paths(G, source, target, cutoff=4)
+  for path in path_gen:
+    print(path)
+
+  plt.figure()
+  options = {
+      "node_color": "white",
+      "with_labels": True
+  }
+  nx.draw(G, **options)
+  nx.shell_layout(G)
+
+  plt.show()
+  exit()
+
+  # RULES:
+  # 1. Always start on a species 'source' node
+  # 2. If current node is species 'target' node, return
+  # 3. Find all nodes connected to current
+  # 4. If last edge had a cost of zero, omit all potential nodes that have a
+  #    cost of zero (prevents double species-jumps)
+  # TODO:
+  # Refactor this specific species-jump-prevention dfs to outside
+  def dfs(current: str, target: str, visited_nodes: List, current_path: List,
+          all_paths: List, previous_distance: float, cutoff=cutoff,
+          max_paths=max_paths):
+    visited_nodes.append(current)
+    current_path.append(current)
+
+    # print(current, target, len(visited_nodes),
+    #       len(current_path), len(all_paths), max_paths)
+
+    if current == target:
+      print(current_path)
+      all_paths.append(deepcopy(current_path))
+
+    if len(all_paths) >= max_paths:
+      return all_paths
+
+    for neighbour in G.neighbors(current):
+      # If previous distance was zero, omit all neighbours with zero cost
+      neighbour_distance = G[current][neighbour][0]['weight']
+      if previous_distance == 0 and neighbour_distance == [0]:
+        continue
+      # Actually, I don't want a C->CO chain to have H in the middle of the path
+      # so I need to think up another rule to prevent that...
+      # I think I solved this before by only connecting certain edges based on
+      # the source/target terms, thereby creating a new graph for each search
+      # pair. I can just replicate this as a rule: skip the neighbour if it
+      # would violate this kind of connection!
+      # TODO;
+      # Check cutoff
+      # No loops!
+      if not (neighbour in visited_nodes):
+        dfs(neighbour, target, visited_nodes, current_path, all_paths,
+            neighbour_distance)
+
+    visited_nodes.pop()
+    current_path.pop()
+
+    if not current_path:
+      return all_paths
+
+  visited_nodes, current_path, all_paths = [], [], []
+  # Most first steps will have a length of zero as the species goes to a complex
+  # so we initialise previous_distance as 'None' instead of '0'; otherwise
+  # there would be no allowed connections
+  return dfs(source, target, visited_nodes, current_path, all_paths, None)
 
 
 def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,

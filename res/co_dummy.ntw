@@ -1,0 +1,14 @@
+@format:idx,R,R,P,rate
+1,C,O,CO,2
+2,C,H,CH,1
+3,O,H,OH,1
+@format:idx,R,P,P,rate
+4,CO,C,O,4
+@format:idx,R,R,P,P,rate
+5,CO,H,CH,O,3
+6,CO,H,CH,O,2
+@format:idx,R,R,P,P,P,rate
+7,CH,H,C,H,H,3
+8,CH,OH,CO,H,H,2
+@format:idx,R,R,R,P,P,rate
+9,C,H,H,CH,H,3

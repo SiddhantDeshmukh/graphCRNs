@@ -2,6 +2,7 @@ from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number
 from gcrn.helper_functions import enumerated_product, setup_dynamics
 from gcrn.network import Network
 import numpy as np
+import time
 
 
 # Dummy network dynamics to profile efficiency
@@ -31,15 +32,23 @@ network = Network.from_krome_file(network_file)
 
 temperatures = np.linspace(3000, 15000, num=50)
 gas_densities = np.logspace(-12, -6, num=50)
-timescales = [100, 1000, 10000]
+timescales = np.logspace(-6, 6, num=10)
+start_time = time.time()
 for (i, j), (T, rho) in enumerated_product(temperatures, gas_densities):
-  # print(f"Solving rho = {rho:.2e} [g/cm^3], T = {T} [K]")
   hydrogen_density = gas_density_to_hydrogen_number_density(rho)
 
   dynamics = setup_dynamics(network, 3000, initial_number_densities,
                             hydrogen_density)
-  for timescale in timescales:
-    # print(f"\tSolving t = {timescale} [s]")
-    dynamics.solve(timescale, dynamics.initial_number_densities)
-  print(
-      f"Done {i+1} / {len(gas_densities)} densities, {j+1} / {len(temperatures)} temperatures")
+  number_densities = dynamics.solve(timescales,
+                                    dynamics.initial_number_densities)
+  print(f"Done {i+1} / {len(gas_densities)} densities "
+        f"{j+1} / {len(temperatures)} temperatures",
+        end="\r")
+
+end_time = time.time()
+print(
+    f"\n{len(timescales)} timescales,\n"
+    f"{len(temperatures)} temperatures,\n"
+    f"{len(gas_densities)} densities.\n"
+    f"Total time: {(end_time - start_time):.3f} seconds."
+)

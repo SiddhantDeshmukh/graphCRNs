@@ -19,6 +19,8 @@ def sort_dict(d: Dict, reverse=True):
 
 def reaction_from_complex(source_complex: str, target_complex: str,
                           network: Network) -> Reaction:
+  # TODO:
+  # network method!
   # Find the first reaction corresponding to 'source_complex -> target_complex'
   # in 'network'. Used in pathfinding to relate paths back to reactions.
   for rxn in network.reactions:
@@ -29,6 +31,8 @@ def reaction_from_complex(source_complex: str, target_complex: str,
 
 
 def reaction_from_idx(idx: int, network: Network) -> Reaction:
+  # TODO:
+  # network method!
   # Use the reaction index to find the corresponding Reaction in network
   for rxn in network.reactions:
     if rxn.idx == idx:
@@ -139,22 +143,18 @@ def setup_dynamics(network: Network, temperature: float,
 
 def solve_dynamics(dynamics: NetworkDynamics, times: List,
                    limit_rates=False) -> np.ndarray:
-  final_number_densities = []
   # TODO:
   # Refactor 'dynamics' to use dynamics.number_densities instead of passing in
-  for i, time in enumerate(times):
-    solver_kwargs = {
-        'min_step': None,
-        # 'max_step': time / 1e9
-        'max_step': None
-    }
-
-    final = dynamics.solve(time, dynamics.number_densities,
-                           create_jacobian=False,
-                           limit_rates=limit_rates,
-                           **solver_kwargs)[0]
-    final_number_densities.append(final)
-    # print(f"Done {i+1} time of {len(times)}")
+  solver_kwargs = {
+      'min_step': None,
+      # 'max_step': time / 1e9
+      'max_step': None
+  }
+  final_number_densities = dynamics.solve(times, dynamics.number_densities,
+                                          create_jacobian=False,
+                                          limit_rates=limit_rates,
+                                          **solver_kwargs)[0]
+  # print(f"Done {i+1} time of {len(times)}")
 
   final_number_densities = np.array(final_number_densities).T
   return final_number_densities
@@ -179,8 +179,8 @@ def run_and_plot(temperatures: List, times: List, network: Network,
     # Total number density
     # axes[idx_x, idx_y].plot(np.log10(times), np.log10(total_number_density),
     #                         label="Total")
-    axes[idx_x, idx_y].plot(np.log10(times), total_number_density / total_number_density[0],
-                            label="Total")
+    # axes[idx_x, idx_y].plot(np.log10(times), total_number_density / total_number_density[0],
+    #                         label="Total")
     # axes[idx_x, idx_y].set_ylim(17, 18)
     # hydrogen_number_density = number_densities[network.species.index('H')]
     for s, n in zip(network.species, number_densities):

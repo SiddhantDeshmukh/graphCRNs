@@ -1,3 +1,4 @@
+from calendar import formatstring
 from typing import List
 from gcrn.reaction import Reaction
 import numpy as np
@@ -69,19 +70,21 @@ def determine_krome_format(reaction: Reaction) -> str:
 def list_to_krome_format(reactions: List[Reaction]) -> str:
   # Write a list of reactions to a KROME-readable string
   output = ""
-  old_format = ""
-  # TODO:
-  # Group reactions by num reactants and products
-  for i, rxn in enumerate(reactions):
+  format_dict = {}  # key is format_str, value is list of matching rxns
+  for rxn in reactions:
     format_str = determine_krome_format(rxn)
-    if old_format != format_str:  # new format
-      old_format = format_str
-      if i > 0:
-        output += '#'
-      output += f"\n## {len(rxn.reactants)} reactants, {len(rxn.products)} products\n"
-      output += f"{format_str}\n"
+    if format_str in format_dict.keys():
+      format_dict[format_str].append(rxn.krome_str())
+    else:
+      format_dict[format_str] = [rxn.krome_str()]
 
-    output += f"{rxn.krome_str()}\n"
+  # Write out dictionary
+  # TODO:
+  # Write out sequentially based on index
+  for i, (format_str, krome_strs) in enumerate(format_dict.items()):
+    output += f'## {list(format_str).count("R")} reactants, {list(format_str).count("P")} products\n'
+    output += f'{format_str}\n'
+    output += '\n'.join(rxn for rxn in krome_strs)
 
   return output
 

@@ -144,7 +144,6 @@ class NetworkDynamics():
 
     return jacobian
 
-  # @jit(nopython=True)
   def evaluate_jacobian(self, temperature: float,
                         number_densities: np.ndarray) -> np.ndarray:
     # # Evaluate the 'jacobian_str' using sympy
@@ -171,7 +170,6 @@ class NetworkDynamics():
 
     return jacobian
 
-  # @lru_cache(maxsize=128)
   def create_rates_vector(self, number_densities: np.ndarray,
                           temperature=None, limit_rates=False) -> np.ndarray:
     # Create the vector v(x) = K Exp(Z.T Ln(x)) that includes the stoichiometry
@@ -201,16 +199,22 @@ class NetworkDynamics():
 
     return dynamics_vector
 
-  def solve(self, timescale: float, initial_number_densities: np.ndarray,
+  def solve(self, evolution_times: List[float], initial_number_densities: np.ndarray,
             initial_time=0, create_jacobian=False, jacobian=None,
             limit_rates=False,
             atol=1e-30, rtol=1e-4,
-            **solver_kwargs) -> np.ndarray:
-    # @lru_cache(maxsize=128)
+            **solver_kwargs) -> List[np.ndarray]:
     def f(t: float, y: np.ndarray,
           temperature=None, limit_rates=False) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
-      if abs(temperature - self.network.temperature) > 1e-04:
+      # NOTE:
+      # Temperature sensitivity here is sort of ad-hoc, choosing a value
+      # that works well in stellar atmospheres which are 10^3-10^4 K
+      # So here the kinetics are updated if the temperature has changed by more
+      # than 10 K.
+      # TODO:
+      # How do we speed this up???
+      if abs(temperature - self.network.temperature) > 1e1:
         self.network.temperature = temperature
       S = self.network.stoichiometric_matrix
       Z = self.network.complex_composition_matrix
@@ -240,15 +244,17 @@ class NetworkDynamics():
     # Initial values
     solver.set_initial_value(initial_number_densities, initial_time)
 
-    # TODO: Add better time-stepping control
-    dt = timescale - initial_time
-
     # TODO: Check for failure and return codes
     number_densities = []
-    while solver.successful() and solver.t < timescale:
-      solver.set_f_params(self.temperature, limit_rates)
-      number_densities.append(solver.integrate(solver.t + dt))
-
+    # TODO:
+    # Test timescale stuff to make sure it works as intended
+    prev_time = initial_time
+    for current_time in evolution_times:
+      dt = current_time - prev_time
+      while solver.successful() and solver.t < current_time:
+        solver.set_f_params(self.temperature, limit_rates)
+        number_densities.append(solver.integrate(solver.t + dt))
+      prev_time = current_time
     return number_densities
 
   def solve_steady_state(self, initial_number_densities: np.ndarray,
