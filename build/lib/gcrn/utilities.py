@@ -84,7 +84,7 @@ def list_to_krome_format(reactions: List[Reaction]) -> str:
   for i, (format_str, krome_strs) in enumerate(format_dict.items()):
     output += f'## {list(format_str).count("R")} reactants, {list(format_str).count("P")} products\n'
     output += f'{format_str}\n'
-    output += '\n'.join(rxn for rxn in krome_strs)
+    output += '\n'.join(rxn for rxn in krome_strs) + "\n"
 
   return output
 
