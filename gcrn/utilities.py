@@ -61,7 +61,7 @@ def determine_krome_format(reaction: Reaction) -> str:
   format_str += "rate,"
 
   if reaction.min_temperature or reaction.max_temperature:
-    format_str += "Tmin,Tmax,limit,"
+    format_str += "Tmin,Tmax,limit,ref"
 
   # Remove trailing comma
   return format_str.rstrip(',')
