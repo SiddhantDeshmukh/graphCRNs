@@ -1,0 +1,16 @@
+################################################################################
+# Experimental network with CH, OH, CO to investigate pathways
+# Forward reactions have odd indices, reverse reactions have even indices
+# i.e. a forward reaction with index 'i' has reverse index 'i+1'
+################################################################################
+@format:idx,R,R,P,rate
+3,O,H,OH,1d-6
+1,C,H,CH,1d-6
+@format:idx,R,P,P,rate
+2,CH,C,H,1d-4
+4,OH,O,H,1d-4
+@format:idx,R,R,P,P,rate
+5,CH,O,CO,H,1d-2
+6,CO,H,CH,O,1d-12
+7,OH,C,CO,H,1d-2
+8,CO,H,OH,C,1d-12

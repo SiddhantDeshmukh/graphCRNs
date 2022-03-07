@@ -1,5 +1,5 @@
 from calendar import formatstring
-from typing import List
+from typing import Dict, List
 from gcrn.reaction import Reaction
 import numpy as np
 import re
@@ -67,16 +67,27 @@ def determine_krome_format(reaction: Reaction) -> str:
   return format_str.rstrip(',')
 
 
-def list_to_krome_format(reactions: List[Reaction]) -> str:
-  # Write a list of reactions to a KROME-readable string
-  output = ""
+def group_rxns(reactions: List[Reaction], krome_str=False) -> Dict:
+  # Group reactions based on number of reactants and products using the KROME
+  # format string of each reaction
+  # if 'str' is 'rxn', save str(rxn)
+  # if 'str' is 'krome', save rxn.krome_str()
   format_dict = {}  # key is format_str, value is list of matching rxns
   for rxn in reactions:
     format_str = determine_krome_format(rxn)
+    value_str = rxn.krome_str() if krome_str else str(rxn)
     if format_str in format_dict.keys():
-      format_dict[format_str].append(rxn.krome_str())
+      format_dict[format_str].append(value_str)
     else:
-      format_dict[format_str] = [rxn.krome_str()]
+      format_dict[format_str] = [value_str]
+
+  return format_dict
+
+
+def list_to_krome_format(reactions: List[Reaction]) -> str:
+  # Write a list of reactions to a KROME-readable string
+  output = ""
+  format_dict = group_rxns(reactions, krome_str=True)
 
   # Write out dictionary
   # TODO:

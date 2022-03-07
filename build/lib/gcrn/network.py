@@ -4,9 +4,10 @@ from gcrn.reaction import Reaction
 from typing import Dict, List, Union
 from itertools import product
 import fortranformat as ff
-from gcrn.utilities import cofactor_matrix, list_to_krome_format,\
+from gcrn.utilities import cofactor_matrix, group_rxns, list_to_krome_format,\
     constants_from_rate, pad_list, to_fortran_str
 from datetime import datetime
+from tabulate import tabulate
 
 
 class Network:
@@ -231,9 +232,21 @@ class Network:
     with open(path, 'w') as outfile:
       outfile.write(output)
 
+  def to_latex_table(self, path: str):
+    # Write the network to a LaTeX table
+    format_dict = group_rxns(self.reactions)
+    for i, (format_str, rxn_strs) in enumerate(format_dict.items()):
+      num_reactants = list(format_str).count('R')
+      num_products = list(format_str).count('P')
+      subtitle = f'{num_reactants} reactants, {num_products} products'
+      print(i, format_str)
+      print(rxn_strs)
+      print('==')
+
   # ----------------------------------------------------------------------------
   # String methods
   # ----------------------------------------------------------------------------
+
   def __str__(self) -> str:
     return "\n".join([str(rxn) for rxn in self.reactions])
 

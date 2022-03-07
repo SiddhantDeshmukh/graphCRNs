@@ -13,7 +13,7 @@ import networkx as nx
 def main():
   network_dir = '../res'
   # network_file = f"{network_dir}/solar_co_w05.ntw"
-  network_file = f"{network_dir}/co_dummy.ntw"
+  network_file = f"{network_dir}/ch_oh_co.ntw"
   # network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
@@ -70,10 +70,12 @@ def main():
       network.number_densities[s] = n[i]
 
     # Find unique pathways for specified {source, target} pairs
-    paths = all_paths(network, 'C', 'CO', max_paths=10)
+    # paths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=10)
+    paths = all_paths(network, 'O', 'CO', cutoff=3, max_paths=10)
     # TODO:
     # Function that computes path lengths from the path
-    print(paths)
+    for path in paths:
+      print(len(path), path)
     exit()
 
 

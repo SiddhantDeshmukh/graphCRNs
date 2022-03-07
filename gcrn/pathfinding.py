@@ -200,23 +200,24 @@ def all_paths(network: Network, source: str, target: str,
     for s in network.species:
       if s in complex_species:
         edges_to_add.append((s, complex, 0))
+        edges_to_add.append((complex, s, 0))
 
   G.add_weighted_edges_from(edges_to_add)
 
-  path_gen = nx.all_simple_paths(G, source, target, cutoff=4)
-  for path in path_gen:
-    print(path)
+  path_gen = nx.all_simple_paths(G, source, target, cutoff=6)
+  # for path in path_gen:
+  #   print(path)
 
-  plt.figure()
-  options = {
-      "node_color": "white",
-      "with_labels": True
-  }
-  nx.draw(G, **options)
-  nx.shell_layout(G)
+  # plt.figure()
+  # options = {
+  #     "node_color": "white",
+  #     "with_labels": True
+  # }
+  # nx.draw(G, **options)
+  # nx.shell_layout(G)
 
-  plt.show()
-  exit()
+  # plt.show()
+  # exit()
 
   # RULES:
   # 1. Always start on a species 'source' node
@@ -231,46 +232,59 @@ def all_paths(network: Network, source: str, target: str,
           max_paths=max_paths):
     visited_nodes.append(current)
     current_path.append(current)
-
     # print(current, target, len(visited_nodes),
     #       len(current_path), len(all_paths), max_paths)
 
     if current == target:
-      print(current_path)
+      # print("Reached target with path")
+      # print(current_path)
       all_paths.append(deepcopy(current_path))
+      # print(len(all_paths))
+      # return
 
     if len(all_paths) >= max_paths:
+      # print("Reached threshold for max paths!")
       return all_paths
+
+    # if len(current_path) - 1 > cutoff:
+    #   # print("Reached cutoff with")
+    #   # print(current_path)
+    #   return all_paths
 
     for neighbour in G.neighbors(current):
       # If previous distance was zero, omit all neighbours with zero cost
       neighbour_distance = G[current][neighbour][0]['weight']
-      if previous_distance == 0 and neighbour_distance == [0]:
+      # print(f'Checking {current} - {neighbour}')
+      # print(previous_distance, neighbour_distance)
+      if previous_distance == 0 and neighbour_distance == 0:
+        # print(f'Skipping {current} - {neighbour}')
         continue
-      # Actually, I don't want a C->CO chain to have H in the middle of the path
-      # so I need to think up another rule to prevent that...
-      # I think I solved this before by only connecting certain edges based on
-      # the source/target terms, thereby creating a new graph for each search
-      # pair. I can just replicate this as a rule: skip the neighbour if it
-      # would violate this kind of connection!
       # TODO;
       # Check cutoff
       # No loops!
       if not (neighbour in visited_nodes):
-        dfs(neighbour, target, visited_nodes, current_path, all_paths,
-            neighbour_distance)
+        all_paths = dfs(neighbour, target, visited_nodes, current_path, all_paths,
+                        neighbour_distance, cutoff=cutoff, max_paths=max_paths)
 
     visited_nodes.pop()
     current_path.pop()
 
-    if not current_path:
-      return all_paths
+    # if not current_path:
+    #   print("Returning all paths!")
+    #   print(all_paths)
+    #   return all_paths
+    # else:
+    #   print("Current path is")
+    #   print(current_path)
+    # print(f'{len(all_paths)} paths found.')
+    return all_paths
 
   visited_nodes, current_path, all_paths = [], [], []
   # Most first steps will have a length of zero as the species goes to a complex
   # so we initialise previous_distance as 'None' instead of '0'; otherwise
   # there would be no allowed connections
-  return dfs(source, target, visited_nodes, current_path, all_paths, None)
+  return dfs(source, target, visited_nodes, current_path, all_paths,
+             previous_distance=1, cutoff=cutoff, max_paths=max_paths)
 
 
 def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,
