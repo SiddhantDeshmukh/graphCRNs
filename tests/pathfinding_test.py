@@ -76,11 +76,17 @@ def main():
     # paths, path_lengths = all_paths(network, 'O', 'CO', cutoff=3, max_paths=10)
     # TODO:
     # Function that computes path lengths from the path
+    stitched_paths = []
     for path, lengths in zip(paths, path_lengths):
       print(len(path), path, lengths)
-      # Stitch path components and lengths together (remember first 'None' is
-      # the input heading into the source node so we can ignore it)
-      # there should be n-1 lengths (edges) for n elements in the path (nodes)
+      stitched_path = {}
+      for i in range(len(path)):
+        if i == len(path) - 1:
+          break
+        stitched_path[f'{path[i]} -> {path[i+1]}'] = lengths[i+1]
+
+      stitched_paths.append(stitched_path)
+      print(stitched_path)
     exit()
 
 
