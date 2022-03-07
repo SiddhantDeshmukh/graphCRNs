@@ -32,6 +32,7 @@ gcrn/graphNet/prototyping.py
 res/L-shape.ntw
 res/T-shape.ntw
 res/catalyst_co.ntw
+res/ch_oh_co.ntw
 res/chem.dat
 res/cno.ntw
 res/co_dummy.ntw

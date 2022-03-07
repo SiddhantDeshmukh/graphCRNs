@@ -228,10 +228,12 @@ def all_paths(network: Network, source: str, target: str,
   # TODO:
   # Refactor this specific species-jump-prevention dfs to outside
   def dfs(current: str, target: str, visited_nodes: List, current_path: List,
-          all_paths: List, previous_distance: float, cutoff=cutoff,
+          current_path_lengths: List, all_paths: List, all_path_lengths: List,
+          previous_distance: float, cutoff=cutoff,
           max_paths=max_paths):
     visited_nodes.append(current)
     current_path.append(current)
+    current_path_lengths.append(previous_distance)
     # print(current, target, len(visited_nodes),
     #       len(current_path), len(all_paths), max_paths)
 
@@ -239,12 +241,11 @@ def all_paths(network: Network, source: str, target: str,
       # print("Reached target with path")
       # print(current_path)
       all_paths.append(deepcopy(current_path))
-      # print(len(all_paths))
-      # return
+      all_path_lengths.append(deepcopy(current_path_lengths))
 
     if len(all_paths) >= max_paths:
       # print("Reached threshold for max paths!")
-      return all_paths
+      return all_paths, all_path_lengths
 
     # if len(current_path) - 1 > cutoff:
     #   # print("Reached cutoff with")
@@ -259,32 +260,24 @@ def all_paths(network: Network, source: str, target: str,
       if previous_distance == 0 and neighbour_distance == 0:
         # print(f'Skipping {current} - {neighbour}')
         continue
-      # TODO;
-      # Check cutoff
       # No loops!
       if not (neighbour in visited_nodes):
-        all_paths = dfs(neighbour, target, visited_nodes, current_path, all_paths,
-                        neighbour_distance, cutoff=cutoff, max_paths=max_paths)
+        all_paths, all_path_lengths = dfs(neighbour, target, visited_nodes,
+                                          current_path, current_path_lengths,
+                                          all_paths, all_path_lengths,
+                                          neighbour_distance, cutoff=cutoff, max_paths=max_paths)
 
     visited_nodes.pop()
     current_path.pop()
+    current_path_lengths.pop()
 
-    # if not current_path:
-    #   print("Returning all paths!")
-    #   print(all_paths)
-    #   return all_paths
-    # else:
-    #   print("Current path is")
-    #   print(current_path)
-    # print(f'{len(all_paths)} paths found.')
-    return all_paths
+    return all_paths, all_path_lengths
 
-  visited_nodes, current_path, all_paths = [], [], []
-  # Most first steps will have a length of zero as the species goes to a complex
-  # so we initialise previous_distance as 'None' instead of '0'; otherwise
-  # there would be no allowed connections
-  return dfs(source, target, visited_nodes, current_path, all_paths,
-             previous_distance=1, cutoff=cutoff, max_paths=max_paths)
+  visited_nodes, current_path, current_path_lengths, all_paths, all_path_lengths\
+      = [], [], [], [], []
+  return dfs(source, target, visited_nodes, current_path, current_path_lengths,
+             all_paths, all_path_lengths, previous_distance=None, cutoff=cutoff,
+             max_paths=max_paths)
 
 
 def find_network_paths(network: Network, sources: List, targets: List, cutoff=4,

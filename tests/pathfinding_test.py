@@ -1,3 +1,4 @@
+from typing import List
 from gcrn.network import Network
 from gcrn.dynamics import NetworkDynamics
 from gcrn.helper_functions import setup_number_densities
@@ -9,7 +10,7 @@ from itertools import product
 import networkx as nx
 
 
-# Test custom Dijkstra pathfinding
+# Test custom pathfinding
 def main():
   network_dir = '../res'
   # network_file = f"{network_dir}/solar_co_w05.ntw"
@@ -45,8 +46,9 @@ def main():
   # reverse paths
   source_targets += [(t, s) for s, t in source_targets]
   source_target_pairs = [f'{s}-{t}' for s, t in source_targets]
-  sources, targets = [l[0] for l in source_targets], [l[1]
-                                                      for l in source_targets]
+  sources, targets = [[l[i] for l in source_targets] for i in range(2)]
+  # sources = [l[0] for l in source_targets]
+  # targets = [l[1] for l in source_targets]
 
   temperatures = np.linspace(3000, 15000, num=10)
   densities = np.logspace(-12, -6, num=10)
@@ -70,12 +72,15 @@ def main():
       network.number_densities[s] = n[i]
 
     # Find unique pathways for specified {source, target} pairs
-    # paths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=10)
-    paths = all_paths(network, 'O', 'CO', cutoff=3, max_paths=10)
+    paths, path_lengths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=10)
+    # paths, path_lengths = all_paths(network, 'O', 'CO', cutoff=3, max_paths=10)
     # TODO:
     # Function that computes path lengths from the path
-    for path in paths:
-      print(len(path), path)
+    for path, lengths in zip(paths, path_lengths):
+      print(len(path), path, lengths)
+      # Stitch path components and lengths together (remember first 'None' is
+      # the input heading into the source node so we can ignore it)
+      # there should be n-1 lengths (edges) for n elements in the path (nodes)
     exit()
 
 
