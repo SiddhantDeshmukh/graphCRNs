@@ -13,8 +13,8 @@ import networkx as nx
 # Test custom pathfinding
 def main():
   network_dir = '../res'
-  # network_file = f"{network_dir}/solar_co_w05.ntw"
-  network_file = f"{network_dir}/ch_oh_co.ntw"
+  network_file = f"{network_dir}/solar_co_w05.ntw"
+  # network_file = f"{network_dir}/ch_oh_co.ntw"
   # network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
@@ -53,6 +53,8 @@ def main():
   temperatures = np.linspace(3000, 15000, num=10)
   densities = np.logspace(-12, -6, num=10)
 
+  # TODO:
+  # Run over histogram, not a product
   for T, rho in product(temperatures, densities):
     network.temperature = T
     hydrogen_density = gas_density_to_hydrogen_number_density(rho)
@@ -72,13 +74,12 @@ def main():
       network.number_densities[s] = n[i]
 
     # Find unique pathways for specified {source, target} pairs
-    paths, path_lengths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=10)
+    paths, path_lengths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=5)
     # paths, path_lengths = all_paths(network, 'O', 'CO', cutoff=3, max_paths=10)
     # TODO:
     # Function that computes path lengths from the path
     stitched_paths = []
     for path, lengths in zip(paths, path_lengths):
-      print(len(path), path, lengths)
       stitched_path = {}
       for i in range(len(path)):
         if i == len(path) - 1:
@@ -86,8 +87,18 @@ def main():
         stitched_path[f'{path[i]} -> {path[i+1]}'] = lengths[i+1]
 
       stitched_paths.append(stitched_path)
-      print(stitched_path)
-    exit()
+
+    # Sort from shortest to longest total timescale
+    stitched_paths = sorted(stitched_paths, key=lambda x: sum(x.values()))
+    print(f'{len(stitched_paths)} paths.')
+    for s_path in stitched_paths:
+      print(f'{len(s_path)} steps:')
+      total_timescale = 0.
+      for step, timescale in s_path.items():
+        print(f'\t{step} with timescale {timescale:.2e}')
+        total_timescale += timescale
+      print(f'\tTotal = {total_timescale:.2e} [s / cm^3]')
+    exit()  # one T, rho iteration
 
 
 if __name__ == "__main__":
