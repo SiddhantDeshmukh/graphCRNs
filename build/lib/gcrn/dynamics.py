@@ -199,7 +199,7 @@ class NetworkDynamics():
 
     return dynamics_vector
 
-  def solve(self, evolution_times: List[float], initial_number_densities: np.ndarray,
+  def solve(self, evolution_times: List[float],
             initial_time=0, create_jacobian=False, jacobian=None,
             limit_rates=False,
             atol=1e-30, rtol=1e-4,
@@ -235,26 +235,30 @@ class NetworkDynamics():
                                                **solver_kwargs)
       # TODO:
       # Refactor number densities to be a property and set this as jac param
-      solver.set_jac_params(self.temperature, initial_number_densities)
+      solver.set_jac_params(self.temperature, self.initial_number_densities)
     else:
       solver = ode(f).set_integrator("vode", method='bdf', atol=atol, rtol=rtol,
                                      with_jacobian=True,
                                      **solver_kwargs)
 
     # Initial values
-    solver.set_initial_value(initial_number_densities, initial_time)
+    solver.set_initial_value(self.initial_number_densities, initial_time)
 
     # TODO: Check for failure and return codes
-    number_densities = []
+    number_densities = np.empty(shape=(len(evolution_times),
+                                       len(self.number_densities)))
+    number_densities[:] = np.nan
     # TODO:
     # Test timescale stuff to make sure it works as intended
     prev_time = initial_time
-    for current_time in evolution_times:
+    for i_time, current_time in enumerate(evolution_times):
       dt = current_time - prev_time
       while solver.successful() and solver.t < current_time:
         solver.set_f_params(self.temperature, limit_rates)
-        number_densities.append(solver.integrate(solver.t + dt))
+        number_densities[i_time] = solver.integrate(solver.t + dt)
+
       prev_time = current_time
+
     return number_densities
 
   def solve_steady_state(self, initial_number_densities: np.ndarray,

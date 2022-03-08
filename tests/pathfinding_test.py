@@ -13,9 +13,9 @@ import networkx as nx
 # Test custom pathfinding
 def main():
   network_dir = '../res'
-  network_file = f"{network_dir}/solar_co_w05.ntw"
+  # network_file = f"{network_dir}/solar_co_w05.ntw"
   # network_file = f"{network_dir}/ch_oh_co.ntw"
-  # network_file = f"{network_dir}/cno.ntw"
+  network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
   print("Pathfinding")
@@ -50,7 +50,7 @@ def main():
   # sources = [l[0] for l in source_targets]
   # targets = [l[1] for l in source_targets]
 
-  temperatures = np.linspace(3000, 15000, num=10)
+  temperatures = np.linspace(3000, 30000, num=10)
   densities = np.logspace(-12, -6, num=10)
 
   # TODO:
@@ -67,11 +67,13 @@ def main():
 
     # Solve dynamics for 100 seconds to get reasonable number densities
     dynamics = NetworkDynamics(network, network.number_densities, T)
-    n = dynamics.solve([1e2], n)[0]
-
+    n = dynamics.solve(np.logspace(10, 12, num=100))
+    print(n.shape)
+    # TODO:
+    # Handle nans!
     # Package back into dictionary for network
     for i, s in enumerate(network.species):
-      network.number_densities[s] = n[i]
+      network.number_densities[s] = n[-1, i]
 
     # Find unique pathways for specified {source, target} pairs
     paths, path_lengths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=5)
@@ -90,15 +92,15 @@ def main():
 
     # Sort from shortest to longest total timescale
     stitched_paths = sorted(stitched_paths, key=lambda x: sum(x.values()))
-    print(f'{len(stitched_paths)} paths.')
-    for s_path in stitched_paths:
-      print(f'{len(s_path)} steps:')
-      total_timescale = 0.
-      for step, timescale in s_path.items():
-        print(f'\t{step} with timescale {timescale:.2e}')
-        total_timescale += timescale
-      print(f'\tTotal = {total_timescale:.2e} [s / cm^3]')
-    exit()  # one T, rho iteration
+    # print(f'{len(stitched_paths)} paths.')
+    # for s_path in stitched_paths:
+    #   print(f'{len(s_path)} steps:')
+    #   total_timescale = 0.
+    #   for step, timescale in s_path.items():
+    #     print(f'\t{step} with timescale {timescale:.2e}')
+    #     total_timescale += timescale
+    #   print(f'\tTotal = {total_timescale:.2e} [s / cm^3]')
+    # exit()  # one T, rho iteration
 
 
 if __name__ == "__main__":
