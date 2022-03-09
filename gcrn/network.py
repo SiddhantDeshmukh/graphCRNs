@@ -17,21 +17,21 @@ class Network:
     self.find_duplicate_indices()
 
     # Determine species and complexes present in each reaction
-    species = []
-    complexes = []
+    species: List[str] = []
+    complexes: List[str] = []
     for rxn in self.reactions:
       species.extend(rxn.reactants + rxn.products)
       complexes.append(rxn.reactant_complex)
       complexes.append(rxn.product_complex)
 
-    self.species = sorted(list(set(species)))
-    self.complexes = sorted(list(set(complexes)))
+    self.species: List[str] = sorted(list(set(species)))
+    self.complexes: List[str] = sorted(list(set(complexes)))
 
     # Properties
     self._temperature = temperature
-    if not number_densities:  # dummy values
-      number_densities = {s: np.random.randint(1, 10) for s in species}
-    self._number_densities = number_densities  # Must be a Dict!
+    if not number_densities:  # populate with random values
+      number_densities = {s: np.random.randint(1, 100) for s in species}
+    self._number_densities: Dict = number_densities
 
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H

@@ -1,11 +1,8 @@
-from functools import lru_cache
-from typing import Union, Dict, List
-from astropy.units.equivalencies import temperature
+from typing import Callable, Union, Dict, List
 import numpy as np
 from gcrn.network import Network
 from scipy.integrate import ode
 import sympy
-from numba import jit
 import re
 from itertools import product
 from math import exp  # used in 'eval'
@@ -15,8 +12,6 @@ from math import exp  # used in 'eval'
 # Clear up distinction between Network and NetworkDynamics
 # - Efficiency: Python is the slow part! Creating complex kinetics matrix in
 #   the rates vector is very slow!
-# - Link the properties back to Network, i.e. each NetworkDynamics object is
-#   linked to a Network object. Could even subclass at this point!
 
 class NetworkDynamics(Network):
   def __init__(self, network: Network, temperature=300,
@@ -24,26 +19,24 @@ class NetworkDynamics(Network):
     # NOTE:
     # network.number_densities is a dict, self.number_densities is an ndarray
     # self.number_densities_dict is self.network.number_densities
-    self.network = network
-    self.species = self.network.species
-    self.symbols = [f"n_{s}" for s in self.species]
+    self.network: Network = network
+    self.species: List[str] = self.network.species
+    self.symbols: List[str] = [f"n_{s}" for s in self.species]
     self.network.temperature = temperature
 
-    self.initial_number_densities = \
+    self.initial_number_densities: np.ndarray = \
         self.setup_initial_number_densities(self.network.number_densities)
-    self.number_densities_dict = self.network.number_densities
-    self._number_densities = self.initial_number_densities.copy()
+    self._number_densities: np.ndarray = self.initial_number_densities.copy()
+    self.number_densities_dict: Dict = self.network.number_densities
 
-    self.rates_vector = eval(
+    self.rates_vector: Callable = eval(
         f'lambda Z, K, n: K.dot(np.exp(Z.T.dot(np.log(n))))')
-    # self.rates_vector = self.create_rates_vector(self.number_densities,
-    #                                              temperature=temperature)
-    self.dynamics_vector = self.calculate_dynamics()
+    self.dynamics_vector: np.ndarray = self.calculate_dynamics()
 
     # Rates and Jacobian attributes
     if initialise_jacobian:
-      self.rate_dict = self.create_rate_dict()
-      self.jacobian_func = self.create_jacobian()
+      self.rate_dict: Dict = self.create_rate_dict()
+      self.jacobian_func: np.ndarray[Callable] = self.create_jacobian()
 
   # TODO:
   # Have number densities and initial number densities as properties?
@@ -70,8 +63,6 @@ class NetworkDynamics(Network):
   def create_rate_dict(self) -> Dict:
     # Create the dictionary describing the time-dependent system of equations
     # d[X]/dt = x_1 + x_2 + ...
-    # TODO:
-    # Fix double-counting!!!
     # TODO:
     # Potentially build this from just evaluating ZDKExp(Z.TLn(x))?
     # Put in 'n_{key}' for 'x', evaluate RHS symbolically and it should be
@@ -132,31 +123,10 @@ class NetworkDynamics(Network):
                       rate)
         jacobian[i, j] = eval(f"lambda T, n: {rate}")
 
-    #   num_species = len(self.species)
-    # jacobian = np.zeros((num_species, num_species), dtype=object)
-    # # Set up d[A]/dt = a_1 + a_2 + ... for each differential expression with A
-    # for i, rate in enumerate(self.rate_dict.values()):
-    #   expression = " + ".join(rate)
-    #   for j, symbol in enumerate(self.symbols):
-    #     differential = sympy.diff(expression, symbol)
-    #     jacobian[i, j] = str(differential)
-
     return jacobian
 
   def evaluate_jacobian(self, temperature: float,
                         number_densities: np.ndarray) -> np.ndarray:
-    # # Evaluate the 'jacobian_str' using sympy
-    # # Note that 'number_densities' must have the same indexing as
-    # # network species
-    # n_dict = {s: n for s, n in zip(self.symbols, number_densities)}
-    # n_dict['Tgas'] = temperature
-    # rows, cols = self.jacobian_str.shape
-    # jacobian = np.zeros((rows, cols))
-    # for i in range(rows):
-    #   for j in range(cols):
-    #     # Evaluate with temperature and number densities!
-    #     jacobian[i, j] = sympy.parse_expr(self.jacobian_str[i, j],
-    #                                       evaluate=True, local_dict=n_dict)
     # Evaluate the function Jacobian by calling each element with the provided
     # temperature and number densities
     if not self.jacobian_func:
@@ -183,8 +153,8 @@ class NetworkDynamics(Network):
     # rates to zero if so
     # TODO:
     # Check ratio of number densities instead?
-    boundary_mask = (number_densities <= 1e-10)
-    number_densities[boundary_mask] = 1e-10
+    # boundary_mask = (number_densities <= 1e-10)
+    # number_densities[boundary_mask] = 1e-10
     rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
 
     return rates_vector
