@@ -13,27 +13,26 @@ from math import exp  # used in 'eval'
 
 # TODO:
 # Clear up distinction between Network and NetworkDynamics
-# Where should temperature be represented? How to interface using it?
 # - Efficiency: Python is the slow part! Creating complex kinetics matrix in
 #   the rates vector is very slow!
+# - Link the properties back to Network, i.e. each NetworkDynamics object is
+#   linked to a Network object. Could even subclass at this point!
 
-class NetworkDynamics():
-  def __init__(self, network: Network,
-               initial_number_densities: Union[Dict, List, np.ndarray],
-               temperature=300, initialise_jacobian=False) -> None:
+class NetworkDynamics(Network):
+  def __init__(self, network: Network, temperature=300,
+               initialise_jacobian=False) -> None:
+    # NOTE:
+    # network.number_densities is a dict, self.number_densities is an ndarray
+    # self.number_densities_dict is self.network.number_densities
     self.network = network
     self.species = self.network.species
     self.symbols = [f"n_{s}" for s in self.species]
-    if temperature:
-      self.network.temperature = temperature
+    self.network.temperature = temperature
 
-    # Properties
-    self._temperature = temperature
-    # TODO:
-    # Number densities as properties
-    self.initial_number_densities =\
-        self.setup_initial_number_densities(initial_number_densities)
-    self.number_densities = self.initial_number_densities.copy()
+    self.initial_number_densities = \
+        self.setup_initial_number_densities(self.network.number_densities)
+    self.number_densities_dict = self.network.number_densities
+    self._number_densities = self.initial_number_densities.copy()
 
     self.rates_vector = eval(
         f'lambda Z, K, n: K.dot(np.exp(Z.T.dot(np.log(n))))')
@@ -248,8 +247,6 @@ class NetworkDynamics():
     number_densities = np.empty(shape=(len(evolution_times),
                                        len(self.number_densities)))
     number_densities[:] = np.nan
-    # TODO:
-    # Test timescale stuff to make sure it works as intended
     prev_time = initial_time
     for i_time, current_time in enumerate(evolution_times):
       dt = current_time - prev_time
@@ -259,6 +256,7 @@ class NetworkDynamics():
 
       prev_time = current_time
 
+    self.number_densities = number_densities[-1]
     return number_densities
 
   def solve_steady_state(self, initial_number_densities: np.ndarray,
@@ -353,9 +351,27 @@ class NetworkDynamics():
 
   @property
   def temperature(self):
-    return self._temperature
+    return self.network._temperature
 
   @temperature.setter
   def temperature(self, value: float):
-    self._temperature = value
     self.network._temperature = value
+
+  @property
+  def number_densities(self) -> np.ndarray:
+    return self._number_densities
+
+  @number_densities.setter
+  def number_densities(self, value: Union[np.ndarray, Dict]):
+    if isinstance(value, dict):
+      # Convert to ndarray, assuming same index as self.network.species
+      n = np.zeros(shape=len(self.species))
+      for i, s in enumerate(self.species):
+        n[i] = value[s]
+      self._number_densities = n
+    elif isinstance(value, np.ndarray):
+      self._number_densities = value
+
+    # Update number densities in self.network
+    self.network.number_densities = value
+    self.number_densities_dict = self.network.number_densities

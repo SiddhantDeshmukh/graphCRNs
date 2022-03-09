@@ -14,8 +14,8 @@ import networkx as nx
 def main():
   network_dir = '../res'
   # network_file = f"{network_dir}/solar_co_w05.ntw"
-  # network_file = f"{network_dir}/ch_oh_co.ntw"
-  network_file = f"{network_dir}/cno.ntw"
+  network_file = f"{network_dir}/ch_oh_co.ntw"
+  # network_file = f"{network_dir}/cno.ntw"
   network = Network.from_krome_file(network_file)
 
   print("Pathfinding")
@@ -66,14 +66,18 @@ def main():
       n[i] = network.number_densities[s]
 
     # Solve dynamics for 100 seconds to get reasonable number densities
-    dynamics = NetworkDynamics(network, network.number_densities, T)
-    n = dynamics.solve(np.logspace(10, 12, num=100))
-    print(n.shape)
-    # TODO:
-    # Handle nans!
-    # Package back into dictionary for network
+    dynamics = NetworkDynamics(network, temperature=T)
+    n = dynamics.solve(np.logspace(-8, 8, num=100))
+    # print(n.shape)
+    # Package back into dictionary for network using last non-nan value
+    print(n[-1])
+    print(dynamics.number_densities)
+    print(dynamics.number_densities_dict)
+    print(dynamics.network.number_densities)
     for i, s in enumerate(network.species):
-      network.number_densities[s] = n[-1, i]
+      network.number_densities[s] = n[np.where(~np.isnan(n))[0][-1], i]
+
+    exit()
 
     # Find unique pathways for specified {source, target} pairs
     paths, path_lengths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=5)
