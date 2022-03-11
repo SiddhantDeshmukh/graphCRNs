@@ -266,7 +266,6 @@ class Network:
     from gcrn.helper_functions import reaction_from_complex
     # Write the network to a LaTeX table
     format_dict = group_rxns(self.reactions)
-    midrule = '-' * 40
 
     # Determine tabular format by max number of reactants & products
     max_num_reactants = 1
@@ -281,18 +280,21 @@ class Network:
 
     tabular_format = 'r '  # idx
     for i in range(max_num_reactants):
-      tabular_format += 'l '
+      tabular_format += 'l c '  # for '+', and '->' at end
     for i in range(max_num_products):
       tabular_format += 'l '
+      if i < max_num_products - 1:
+        tabular_format += 'c '  # for '+'
 
     tabular_format += 'r r r r'  # alpha, beta, gamma, ref
+    table_body = []
     for i, (format_str, rxn_strs) in enumerate(format_dict.items()):
       num_reactants = list(format_str).count('R')
       num_products = list(format_str).count('P')
       subtitle = f'{num_reactants} reactants, {num_products} products'
-      print(subtitle)
-      print(midrule)
-      # Write out for each subtitle
+      table_body.append(r'\midrule')
+      table_body.append(r'% ' + subtitle + r'\\')
+      table_body.append(r'\midrule')
       # TODO:
       # Organise by description (optional)
       for rxn_str in rxn_strs:
@@ -300,18 +302,53 @@ class Network:
         reactants = reactant_complex.split(' + ')
         products = product_complex.split(' + ')
         rxn = reaction_from_complex(reactant_complex, product_complex, self)
-        reactant_str = ' & '.join(reactants) + ' & ' * \
-            (max_num_reactants - len(reactants))
-        product_str = ' & '.join(products) + ' & ' * \
-            (max_num_products - len(products))
+        reactant_str, product_str = '', ''
+
+        for i in range(max_num_reactants):
+          try:
+            reactant_str += f'{reactants[i]} & '
+          except IndexError:
+            reactant_str += ' & '
+          if i < max_num_reactants - 1:
+            reactant_str += ' + & ' if i < len(reactants) - 1 else '&'
+
+        reactant_str += ' -> '
+        for i in range(max_num_products):
+          try:
+            product_str += f'{products[i]} &'
+          except IndexError:
+            product_str += ' & '
+          if i < max_num_products - 1:
+            product_str += ' + &' if i < len(products) - 1 else '&'
         alpha, beta, gamma = constants_from_rate(rxn.rate_expression)
-        line = f'{rxn.idx} & {reactant_str} & {product_str} &'\
-            f' {alpha} & {beta} & {gamma} & {rxn.reference}'
-        print(line)
+        line = f'{rxn.idx} & {reactant_str} & {product_str} '\
+            f' {alpha:2.2e} & {beta:1.2f} & {gamma} & {rxn.reference}'
+        table_body.append(line + r'\\')
+
+    # TODO:
+    # Create a write_table() function in utilities
+    with open(path, 'w', encoding='utf-8') as outfile:
+      # Table header
+      outfile.write(r'\begin{table}' + '\n')
+      # Centering
+      outfile.write(r'\centering' + '\n')
+      # Table caption
+      outfile.write(r'\caption{' + '\n\n}\n')
+      # Tabular
+      outfile.write(r'\begin{tabular}{' + tabular_format + '}\n')
+      table_body = '\n'.join(table_body)
+      outfile.write(table_body)
+      # End tabular
+      outfile.write('\n' + r'\end{tabular}' + '\n')
+      # Label
+      outfile.write(r'\label{table:}' + '\n')
+      # End table
+      outfile.write(r'\end{table}' + '\n')
 
   # ----------------------------------------------------------------------------
   # String methods
   # ----------------------------------------------------------------------------
+
   def __str__(self) -> str:
     return "\n".join([str(rxn) for rxn in self.reactions])
 
