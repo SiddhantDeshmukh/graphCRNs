@@ -1,6 +1,5 @@
 # Test network I/O
 from gcrn.network import Network
-from gcrn.helper_functions import reaction_from_idx
 from os import system
 
 

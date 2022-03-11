@@ -2,7 +2,7 @@
 # Need some kind of 'intelligent' reader, the idea is to use KROME format so we
 # read to find the 'format', then the lines after that have to follow this
 # format. Need a Reaction class and a Network class for sure
-from typing import Dict, List, Union
+from typing import Dict, List
 from math import exp  # used in 'eval'
 from .limits import limit_dict, scale_dict
 import numpy as np
@@ -159,7 +159,7 @@ class Reaction:
   def evaluate_mass_action_rate(self, temperature: float,
                                 number_densities: Dict) -> float:
     # Provided a temperature and number densities for the reactants (dictionary
-    # containing all reactants or numpy array indexed the same as the reactants)
+    # containing all reactants)
     # compute the mass action rate
     rate = self.determine_mass_action_rate().replace("Tgas", str(temperature))
     # TODO:

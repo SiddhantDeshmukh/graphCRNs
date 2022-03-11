@@ -1,6 +1,5 @@
 from typing import List
 from gcrn.network import Network
-from gcrn.dynamics import NetworkDynamics
 from gcrn.helper_functions import setup_number_densities
 from gcrn.pathfinding import all_paths
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
@@ -58,26 +57,19 @@ def main():
   for T, rho in product(temperatures, densities):
     network.temperature = T
     hydrogen_density = gas_density_to_hydrogen_number_density(rho)
+    # TODO:
+    # Make this a method of Network to initialise
     network.number_densities = \
         setup_number_densities(initial_number_densities,
                                hydrogen_density, network)
-    n = np.zeros(len(network.species))
-    for i, s in enumerate(network.species):
-      n[i] = network.number_densities[s]
-
+    n = network.number_densities
     # Solve dynamics for 100 seconds to get reasonable number densities
-    dynamics = NetworkDynamics(network, temperature=T)
-    n = dynamics.solve(np.logspace(-8, 8, num=100))
-    # print(n.shape)
+    print(n.shape)
+    n = network.solve(np.logspace(-8, 8, num=100))
     # Package back into dictionary for network using last non-nan value
     print(n[-1])
-    print(dynamics.number_densities)
-    print(dynamics.number_densities_dict)
-    print(dynamics.network.number_densities)
     for i, s in enumerate(network.species):
-      network.number_densities[s] = n[np.where(~np.isnan(n))[0][-1], i]
-
-    exit()
+      network.number_densities_dict[s] = n[np.where(~np.isnan(n))[0][-1], i]
 
     # Find unique pathways for specified {source, target} pairs
     paths, path_lengths = all_paths(network, 'C', 'CO', cutoff=3, max_paths=5)
@@ -96,15 +88,15 @@ def main():
 
     # Sort from shortest to longest total timescale
     stitched_paths = sorted(stitched_paths, key=lambda x: sum(x.values()))
-    # print(f'{len(stitched_paths)} paths.')
-    # for s_path in stitched_paths:
-    #   print(f'{len(s_path)} steps:')
-    #   total_timescale = 0.
-    #   for step, timescale in s_path.items():
-    #     print(f'\t{step} with timescale {timescale:.2e}')
-    #     total_timescale += timescale
-    #   print(f'\tTotal = {total_timescale:.2e} [s / cm^3]')
-    # exit()  # one T, rho iteration
+    print(f'{len(stitched_paths)} paths.')
+    for s_path in stitched_paths:
+      print(f'{len(s_path)} steps:')
+      total_timescale = 0.
+      for step, timescale in s_path.items():
+        print(f'\t{step} with timescale {timescale:.2e}')
+        total_timescale += timescale
+      print(f'\tTotal = {total_timescale:.2e} [s / cm^3]')
+    exit()  # one T, rho iteration
 
 
 if __name__ == "__main__":

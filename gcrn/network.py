@@ -1,18 +1,33 @@
 import numpy as np
 import networkx as nx
 from gcrn.reaction import Reaction
-from typing import Dict, List, Union
+from typing import Callable, Dict, List, Union
 from itertools import product
 import fortranformat as ff
 from gcrn.utilities import cofactor_matrix, group_rxns, list_to_krome_format,\
     constants_from_rate, pad_list, to_fortran_str
 from datetime import datetime
 from tabulate import tabulate
+import re
+import sympy
+from math import exp  # used in 'eval'
+from scipy.integrate import ode
+
+# REFACTOR TODO:
+# - Add solver methods into Network and remove NetworkDynamics
+# - Add method to initialise number densities from an abundance file
+# - Add to_table() method
+# - Move graph methods ot a separate script and make them functions(Network)
+# - Add functions to compute timecsales from output number densities
 
 
 class Network:
+  # ----------------------------------------------------------------------------
+  # Input
+  # ----------------------------------------------------------------------------
   def __init__(self, reactions: List[Reaction], temperature=300,
-               number_densities=None) -> None:
+               number_densities=None, initialise_jacobian=False,
+               abundance_file='') -> None:
     self.reactions: List[Reaction] = sorted(reactions, key=lambda rxn: rxn.idx)
     self.find_duplicate_indices()
 
@@ -26,41 +41,49 @@ class Network:
 
     self.species: List[str] = sorted(list(set(species)))
     self.complexes: List[str] = sorted(list(set(complexes)))
+    self.symbols: List[str] = [f"n_{s}" for s in self.species]
 
     # Properties
     self._temperature = temperature
     if not number_densities:  # populate with random values
       number_densities = {s: np.random.randint(1, 100) for s in species}
-    self._number_densities: Dict = number_densities
 
+    self.initial_number_densities: np.ndarray = \
+        self.setup_initial_number_densities(number_densities)
+    self._number_densities: np.ndarray = self.initial_number_densities.copy()
+    self.number_densities_dict: Dict = {s: self.number_densities[i]
+                                        for i, s in enumerate(self.species)}
     # TODO: Additional constraint: combinations, not permutations!
     # e.g. H + H + H2 == H2 + H + H
     # Also need to check this when creating the graph!
     # self.complexes = sorted(list(set(chain.from_iterable(
     #     [[rxn.reactant_complex, rxn.product_complex]
     #      for rxn in self.reactions]))))
-
-    # Create MultiDiGraphs for species and complexes using networkx
-    self._species_graph = self.create_species_graph()
-    self._complex_graph = self.create_complex_graph()
-
-    # Incidence matrices from graphs
-    # Species incidence matrix (m x r)
-    self.species_incidence_matrix = nx.incidence_matrix(self._species_graph)
-    # Complex incidence matrix (c x r)
-    self.complex_incidence_matrix = self.create_complex_incidence_matrix()
-    # Complex composition matrix (m x c)
+    # Complex composition matrix Z (m x c)
     self.complex_composition_matrix = self.create_complex_composition_matrix()
-    # Stoichiometric matrix (m x r)
+    # Complex incidence matrix D (c x r)
+    self.complex_incidence_matrix = self.create_complex_incidence_matrix()
+    # Stoichiometric matrix S (m x r)
     self.stoichiometric_matrix = self.complex_composition_matrix @ self.complex_incidence_matrix
-    # Outgoing co-incidence matrix of reaction rates (r x c)
+    # Outgoing co-incidence matrix of reaction rates K (r x c)
     self.eval_kinetics_matrix, self.eval_kinetics_idxs = self.create_eval_kinetics_matrix()
     self.complex_kinetics_matrix = self.create_complex_kinetics_matrix()
     # Weighted Laplacian (transpose of conventional Laplacian) matrix (c x c)
     self.complex_laplacian = self.create_complex_laplacian_matrix()
 
+    # Vectors for solver
+    self.rates_vector: Callable = eval(
+        f'lambda Z, K, n: K.dot(np.exp(Z.T.dot(np.log(n))))')
+    self.dynamics_vector: np.ndarray = self.calculate_dynamics()
+
+    if initialise_jacobian:
+      self.rate_dict: Dict = self.create_rate_dict()
+      self.jacobian_func: np.ndarray[Callable] = self.create_jacobian()
+
   @classmethod
-  def from_krome_file(cls, krome_file: str):
+  def from_krome_file(cls, krome_file: str, temperature=300,
+                      number_densities=None, initialise_jacobian=False,
+                      abundance_file=''):
     # Initialise the Network from a valid KROME network file
     rxn_format = None
 
@@ -79,13 +102,12 @@ class Network:
         # TODO:
         # Use accuracy to determine limit strength, add 'sigmoid' limit
         'accuracy': [],  # A, B, C, D, E (see UMIST12 nomenclature)
-        'ref': []  # reference to rate
-        # TODO:
-        # Add implementation to read files that don't have all keys present
+        'ref': [],  # reference to rate
+        'description': [],  # e.g. radiative association, species exchange
     }
 
     single_entry_keys = ['idx', 'rate', 'Tmin', 'Tmax',
-                         'limit', 'accuracy', 'ref']
+                         'limit', 'accuracy', 'ref', 'description']
 
     reactions = []
     with open(krome_file, 'r', encoding='utf-8') as infile:
@@ -98,6 +120,7 @@ class Network:
           continue
 
         # Check for 'format'
+        # TODO: allow for custom tokens like photo
         if line.startswith('@format:'):
           # Reaction usually made up of 'idx', 'R', 'P', 'rate'
           rxn_format = line.replace('@format:', '').split(',')
@@ -129,10 +152,15 @@ class Network:
         for key in format_dict.keys():
           format_dict[key] = []
 
-    return cls(reactions)
+    return cls(reactions, temperature=temperature,
+               number_densities=number_densities,
+               initialise_jacobian=initialise_jacobian,
+               abundance_file=abundance_file)
 
   @classmethod
-  def from_cobold_file(cls, cobold_file: str):
+  def from_cobold_file(cls, cobold_file: str,
+                       temperature=300, number_densities=None,
+                       initialise_jacobian=False, abundance_file=''):
     # Initialise Network object from Fortran fixed format cobold 'chem.dat' file
     fformat = '(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,A16)'
     reader = ff.FortranRecordReader(fformat)
@@ -163,12 +191,14 @@ class Network:
         reactions.append(Reaction(reactants, products, rate_expression, idx,
                                   reference=ref))
 
-    return cls(reactions)
+    return cls(reactions, temperature=temperature,
+               number_densities=number_densities,
+               initialise_jacobian=initialise_jacobian,
+               abundance_file=abundance_file)
 
   # ----------------------------------------------------------------------------
   # Output
   # ----------------------------------------------------------------------------
-
   def to_krome_format(self, path: str):
     # Write the Network to KROME-readable format
     # Determine reaction formats
@@ -233,20 +263,55 @@ class Network:
       outfile.write(output)
 
   def to_latex_table(self, path: str):
+    from gcrn.helper_functions import reaction_from_complex
     # Write the network to a LaTeX table
     format_dict = group_rxns(self.reactions)
+    midrule = '-' * 40
+
+    # Determine tabular format by max number of reactants & products
+    max_num_reactants = 1
+    max_num_products = 1
+    for format_str in format_dict.keys():
+      num_reactants = list(format_str).count('R')
+      num_products = list(format_str).count('P')
+      if num_reactants > max_num_reactants:
+        max_num_reactants = num_reactants
+      if num_products > max_num_products:
+        max_num_products = num_products
+
+    tabular_format = 'r '  # idx
+    for i in range(max_num_reactants):
+      tabular_format += 'l '
+    for i in range(max_num_products):
+      tabular_format += 'l '
+
+    tabular_format += 'r r r r'  # alpha, beta, gamma, ref
     for i, (format_str, rxn_strs) in enumerate(format_dict.items()):
       num_reactants = list(format_str).count('R')
       num_products = list(format_str).count('P')
       subtitle = f'{num_reactants} reactants, {num_products} products'
-      print(i, format_str)
-      print(rxn_strs)
-      print('==')
+      print(subtitle)
+      print(midrule)
+      # Write out for each subtitle
+      # TODO:
+      # Organise by description (optional)
+      for rxn_str in rxn_strs:
+        reactant_complex, product_complex = rxn_str.split(' -> ')
+        reactants = reactant_complex.split(' + ')
+        products = product_complex.split(' + ')
+        rxn = reaction_from_complex(reactant_complex, product_complex, self)
+        reactant_str = ' & '.join(reactants) + ' & ' * \
+            (max_num_reactants - len(reactants))
+        product_str = ' & '.join(products) + ' & ' * \
+            (max_num_products - len(products))
+        alpha, beta, gamma = constants_from_rate(rxn.rate_expression)
+        line = f'{rxn.idx} & {reactant_str} & {product_str} &'\
+            f' {alpha:2.2e} & {beta:1.2f} & {gamma} & {rxn.reference}'
+        print(line)
 
   # ----------------------------------------------------------------------------
   # String methods
   # ----------------------------------------------------------------------------
-
   def __str__(self) -> str:
     return "\n".join([str(rxn) for rxn in self.reactions])
 
@@ -259,7 +324,6 @@ class Network:
   # ----------------------------------------------------------------------------
   # Verification methods
   # ----------------------------------------------------------------------------
-
   def find_duplicate_indices(self):
     # Check if mulitple reactions have the same index
     duplicates = []
@@ -282,44 +346,189 @@ class Network:
         print(f'==================================================')
 
   # ----------------------------------------------------------------------------
-  # Methods for creating graphs
+  # Solver methods
   # ----------------------------------------------------------------------------
-  # TODO:
-  # Move graph creation into a generic functional script
-  def create_species_graph(self) -> nx.MultiDiGraph:
-    # Create graph of species
-    species_graph = nx.MultiDiGraph()
-    for rxn in self.reactions:
-      for r, p in product(rxn.reactants, rxn.products):
-        # Weight is timescale (inverse rate)
-        weight = 1 / rxn.evaluate_mass_action_rate(self.temperature,
-                                                   self.number_densities)
-        species_graph.add_edge(r, p, weight=weight)
+  def setup_initial_number_densities(self, initial_number_densities: Union[Dict, List, np.ndarray]) -> np.ndarray:
+    # Create the array of number densities with the same indexing as the species
+    # in the network
+    number_densities = np.zeros(len(self.species))
+    if isinstance(initial_number_densities, dict):
+      species = []
+      for i, s in enumerate(self.species):
+        number_densities[i] = initial_number_densities[s]
+        species.append(s)
+      self.species = species
+    elif isinstance(initial_number_densities, List):
+      number_densities = np.array(initial_number_densities)
+    elif isinstance(initial_number_densities, np.ndarray):
+      number_densities = initial_number_densities
 
-    return species_graph
+    return number_densities
 
-  def create_complex_graph(self) -> nx.MultiDiGraph:
-    # Create graph of complexes
-    complex_graph = nx.MultiDiGraph()
-    for rxn in self.reactions:
-      # Weight is timescale (inverse rate)
-      weight = 1 / rxn.evaluate_mass_action_rate(self.temperature,
-                                                 self.number_densities)
-      complex_graph.add_edge(rxn.reactant_complex,
-                             rxn.product_complex, weight=weight)
+  def create_rate_dict(self) -> Dict:
+    # Create the dictionary describing the time-dependent system of equations
+    # d[X]/dt = x_1 + x_2 + ...
+    # TODO:
+    # Potentially build this from just evaluating ZDKExp(Z.TLn(x))?
+    # Put in 'n_{key}' for 'x', evaluate RHS symbolically and it should be
+    # the rates!
+    rate_dict = {}  # keys are species
+    for reaction in self.reactions:
+      expression = reaction.mass_action_rate_expression
+      reactant_symbols = [
+          f"n_{key}" for key in reaction.stoichiometry[0].keys()]
+      product_symbols = [
+          f"n_{key}" for key in reaction.stoichiometry[1].keys()]
+      for symbol in reactant_symbols:
+        # TODO:
+        # If symbol appears in both reactant and product sides, ignore it
+        # But also check it appears the same number of times, e.g.
+        # H2 + H2 -> H2 + H + H
+        # has 'H2' on both sides, but one side has one more so it's still
+        # a destruction
+        # Alternatively, just leave it and check for zero rates at the end
+        # Idea:
+        # Check if the opposite symbol exists in the dictionary-key list, and
+        # if so, remove it and don't add the new one since it means we're adding
+        # e.g. dict['A'] = 'B' ' - B'
+        # But again, might just be faster to catch them all at the end?
+        if symbol in rate_dict.keys():
+          rate_dict[symbol].append(f"-{expression}")
+        else:
+          rate_dict[symbol] = [f"-{expression}"]
 
-    return complex_graph
+      for symbol in product_symbols:
+        if symbol in rate_dict.keys():
+          rate_dict[symbol].append(expression)
+        else:
+          rate_dict[symbol] = [expression]
 
-  def create_complex_composition_graph(self) -> nx.DiGraph:
-    # From the complex composition matrix, create a Directed Graph
-    # (species -> complex) for each species/complex in the network
-    complex_composition_graph = nx.DiGraph()
-    for i, species in enumerate(self.species):
-      for j, complex in enumerate(self.complexes):
-        if self.complex_composition_matrix[i, j] == 1:
-          complex_composition_graph.add_edge(species, complex)
+    return rate_dict
 
-    return complex_composition_graph
+  def create_jacobian(self) -> np.ndarray:
+    # Create a Jacobian where each entry is a Callable, taking in number densities
+    # as indexed in dynamics.network.species and a temperature
+    # TODO:
+    # Fix indexing for rate dict vs symbols/species
+    num_species = len(self.species)
+    # Fill with function that returns zero instead?
+    jacobian = np.zeros((num_species, num_species), dtype=object)
+    for i, s1 in enumerate(self.symbols):
+      # for i, (s, rate) in enumerate(self.rate_dict.items()):
+      expression = '+'.join(self.rate_dict[s1])
+      # expression = "+".join(rate)
+      for j, s2 in enumerate(self.symbols):
+        differential = sympy.diff(expression, s2)
+        rate = str(differential).replace("Tgas", "T")
+        pattern = r"_[A-Z0-9]*"
+        # TODO:
+        # Do the whole replacement with regex!
+        rate = re.sub(pattern,
+                      lambda s: f"[{self.species.index(s.group()[1:])}]",
+                      rate)
+        jacobian[i, j] = eval(f"lambda T, n: {rate}")
+
+    return jacobian
+
+  def evaluate_jacobian(self, temperature: float,
+                        number_densities: np.ndarray) -> np.ndarray:
+    # Evaluate the function Jacobian by calling each element with the provided
+    # temperature and number densities
+    if not self.jacobian_func:
+      self.rate_dict = self.create_rate_dict()
+      self.jacobian_func = self.create_jacobian()
+    jacobian = np.zeros_like(self.jacobian_func, dtype=float)
+    x, y = jacobian.shape
+    for i, j in product(range(x), range(y)):
+      jacobian[i, j] = self.jacobian_func[i, j](temperature, number_densities)
+
+    return jacobian
+
+  def create_rates_vector(self, number_densities: np.ndarray) -> np.ndarray:
+    # Create the vector v(x) = K Exp(Z.T Ln(x)) that includes the stoichiometry
+    # into reaction rates
+    # 'number_densities' must have the same indexing as species!
+    # if (number_densities < 0).any():
+    #   print("Error: number densities negative!")
+    #   exit(-1)
+    Z = self.complex_composition_matrix
+    K = self.complex_kinetics_matrix
+    # Check if number densities are below minimum value of 1e-20 and set the
+    # rates to zero if so
+    # TODO:
+    # Check ratio of number densities instead?
+    # boundary_mask = (number_densities <= 1e-10)
+    # number_densities[boundary_mask] = 1e-10
+    rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
+
+    return rates_vector
+
+  def calculate_dynamics(self) -> np.ndarray:
+    # Calculate the RHS ZD v(x) = Sv(x)
+    S = self.stoichiometric_matrix
+    Z = self.complex_composition_matrix
+    K = self.complex_kinetics_matrix
+    dynamics_vector = S.dot(self.rates_vector(Z, K, self.number_densities))
+
+    return dynamics_vector
+
+  def solve(self, evolution_times: List[float],
+            initial_time=0, create_jacobian=False, jacobian=None,
+            limit_rates=False,
+            atol=1e-30, rtol=1e-4,
+            **solver_kwargs) -> List[np.ndarray]:
+    def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
+      # Create RHS ZDK Exp(Z.T Ln(x))
+      # NOTE:
+      # Temperature sensitivity here is sort of ad-hoc, choosing a value
+      # that works well in stellar atmospheres which are 10^3-10^4 K
+      # So here the kinetics are updated if the temperature has changed by more
+      # than 10 K.
+      # TODO:
+      # How do we speed this up???
+      if abs(temperature - self.temperature) > 1e1:
+        self.temperature = temperature
+      S = self.stoichiometric_matrix
+      Z = self.complex_composition_matrix
+      K = self.complex_kinetics_matrix
+
+      return S @ self.rates_vector(Z, K, y)
+
+    if create_jacobian:
+      # Use the analytical Jacobian stored in NetworkDynamics
+      jacobian = self.evaluate_jacobian
+
+    # TODO:
+    # Experiment with 'min_step' and 'max_step' options
+
+    if jacobian:
+      solver = ode(f, jacobian).set_integrator("vode", method='bdf',
+                                               atol=atol, rtol=rtol,
+                                               **solver_kwargs)
+      solver.set_jac_params(self.temperature, self.number_densities)
+    else:
+      solver = ode(f).set_integrator("vode", method='bdf', atol=atol, rtol=rtol,
+                                     with_jacobian=True,
+                                     **solver_kwargs)
+
+    # Initial values
+    solver.set_initial_value(self.number_densities, initial_time)
+
+    # TODO: Check for failure and return codes
+    number_densities = np.empty(shape=(len(evolution_times),
+                                       len(self.number_densities)))
+    number_densities[:] = np.nan
+    prev_time = initial_time
+    for i_time, current_time in enumerate(evolution_times):
+      dt = current_time - prev_time
+      while solver.successful() and solver.t < current_time:
+        solver.set_f_params(self.temperature)
+        number_densities[i_time] = solver.integrate(solver.t + dt)
+
+      prev_time = current_time
+
+    self.number_densities = number_densities[-1]
+    return number_densities
 
   # ----------------------------------------------------------------------------
   # Methods for creating matrices
@@ -361,9 +570,6 @@ class Network:
     # the zero entries
     for i, rxn in enumerate(self.reactions):
       for j, complex in enumerate(self.complexes):
-        # rhs = rxn if complex == rxn.reactant_complex else eval('lambda _: 0')
-        # eval_kinetics_matrix[i, j] = rhs
-        # eval_kinetics_idxs.append((i, j))
         if complex == rxn.reactant_complex:
           eval_kinetics_matrix[i, j] = rxn
           eval_kinetics_idxs.append((i, j))
@@ -388,78 +594,20 @@ class Network:
     return laplacian_matrix
 
   # ----------------------------------------------------------------------------
-  # Methods for updating graphs
-  # ----------------------------------------------------------------------------
-
-  def update_species_graph(self):
-    # Given a certain temperature, update the species Graph (weights)
-    self.species_graph = self.create_species_graph()
-
-  def update_complex_graph(self):
-    # Given a certain temperature, update the complex Graph (weights)
-    self.complex_graph = self.create_complex_graph()
-
-  # ----------------------------------------------------------------------------
   # Methods for updating attributes
   # ----------------------------------------------------------------------------
   def _update(self):
     # Update complex kinetics matrix
     # NOTE: Graphs are NOT updated!
+    self.number_densities_dict = {s: self.number_densities[i]
+                                  for i, s in enumerate(self.species)}
     self.complex_kinetics_matrix =\
         self.create_complex_kinetics_matrix()
 
   # ----------------------------------------------------------------------------
-  # Methods for computing nullspaces
-  # ----------------------------------------------------------------------------
-  def compute_complex_balance(self) -> np.ndarray:
-    # Using Kirchhoff's Matrix Tree theorem, compute the kernel of the Laplacian
-    # corresponding to a positive, complex-balanced equilibrium for a given
-    # temperature
-    # Only need first row of cofactor matrix!
-    C = cofactor_matrix(self.complex_laplacian)
-    rho = C[0]
-    return rho
-
-  # ----------------------------------------------------------------------------
-  # Methods for counting
-  # ----------------------------------------------------------------------------
-  def count_reactant_instances(self, species: str) -> int:
-    # For a specified species, count the number of times it appears as a
-    # reactant and return the count
-    count = 0
-    for rxn in self.reactions:
-      if species in rxn.reactants:
-        count += 1
-    return count
-
-  def count_product_instances(self, species: str) -> int:
-    # For a specified species, count the number of times it appears as a
-    # product and return the count
-    count = 0
-    for rxn in self.reactions:
-      if species in rxn.products:
-        count += 1
-    return count
-
-  def network_species_count(self) -> Dict:
-    # Count the occurrence of reactant/product occurrences of species in
-    # network of reactions. Only counts each species once per reaction,
-    # e.g. H + H + H -> H2 yields 1 appearance of H on LHS and 1 appearance
-    # of H2 on RHS.
-    # TODO:
-    # Isn't this just from the adjacency matrix? Try to get it from that
-    # key (str, species) to List(int, int; reactant_count, product_count)
-    counts = {}
-    for s in self.species:
-      reactant_count = self.count_reactant_instances(s)
-      product_count = self.count_product_instances(s)
-      counts[s] = {"R": reactant_count, "P": product_count}
-
-    return counts
-
-  # ----------------------------------------------------------------------------
   # Setters for reactions
   # ----------------------------------------------------------------------------
+
   def set_reaction_limit(self, limit: str):
     # Set the limit type for each reaction in the network
     for rxn in self.reactions:
@@ -483,27 +631,12 @@ class Network:
 
   @number_densities.setter
   def number_densities(self, value: Union[np.ndarray, Dict]):
-    if isinstance(value, np.ndarray):
-      # Create a dictionary, assuming same indexing of array as self.species
-      self._number_densities = {s: n for s, n in zip(self.species, value)}
-    elif isinstance(value, dict):
+    if isinstance(value, dict):
+      # Convert to ndarray, assuming same index as self.species
+      n = np.zeros(shape=len(self.species))
+      for i, s in enumerate(self.species):
+        n[i] = value[s]
+      self._number_densities = n
+    elif isinstance(value, np.ndarray):
       self._number_densities = value
     self._update()
-
-  @property
-  def complex_graph(self):
-    self._complex_graph = self.create_complex_graph()
-    return self._complex_graph
-
-  @complex_graph.setter
-  def complex_graph(self, value: nx.Graph):
-    self._complex_graph = value
-
-  @property
-  def species_graph(self):
-    self._species_graph = self.create_species_graph()
-    return self._complex_graph
-
-  @complex_graph.setter
-  def species_grah(self, value: nx.Graph):
-    self._species_graph = value

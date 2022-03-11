@@ -5,7 +5,6 @@ install
 setup.py
 update
 gcrn/__init__.py
-gcrn/dynamics.py
 gcrn/graphs.py
 gcrn/helper_functions.py
 gcrn/limits.py

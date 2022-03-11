@@ -1,8 +1,6 @@
-from calendar import formatstring
 from typing import Dict, List
 from gcrn.reaction import Reaction
 import numpy as np
-import re
 
 
 def incidence_to_adjacency(incidence_matrix: np.ndarray,
@@ -39,7 +37,7 @@ def cofactor_matrix(matrix: np.ndarray) -> np.ndarray:
 # -------------------------------------------------------------------------
 # Laplacian matrix utilities
 # -------------------------------------------------------------------------
-def compute_balance(laplacian: np.ndarray) -> np.ndarray:
+def compute_complex_balance(laplacian: np.ndarray) -> np.ndarray:
   # Using Kirchhoff's Matrix Tree theorem, compute the kernel of the Laplacian
   # corresponding to a positive, complex-balanced equilibrium
   # Only need first row of cofactor matrix!

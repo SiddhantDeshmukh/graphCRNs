@@ -2,12 +2,10 @@ from copy import deepcopy
 import re
 from typing import Union, List, Dict
 import networkx as nx
-from numpy.core.numeric import Inf
+from gcrn.graphs import create_complex_graph
 from gcrn.network import Network
 from gcrn.reaction import Reaction
 from dataclasses import dataclass
-import matplotlib.pyplot as plt
-import sys
 
 
 @dataclass
@@ -62,7 +60,8 @@ def create_search_graph(network: Network, source: str, target: str):
   # target species for any complex that contains the target species
   # Source node only has outgoing edges (source)
   # Target node only has incoming edges (sink)
-  G = deepcopy(network.complex_graph)
+  G = create_complex_graph(network)
+  # G = deepcopy(network.complex_graph)
   # plt.figure()
   # options = {
   #     "node_color": "white",
@@ -174,12 +173,9 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
   return unique_paths, unique_lengths, reaction_paths
 
 
-# !!!!!!!
-# TESTING
-# !!!!!!!
 def all_paths(network: Network, source: str, target: str,
               cutoff=4, max_paths=100):
-  # Use a custom Dijkstra pathfinding alg to find paths on species-complex graph
+  # Use a customi pathfinding alg to find paths on species-complex graph
   # with rules of species-jumps
   # Species-Complex graph:
   # Complex graph with edge connections + 0-weight edge connections to all
@@ -188,7 +184,7 @@ def all_paths(network: Network, source: str, target: str,
   # network in species is fully connected
   # Additionally, we use one graph for the entire network regardless of
   # {source,target}; the pathfinding takes care of zero-jumps
-  G = deepcopy(network.complex_graph)
+  G = create_complex_graph(network)
   edges_to_add = []
   for complex in G.nodes():
     if complex in network.species:
@@ -204,7 +200,7 @@ def all_paths(network: Network, source: str, target: str,
 
   G.add_weighted_edges_from(edges_to_add)
 
-  path_gen = nx.all_simple_paths(G, source, target, cutoff=6)
+  # path_gen = nx.all_simple_paths(G, source, target, cutoff=6)
   # for path in path_gen:
   #   print(path)
 
