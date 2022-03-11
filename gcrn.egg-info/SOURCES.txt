@@ -14,6 +14,7 @@ gcrn/pathfinding.py
 gcrn/profiling.py
 gcrn/prototyping.py
 gcrn/reaction.py
+gcrn/timescales.py
 gcrn/utilities.py
 gcrn.egg-info/PKG-INFO
 gcrn.egg-info/SOURCES.txt

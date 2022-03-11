@@ -62,7 +62,7 @@ def count_rxns_for_paths(paths: List) -> Dict:
 
 
 # ----------------------------------------------------------------------------
-# Methods for counting
+# Functions for counting
 # ----------------------------------------------------------------------------
 def count_reactant_instances(network, species: str) -> int:
   # For a specified species, count the number of times it appears as a

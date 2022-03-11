@@ -303,7 +303,8 @@ class Network:
         products = product_complex.split(' + ')
         rxn = reaction_from_complex(reactant_complex, product_complex, self)
         reactant_str, product_str = '', ''
-
+        # TODO
+        # abstract following to an internal function
         for i in range(max_num_reactants):
           try:
             reactant_str += f'{reactants[i]} & '
