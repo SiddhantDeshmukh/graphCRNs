@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+from gcrn.helper_functions import number_densities_from_abundances
 from gcrn.reaction import Reaction
 from typing import Callable, Dict, List, Union
 from itertools import product
@@ -12,6 +13,8 @@ import re
 import sympy
 from math import exp  # used in 'eval'
 from scipy.integrate import ode
+from sadtools.utilities.abu_tools import load_abu
+
 
 # REFACTOR TODO:
 # - Add solver methods into Network and remove NetworkDynamics
@@ -26,8 +29,8 @@ class Network:
   # Input
   # ----------------------------------------------------------------------------
   def __init__(self, reactions: List[Reaction], temperature=300,
-               number_densities=None, initialise_jacobian=False,
-               abundance_file='') -> None:
+               gas_density=1e-6, abundances=None, number_densities=None,
+               initialise_jacobian=False) -> None:
     self.reactions: List[Reaction] = sorted(reactions, key=lambda rxn: rxn.idx)
     self.find_duplicate_indices()
 
@@ -45,8 +48,13 @@ class Network:
 
     # Properties
     self._temperature = temperature
-    if not number_densities:  # populate with random values
-      number_densities = {s: np.random.randint(1, 100) for s in species}
+    if abundances:
+      # Initialise number densities from abundances and the gas density
+      number_densities = number_densities_from_abundances(abundances,
+                                                          gas_density, self.species)
+    else:
+      if not number_densities:  # populate with random values
+        number_densities = {s: np.random.randint(1, 100) for s in species}
 
     self.initial_number_densities: np.ndarray = \
         self.setup_initial_number_densities(number_densities)
@@ -81,9 +89,9 @@ class Network:
       self.jacobian_func: np.ndarray[Callable] = self.create_jacobian()
 
   @classmethod
-  def from_krome_file(cls, krome_file: str, temperature=300,
-                      number_densities=None, initialise_jacobian=False,
-                      abundance_file=''):
+  def from_krome_file(cls, krome_file: str, temperature=300, gas_density=1e-6,
+                      abundances=None, number_densities=None,
+                      initialise_jacobian=False):
     # Initialise the Network from a valid KROME network file
     rxn_format = None
 
@@ -152,15 +160,14 @@ class Network:
         for key in format_dict.keys():
           format_dict[key] = []
 
-    return cls(reactions, temperature=temperature,
-               number_densities=number_densities,
-               initialise_jacobian=initialise_jacobian,
-               abundance_file=abundance_file)
+    return cls(reactions, temperature=temperature, gas_density=gas_density,
+               abundances=abundances, number_densities=number_densities,
+               initialise_jacobian=initialise_jacobian)
 
   @classmethod
-  def from_cobold_file(cls, cobold_file: str,
-                       temperature=300, number_densities=None,
-                       initialise_jacobian=False, abundance_file=''):
+  def from_cobold_file(cls, cobold_file: str, temperature=300,
+                       gas_density=1e-6, abundances=None, number_densities=None,
+                       initialise_jacobian=False):
     # Initialise Network object from Fortran fixed format cobold 'chem.dat' file
     fformat = '(I4,5(A8,1X),2(1X,A4),1X,1PE8.2,3X,0PF5.2,2X,0PF8.1,A16)'
     reader = ff.FortranRecordReader(fformat)
@@ -191,10 +198,9 @@ class Network:
         reactions.append(Reaction(reactants, products, rate_expression, idx,
                                   reference=ref))
 
-    return cls(reactions, temperature=temperature,
-               number_densities=number_densities,
-               initialise_jacobian=initialise_jacobian,
-               abundance_file=abundance_file)
+    return cls(reactions, temperature=temperature, gas_density=gas_density,
+               abundances=abundances, number_densities=number_densities,
+               initialise_jacobian=initialise_jacobian)
 
   # ----------------------------------------------------------------------------
   # Output

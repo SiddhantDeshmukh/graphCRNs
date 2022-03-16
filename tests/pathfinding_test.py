@@ -1,6 +1,6 @@
 from typing import List
 from gcrn.network import Network
-from gcrn.helper_functions import setup_number_densities
+from gcrn.helper_functions import number_densities_from_abundances
 from gcrn.pathfinding import all_paths
 from sadtools.utilities.chemistryUtilities import gas_density_to_hydrogen_number_density
 
@@ -60,8 +60,8 @@ def main():
     # TODO:
     # Make this a method of Network to initialise
     network.number_densities = \
-        setup_number_densities(initial_number_densities,
-                               hydrogen_density, network)
+        number_densities_from_abundances(initial_number_densities,
+                                         hydrogen_density, network)
     n = network.number_densities
     # Solve dynamics for 100 seconds to get reasonable number densities
     print(n.shape)

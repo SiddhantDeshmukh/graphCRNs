@@ -8,7 +8,7 @@ from gcrn.network import Network
 from gcrn.dynamics import NetworkDynamics
 from gcrn.pathfinding import find_network_paths, rxn_idx_paths_from_rxn_paths,\
     PointPaths
-from gcrn.helper_functions import setup_number_densities, count_all_rxns, count_rxns_by_pairs, species_counts_from_rxn_counts
+from gcrn.helper_functions import number_densities_from_abundances, count_all_rxns, count_rxns_by_pairs, species_counts_from_rxn_counts
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx

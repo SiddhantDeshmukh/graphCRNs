@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from gcrn.network import Network
 from gcrn.reaction import Reaction
 import re
+import pandas as pd
+
+mass_hydrogen = 1.67262171e-24  # g
 
 
 def sort_dict(d: Dict, reverse=True):
@@ -150,14 +153,28 @@ def enumerated_product(*args):
   yield from zip(product(*(range(len(x)) for x in args)), product(*args))
 
 
-def setup_number_densities(abundance_dict: Dict, hydrogen_density: float,
-                           network: Network):
+def setup_number_densities(abundance_dict: Dict,
+                           hydrogen_density: float, network: Network):
   number_densities = np.zeros(len(network.species))
   # Index number densities same as network.species
   for i, s in enumerate(network.species):
     n = log_abundance_to_number_density(np.log10(abundance_dict[s]),
                                         np.log10(hydrogen_density.value))
     number_densities[i] = n
+
+  return number_densities
+
+
+def number_densities_from_abundances(abundances: Dict,
+                                     gas_density: float, species: List[str]):
+  # Determine hydrogen density
+  percentage_hydrogen = 10**abundances['H'] / \
+      np.sum(10**np.array(abundances.values()))
+  hydrogen_density = gas_density / (percentage_hydrogen * mass_hydrogen)
+  number_densities = np.zeros(len(species))
+  # Index number densities same as network.species
+  for i, s in enumerate(species):
+    number_densities[i] = np.log10(hydrogen_density) + abundances[s] - 12
 
   return number_densities
 
