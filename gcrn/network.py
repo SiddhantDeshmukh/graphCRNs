@@ -1,6 +1,6 @@
+from __future__ import annotations
 import numpy as np
 import networkx as nx
-from gcrn.helper_functions import number_densities_from_abundances
 from gcrn.reaction import Reaction
 from typing import Callable, Dict, List, Union
 from itertools import product
@@ -49,6 +49,7 @@ class Network:
     # Properties
     self._temperature = temperature
     if abundances:
+      from gcrn.helper_functions import number_densities_from_abundances
       # Initialise number densities from abundances and the gas density
       number_densities = number_densities_from_abundances(abundances,
                                                           gas_density, self.species)
@@ -642,11 +643,17 @@ class Network:
   # ----------------------------------------------------------------------------
   def _update(self):
     # Update complex kinetics matrix
-    # NOTE: Graphs are NOT updated!
     self.number_densities_dict = {s: self.number_densities[i]
                                   for i, s in enumerate(self.species)}
     self.complex_kinetics_matrix =\
         self.create_complex_kinetics_matrix()
+
+  def update_number_densities_from_abundances(self, abundances: Dict,
+                                              gas_density: float):
+    from gcrn.helper_functions import number_densities_from_abundances
+    self.number_densities = number_densities_from_abundances(abundances,
+                                                             gas_density,
+                                                             self.species)
 
   # ----------------------------------------------------------------------------
   # Setters for reactions

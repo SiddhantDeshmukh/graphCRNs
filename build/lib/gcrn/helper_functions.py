@@ -1,13 +1,12 @@
+from __future__ import annotations
 from itertools import product
 from sadtools.utilities.chemistryUtilities import log_abundance_to_number_density
 from sadtools.utilities.abu_tools import load_abu, get_abundances
 from typing import Dict, List
 import numpy as np
-import matplotlib.pyplot as plt
 from gcrn.network import Network
 from gcrn.reaction import Reaction
 import re
-import pandas as pd
 
 mass_hydrogen = 1.67262171e-24  # g
 
@@ -168,13 +167,13 @@ def setup_number_densities(abundance_dict: Dict,
 def number_densities_from_abundances(abundances: Dict,
                                      gas_density: float, species: List[str]):
   # Determine hydrogen density
-  percentage_hydrogen = 10**abundances['H'] / \
-      np.sum(10**np.array(abundances.values()))
+  abundance_values = np.array([v for v in abundances.values()])
+  percentage_hydrogen = 10**abundances['H'] / np.sum(10**abundance_values)
   hydrogen_density = gas_density / (percentage_hydrogen * mass_hydrogen)
   number_densities = np.zeros(len(species))
   # Index number densities same as network.species
   for i, s in enumerate(species):
-    number_densities[i] = np.log10(hydrogen_density) + abundances[s] - 12
+    number_densities[i] = 10**(np.log10(hydrogen_density) + abundances[s] - 12)
 
   return number_densities
 
