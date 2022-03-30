@@ -498,12 +498,10 @@ class Network:
     #   exit(-1)
     Z = self.complex_composition_matrix
     K = self.complex_kinetics_matrix
-    # Check if number densities are below minimum value of 1e-20 and set the
-    # rates to zero if so
-    # TODO:
-    # Check ratio of number densities instead?
-    # boundary_mask = (number_densities <= 1e-10)
-    # number_densities[boundary_mask] = 1e-10
+    # # Check if number densities are below minimum value of 1e-20 and set the
+    # # rates to zero if so
+    # boundary_mask = (number_densities <= 1e-20)
+    # number_densities[boundary_mask] = 1e-20
     rates_vector = K.dot(np.exp(Z.T.dot(np.log(number_densities))))
 
     return rates_vector
@@ -520,7 +518,7 @@ class Network:
   def solve(self, evolution_times: List[float],
             initial_time=0, create_jacobian=False, jacobian=None,
             limit_rates=False,
-            atol=1e-30, rtol=1e-4,
+            atol=1e-30, rtol=1e-4, eqm_tolerance=1e-5,
             **solver_kwargs) -> List[np.ndarray]:
     def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
@@ -542,9 +540,6 @@ class Network:
     if create_jacobian:
       # Use the analytical Jacobian stored in NetworkDynamics
       jacobian = self.evaluate_jacobian
-
-    # TODO:
-    # Experiment with 'min_step' and 'max_step' options
 
     if jacobian:
       solver = ode(f, jacobian).set_integrator("vode", method='bdf',
@@ -569,6 +564,19 @@ class Network:
       while solver.successful() and solver.t < current_time:
         solver.set_f_params(self.temperature)
         number_densities[i_time] = solver.integrate(solver.t + dt)
+
+        if i_time > 0:
+          # Check for equilibrium convergence
+          # If relative difference <= 'eqm_tolerance', solution has converged
+          # to equilibrium (regardless of absolute tolerance)
+          ratio = np.abs(1. - (number_densities[i_time] /
+                               number_densities[i_time-1]))
+          if np.all(ratio <= eqm_tolerance):
+            print(f"Equilibrium convergence after {i_time+1} steps"
+                  f" (t = {current_time:.2e}) [s].")
+            number_densities[i_time:] = number_densities[i_time].copy()
+            self.number_densities = number_densities[-1]
+            return number_densities
 
       prev_time = current_time
 
