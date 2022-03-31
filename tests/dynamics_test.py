@@ -100,7 +100,7 @@ network = Network.from_krome_file(network_file)
 # )
 
 # Test case for plotting
-times = np.logspace(-8, 20, num=5000)
+times = np.logspace(-8, 8, num=10)
 evaluation_temperature = 7000
 evaluation_density = 1e-8
 atol, rtol = 1e-30, 1e-6
@@ -108,7 +108,8 @@ fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
 n = calculate_number_densities(abundances, np.log10(evaluation_density))
 network.temperature = evaluation_temperature
 network.number_densities = n
-n = network.solve(times, atol=atol, rtol=rtol, eqm_tolerance=1e-8).T
+n = network.solve(times, atol=atol, rtol=rtol,
+                  eqm_tolerance=1e-10, n_subtime=10).T
 
 for j, s in enumerate(network.species):
   axes[0].plot(np.log10(times), np.log10(n[j]))

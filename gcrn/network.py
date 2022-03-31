@@ -518,7 +518,7 @@ class Network:
   def solve(self, evolution_times: List[float],
             initial_time=0, create_jacobian=False, jacobian=None,
             limit_rates=False,
-            atol=1e-30, rtol=1e-4, eqm_tolerance=1e-5,
+            atol=1e-30, rtol=1e-4, eqm_tolerance=1e-5, n_subtime=10,
             **solver_kwargs) -> List[np.ndarray]:
     def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
@@ -560,7 +560,9 @@ class Network:
     number_densities[:] = np.nan
     prev_time = initial_time
     for i_time, current_time in enumerate(evolution_times):
-      dt = current_time - prev_time
+      full_dt = current_time - prev_time
+      # substeps in time
+      dt = full_dt / n_subtime
       while solver.successful() and solver.t < current_time:
         solver.set_f_params(self.temperature)
         number_densities[i_time] = solver.integrate(solver.t + dt)
@@ -572,8 +574,8 @@ class Network:
           ratio = np.abs(1. - (number_densities[i_time] /
                                number_densities[i_time-1]))
           if np.all(ratio <= eqm_tolerance):
-            print(f"Equilibrium convergence after {i_time+1} steps"
-                  f" (t = {current_time:.2e}) [s].")
+            # print(f"Equilibrium convergence after {i_time+1} steps"
+            #       f" (t = {current_time:.2e}) [s].")
             number_densities[i_time:] = number_densities[i_time].copy()
             self.number_densities = number_densities[-1]
             return number_densities
