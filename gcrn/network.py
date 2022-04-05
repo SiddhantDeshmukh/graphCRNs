@@ -517,20 +517,15 @@ class Network:
 
   def solve(self, evolution_times: List[float],
             initial_time=0, create_jacobian=False, jacobian=None,
-            limit_rates=False,
             atol=1e-30, rtol=1e-4, eqm_tolerance=1e-5, n_subtime=10,
+            return_eqm_times=False,
             **solver_kwargs) -> List[np.ndarray]:
     def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
-      # NOTE:
-      # Temperature sensitivity here is sort of ad-hoc, choosing a value
-      # that works well in stellar atmospheres which are 10^3-10^4 K
-      # So here the kinetics are updated if the temperature has changed by more
-      # than 10 K.
       # TODO:
       # How do we speed this up???
-      if abs(temperature - self.temperature) > 1e1:
-        self.temperature = temperature
+      # I think it's slow because the rates vector eval is in Python, whereas
+      # it would be much faster if it were compiled
       S = self.stoichiometric_matrix
       Z = self.complex_composition_matrix
       K = self.complex_kinetics_matrix
@@ -555,9 +550,14 @@ class Network:
     solver.set_initial_value(self.number_densities, initial_time)
 
     # TODO: Check for failure and return codes
-    number_densities = np.empty(shape=(len(evolution_times),
-                                       len(self.number_densities)))
-    number_densities[:] = np.nan
+    # TODO: Verbosity control
+    number_densities = np.full((len(evolution_times),
+                                len(self.number_densities)),
+                               np.nan)
+
+    # Store times when species reach equilibrium
+    is_eqm = np.full(len(self.number_densities), False)
+    eqm_times = np.full(len(self.number_densities), np.nan)
     prev_time = initial_time
     for i_time, current_time in enumerate(evolution_times):
       full_dt = current_time - prev_time
@@ -573,12 +573,18 @@ class Network:
           # to equilibrium (regardless of absolute tolerance)
           ratio = np.abs(1. - (number_densities[i_time] /
                                number_densities[i_time-1]))
-          if np.all(ratio <= eqm_tolerance):
+          is_eqm = (ratio <= eqm_tolerance)
+          idxs = np.isnan(eqm_times) & is_eqm
+          eqm_times[idxs] = solver.t
+          if np.all(is_eqm):
             # print(f"Equilibrium convergence after {i_time+1} steps"
             #       f" (t = {current_time:.2e}) [s].")
             number_densities[i_time:] = number_densities[i_time].copy()
             self.number_densities = number_densities[-1]
-            return number_densities
+            if return_eqm_times:
+              return number_densities, eqm_times
+            else:
+              return number_densities
 
       prev_time = current_time
 

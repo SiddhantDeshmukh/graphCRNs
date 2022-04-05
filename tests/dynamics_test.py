@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 
 mass_hydrogen = 1.67262171e-24  # [g]
 
+plt.style.use('standard-scientific')
+prop_cycle = plt.rcParams['axes.prop_cycle']
+colors = prop_cycle.by_key()['color']
+
 
 def ratio(arr: np.ndarray, axis=0):
   return np.exp(-np.diff(np.log10(arr), axis=axis))
@@ -78,51 +82,62 @@ abundances = {
 
 network = Network.from_krome_file(network_file)
 
-# temperatures = np.linspace(3000, 25000, num=100)
-# gas_densities = np.logspace(-12, -6, num=100)
-# times = np.logspace(-8, 8, num=50)
-# start_time = time.time()
-# for (i, j), (T, rho) in enumerated_product(temperatures, gas_densities):
-#   n = calculate_number_densities(abundances, np.log10(rho))
-#   network.temperature = T
-#   network.number_densities = n
-#   n = network.solve(times)
-#   print(f"Done {i+1} / {len(gas_densities)} densities "
-#         f"{j+1} / {len(temperatures)} temperatures",
-#         end="\r")
+temperatures = np.linspace(3000, 25000, num=100)
+gas_densities = np.logspace(-12, -6, num=100)
+times = np.logspace(-8, 8, num=50)
+start_time = time.time()
+for (i, j), (T, rho) in enumerated_product(temperatures, gas_densities):
+  n = calculate_number_densities(abundances, np.log10(rho))
+  network.temperature = T
+  network.number_densities = n
+  n = network.solve(times)
+  print(f"Done {i+1} / {len(gas_densities)} densities "
+        f"{j+1} / {len(temperatures)} temperatures",
+        end="\r")
 
-# end_time = time.time()
-# print(
-#     f"\n{len(times)} timescales,\n"
-#     f"{len(temperatures)} temperatures,\n"
-#     f"{len(gas_densities)} densities.\n"
-#     f"Total time: {(end_time - start_time):.3f} seconds."
-# )
+end_time = time.time()
+print(
+    f"\n{len(times)} timescales,\n"
+    f"{len(temperatures)} temperatures,\n"
+    f"{len(gas_densities)} densities.\n"
+    f"Total time: {(end_time - start_time):.3f} seconds."
+)
 
-# Test case for plotting
-times = np.logspace(-8, 8, num=10)
-evaluation_temperature = 7000
-evaluation_density = 1e-8
-atol, rtol = 1e-30, 1e-6
-fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
-n = calculate_number_densities(abundances, np.log10(evaluation_density))
-network.temperature = evaluation_temperature
-network.number_densities = n
-n = network.solve(times, atol=atol, rtol=rtol,
-                  eqm_tolerance=1e-10, n_subtime=10).T
+# # Test case for plotting
+# times = np.logspace(-8, 8, num=10)
+# evaluation_temperature = 7000
+# evaluation_density = 1e-8
+# atol, rtol = 1e-30, 1e-6
+# fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True)
+# n = calculate_number_densities(abundances, np.log10(evaluation_density))
+# network.temperature = evaluation_temperature
+# network.number_densities = n
+# n, eqm_times = network.solve(times, atol=atol, rtol=rtol,
+#                              eqm_tolerance=1e-10, n_subtime=10,
+#                              return_eqm_times=True)
 
-for j, s in enumerate(network.species):
-  axes[0].plot(np.log10(times), np.log10(n[j]))
-  axes[1].plot(np.log10(times[:-1]), np.log10(np.abs(np.diff(n[j]))), label=s)
-  axes[2].plot(np.log10(times[:-1]), np.log10(1. - ratio(n[j], axis=0)))
+# n = n.T
 
-axes[1].axhline(np.log10(atol), c='k', ls=':')
-axes[2].axhline(np.log10(rtol), c='k', ls=':')
+# print(network.species)
+# print(eqm_times)
 
-axes[1].legend()
-axes[2].set_xlabel("log time [s]")
-axes[0].set_ylabel(r"log n [cm$^{-3}$]")
-axes[1].set_ylabel(r"diff log n [cm$^{-3}$]")
-axes[2].set_ylabel(r"ratio log n [cm$^{-3}$]")
+# for j, s in enumerate(network.species):
+#   axes[0].plot(np.log10(times), np.log10(n[j]))
+#   axes[1].plot(np.log10(times[:-1]), np.log10(np.abs(np.diff(n[j]))), label=s)
+#   axes[2].plot(np.log10(times[:-1]), np.log10(1. - ratio(n[j], axis=0)))
 
-plt.show()
+#   axes[0].axvline(np.log10(eqm_times[j]), c=colors[j], ls='--')
+
+# axes[1].axhline(np.log10(atol), c='k', ls=':')
+# axes[2].axhline(np.log10(rtol), c='k', ls=':')
+
+# for ax in axes:
+#   ax.plot(np.log10(times), [0.] * len(times), ls='none', marker='o', c='k')
+
+# axes[1].legend()
+# axes[2].set_xlabel("log time [s]")
+# axes[0].set_ylabel(r"log n [cm$^{-3}$]")
+# axes[1].set_ylabel(r"diff log n [cm$^{-3}$]")
+# axes[2].set_ylabel(r"ratio log n [cm$^{-3}$]")
+
+# plt.show()
