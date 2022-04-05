@@ -1,0 +1,8 @@
+# Ring reaction with temperature-dependent rates
+@format:idx,R,P,rate
+1,A,B,2 * exp(-1.4 / Tgas)
+2,B,A,3 * exp(-1.5 / Tgas)
+3,B,C,1 * exp(-2.3 / Tgas)
+4,C,B,5 * exp(-3.1 / Tgas)
+5,C,A,8 * exp(-1.9 / Tgas)
+6,A,C,1 * exp(-5.3 / Tgas)
