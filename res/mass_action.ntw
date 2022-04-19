@@ -1,0 +1,9 @@
+# Test mass-action dependence
+@format:idx,R,R,P,rate
+1,A,A,B,4 * exp(-2. / Tgas)
+2,B,B,C,2 * exp(-1. / Tgas)
+3,C,C,A,3 * exp(-5. / Tgas)
+@format:idx,R,P,P,rate
+4,B,A,A,5 * exp(-3. / Tgas)
+5,C,B,B,8 * exp(-7. / Tgas)
+6,A,C,C,3 * exp(-1. / Tgas)
