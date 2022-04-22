@@ -95,8 +95,9 @@ function main(density::Float64, temperature::Float64)
   sol = run_network(co_rn, u0, (1e-8, 1e6), [T => temperature])
   @show species(co_rn)
   @show sol[end]
+  gr(size=(750, 565))
   display(plot(sol, xaxis=:log, yaxis=:log))
 end
 
 ##
-main(1e-8, 5000.)
+main(1e-12, 3000.)

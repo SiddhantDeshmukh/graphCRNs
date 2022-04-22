@@ -1,7 +1,7 @@
 # Testing ring reaction network with Catalyst
 ##
 using Catalyst, DifferentialEquations, ModelingToolkit, TimerOutputs, SteadyStateDiffEq, Plots, StaticArrays
-using ProgressBars
+using ProgressBars, Tables, CSV, DelimitedFiles
 
 ##
 const mass_hydrogen = 1.67262171e-24  # [g]
@@ -114,16 +114,6 @@ function setup_co(to::TimerOutput, num_densities::Int, num_temperatures::Int;
 end
 
 function evolve_system(to:: TimerOutput, odesys, u0, tspan, p; prob=nothing)
-  # if (isnothing(prob))
-  #   @timeit to "make problem" prob = ODEProblem(odesys, u0, tspan, p)
-  #   @timeit to "create jacobian" de = modelingtoolkitize(prob)
-  #   @timeit to "make jac problem" prob = ODEProblem(de, [], tspan, jac=true)
-  #   @timeit to "1st solve" sol = solve(prob, Rodas5(); saveeverystep=false)
-  #   return prob, sol
-  # else
-  #   @timeit to "remake problem" prob = remake(prob; u0=u0, p=p, tspan=tspan)
-  #   @timeit to "solve" return solve(prob, Rodas5(); saveeverystep=false)[end]
-  # end
   # Can't use 'to' profiling when multi-threading!
   if (isnothing(prob))
     prob = ODEProblem(odesys, u0, tspan, p)
@@ -183,7 +173,7 @@ function run(to:: TimerOutput, odesys, iter, tspan;
     end
   end
 
-  return number_densities
+  @timeit to "mapreduce" return mapreduce(permutedims, vcat, number_densities)
 end
 
 function run_multithreaded(to:: TimerOutput, odesys, iter, tspan;
@@ -218,14 +208,14 @@ function run_multithreaded(to:: TimerOutput, odesys, iter, tspan;
     end
   end
 
-  return number_densities
+  @timeit to "mapreduce" return mapreduce(permutedims, vcat, number_densities)
 end
 
 function main(num_densities::Int, num_temperatures::Int;
               setup=setup_co, tspan=(1e-8, 1e6),
               min_density=-12., max_density=-6.,
               min_temperature=1000., max_temperature=15000.,
-              parallel=false, timeit=true)
+              parallel=false, timeit=true, save=false, outfile="./dummy.csv")
   densities, temperatures, odesys = setup(to, num_densities,
                                          num_temperatures;
                                          min_density=min_density,
@@ -237,18 +227,18 @@ function main(num_densities::Int, num_temperatures::Int;
   iter = collect(Base.product(densities, temperatures))
   if (parallel)
     if timeit
-      @timeit to "complete parallel" run_multithreaded(to, odesys, iter, tspan,
+      @timeit to "complete parallel" n = run_multithreaded(to, odesys, iter, tspan,
                                               steady_state=false)
     else
-      run_multithreaded(to, odesys, iter, tspan, steady_state=false)
+      n = run_multithreaded(to, odesys, iter, tspan, steady_state=false)
     end
     # @timeit to "complete steady-state" run_multithreaded(to, odesys, iter,
     #                                                      tspan, steady_state=true)
   else
     if timeit
-      @timeit to "complete serial" run(to, odesys, iter, tspan; steady_state=false)
+      @timeit to "complete serial" n = run(to, odesys, iter, tspan; steady_state=false)
     else
-      run(to, odesys, iter, tspan; steady_state=false)
+      n = run(to, odesys, iter, tspan; steady_state=false)
     end
     # @timeit to "complete steady-state" run(to, odesys, iter, tspan;
                                         # steady_state=true)
@@ -257,24 +247,36 @@ function main(num_densities::Int, num_temperatures::Int;
   println()
   show(to)
   println()
+
+  # Save 'n' to a dummy file
+  if (save)
+    header = ["n_$(str_replace(s))" for s in species(odesys)]
+    table = Tables.table(n; header=header)
+
+    CSV.write(outfile, table; delim=',')
+  end
 end
 
 ##
 # Run once to compile without timing
 @timeit to "initial compilation" begin
-  main(10, 10; parallel=false, timeit=false)
-  main(10, 10; parallel=true, timeit=false)
+  main(10, 10; parallel=false, timeit=false, save=false)
+  main(10, 10; parallel=true, timeit=false, save=false)
 end
 
+##
 num_trials = 1
-num_densities = 1719
-num_temperatures = 1719
-tspan = (1e0, 1e8)
+# num_densities = 1719
+# num_temperatures = 1719
+num_densities = 10
+num_temperatures = 5
+tspan = (1e4, 1e8)
 for i in 1:num_trials
-  main(num_densities, num_temperatures; tspan=tspan, parallel=false, timeit=true)
-  main(num_densities, num_temperatures; tspan=tspan, parallel=true, timeit=true)
+  main(num_densities, num_temperatures; tspan=tspan, parallel=false,
+      save=true, timeit=true)
+  # main(num_densities, num_temperatures; tspan=tspan, parallel=true,
+  #     timeit=true, save=true, outfile="./dummy.csv")
 end
-# main(1719, 1719; parallel=true)
 
 #=
 TODO:

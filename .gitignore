@@ -3,3 +3,5 @@
 src/*.png
 out/**
 src/profiles/**
+julia/out/**
+julia/res/**
