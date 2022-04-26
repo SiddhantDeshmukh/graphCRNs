@@ -1,16 +1,16 @@
 # Read density-temperature from file and write out a number density file
 ##
 using Catalyst, DifferentialEquations, ModelingToolkit, TimerOutputs
-using CSV, DelimitedFiles, Tables
+using CSV, DelimitedFiles, Tables, Dates
 ##
 const mass_hydrogen = 1.67262171e-24  # [g]
 const to = TimerOutput()
-solar_abundances = Dict(
+mm00_abundances = Dict(
   "H" => 12,
   "H2" => -4,
   "OH" => -12,
-  "C" => 8.39,  # solar
-  "O" => 8.66,  # solar
+  "C" => 8.43,  # solar
+  "O" => 8.69,  # solar
   "N" => 7.83,
   "CH" => -12,
   "CO" => -12,
@@ -26,13 +26,76 @@ solar_abundances = Dict(
   "Z" => 3
 )
 
-mmm20a04_abundances = Dict(
+mm20a04_abundances = Dict(
   "H" => 12,
   "H2" => -4,
   "OH" => -12,
   "C" => 6.41,
   "O" => 7.06,
   "N" => 5.80,
+  "CH" => -12,
+  "CO" => -12,
+  "CN" => -12,
+  "NH" => -12,
+  "NO" => -12,
+  "C2" => -12,
+  "O2" => -12,
+  "N2" => -12,
+  "M" => 11,
+  "X" => 1,
+  "Y" => 2,
+  "Z" => 3
+)
+
+mm30a04_abundances = Dict(
+  "H" => 12,
+  "H2" => -4,
+  "OH" => -12,
+  "C" => 5.41,
+  "O" => 6.06,
+  "N" => 4.80,
+  "CH" => -12,
+  "CO" => -12,
+  "CN" => -12,
+  "NH" => -12,
+  "NO" => -12,
+  "C2" => -12,
+  "O2" => -12,
+  "N2" => -12,
+  "M" => 11,
+  "X" => 1,
+  "Y" => 2,
+  "Z" => 3
+)
+
+mm30a04c20n20o04_abundances = Dict(
+  "H" => 12,
+  "H2" => -4,
+  "OH" => -12,
+  "C" => 7.39,
+  "O" => 6.06,
+  "N" => 6.78,
+  "CH" => -12,
+  "CO" => -12,
+  "CN" => -12,
+  "NH" => -12,
+  "NO" => -12,
+  "C2" => -12,
+  "O2" => -12,
+  "N2" => -12,
+  "M" => 11,
+  "X" => 1,
+  "Y" => 2,
+  "Z" => 3
+)
+
+mm30a04c20n20o20_abundances = Dict(
+  "H" => 12,
+  "H2" => -4,
+  "OH" => -12,
+  "C" => 7.39,
+  "O" => 7.66,
+  "N" => 6.78,
   "CH" => -12,
   "CO" => -12,
   "CN" => -12,
@@ -149,43 +212,75 @@ function run(to:: TimerOutput, odesys, iter, tspan, abundances)
   return number_densities
 end
 
-function main(abundances::Dict; precompile=true)
-  PROJECT_DIR =  "/home/sdeshmukh/Documents/graphCRNs/julia"
-  res_dir = "$(PROJECT_DIR)/res"
-  out_dir = "$(PROJECT_DIR)/out"
-  co_rn = create_co_network(to)
-  if (precompile)
-    infile = "$(res_dir)/rho_T_test.csv"
-    outfile = "$(out_dir)/catalyst_test.csv"
-  else
-    infile = "$(res_dir)/rho_T.csv"
-    outfile = "$(out_dir)/catalyst.csv"
-  end
-  arr = read_density_temperature_file(infile)
-  odesys = convert(ODESystem, co_rn; combinatoric_ratelaws=false)
-  tspan = (1e-8, 1e6)
-  n = run(to, odesys, arr, tspan, abundances)
-  header = [str_replace(s) for s in species(odesys)]
-  table = Tables.table(n; header=header)
-  
-  CSV.write(outfile, table; delim=',')
+function postprocess_file(infile::String, outfile::String, odesys, tspan,
+                          abundances::Dict)
+    println("$(current_time()): Postprocessing from $(infile), output to $(outfile)")
+    arr = read_density_temperature_file(infile)
+    n = run(to, odesys, arr, tspan, abundances)
+
+    header = [str_replace(s) for s in species(odesys)]
+    table = Tables.table(n; header=header)
+    CSV.write(outfile, table; delim=',')
 end
 
+function current_time()
+  return Dates.format(now(), "HH:MM")
+end
+
+function main(abundances::Dict, input_dir::String, output_dir::String;
+              precompile=true)
+  co_rn = create_co_network(to)
+  odesys = convert(ODESystem, co_rn; combinatoric_ratelaws=false)
+  tspan = (1e-8, 1e6)
+  if (precompile)  # single file test case
+    println("Precompiling test!")
+    infile = "$(input_dir)/rho_T_test.csv"
+    outfile = "$(output_dir)/catalyst_test.csv"
+    postprocess_file(infile, outfile, odesys, tspan, abundances)
+    @show to
+    println()
+  else
+    # Read files from input dir
+    infile_names = readdir(input_dir)
+    outfile_names = [replace(f, "rho_T" => "catalyst") for f in infile_names]
+    infiles = ["$(input_dir)/$(f)" for f in infile_names]
+    outfiles = ["$(output_dir)/$(f)" for f in outfile_names]
+
+    for (i, (infile, outfile)) in enumerate(zip(infiles, outfiles))
+      postprocess_file(infile, outfile, odesys, tspan, abundances)
+      println("$(current_time()): Postprocessed $(i)/$(length(infiles))")
+      @show to
+      println()
+    end
+  end
+end
 
 ##
-main(mmm20a04_abundances; precompile=true)
+PROJECT_DIR =  "/home/sdeshmukh/Documents/graphCRNs/julia"
+res_dir = "$(PROJECT_DIR)/res"
+out_dir = "$(PROJECT_DIR)/out"
+model_id = "d3t63g40mm30chem1"
+
+##
+main(mm00_abundances, "$(res_dir)/test", "$(out_dir)/test"; precompile=true)
 
 ##
 reset_timer!(to)
-main(mmm20a04_abundances; precompile=false)
-
-println()
-@show to
-println()
+main(mm30_abundances, "$(res_dir)/$(model_id)", "$(out_dir)/$(model_id)";
+    precompile=false)
 
 # TODO:
 # - add types to all funcargs for speeeeeeed
+# - add saving at intervals, since these are just 1D arrays now, restarting
+#   becomes very easy
+# - check if output file exists, skip if completed
 # - I/O for:
 #   - abundances
 #   - .dat files
 #   - .ntw files
+# - command line arguments to automatically choose correct options based on
+#   model ID passed in
+# - proper modules and imports/exports
+# - allow for different abundances and other solver options
+#   - would be best to perhaps read from a config file (that could be written
+#     from bash for automation)

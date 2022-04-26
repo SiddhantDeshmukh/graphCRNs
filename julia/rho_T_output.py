@@ -1,5 +1,6 @@
 # Create a density-temperature output file for the Julia solver
 from itertools import product
+from os import system
 from typing import Dict, List
 import numpy as np
 from uio_tools.uio_loader import UIOLoader
@@ -73,6 +74,8 @@ def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
       loader.current_model.final_snap_idx - num_snap_skip
   snap_out_frequency = total_snaps // num_snaps_out
   snap_out_idxs = list(range(num_snap_skip, total_snaps, snap_out_frequency))
+  system(f"mkdir -p {out_dir}")
+
   for model in loader:
     model = loader.current_model
     for _ in range(model.final_snap_idx):
@@ -96,20 +99,23 @@ def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
 
 
 def main():
+  write_subsample = True
   test_case = False  # equivalent to 'precompile' option in the Julia version
   plot = False
-  write_subsample = True
 
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs/julia"
   res_dir = f"{PROJECT_DIR}/res"
   out_dir = f"{PROJECT_DIR}/out"
-  model_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/res/cobold-runs/chem/d3t63g40mm20c01chem1rec4"
+  # model_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/res/cobold-runs/chem/d3t63g40mm20c01chem1rec4"
+  model_dir = "/media/sdeshmukh/Crucial X6/cobold_runs/chem"
+  model_dir += "/d3t63g40mm30chem1"
   loader = UIOLoader(model_dir)
   num_snaps_out = 20  # number of equidistant snapshots to pick
   num_snap_skip = 10  # number of snaps to skip when choosing output
 
   if write_subsample:
-    save_subsample_snapshots(loader, num_snaps_out, res_dir,
+    save_subsample_snapshots(loader, num_snaps_out,
+                             f"{res_dir}/{loader.current_model.id}",
                              num_snap_skip=num_snap_skip)
   else:
     # Write single
@@ -123,7 +129,6 @@ def main():
     if test_case:
       # Sample uniform points from model
       nz, ny, nx = 10, 5, 7
-      shape = (nz, ny, nx)
       original_shape = model['rho'].shape
       idxs = product(*[np.linspace(0, original_shape[i] - 1, num=n, dtype=int)
                        for i, n in enumerate([nz, ny, nx])])
@@ -143,15 +148,15 @@ def main():
 
     print(f"Array output shape: {arr.shape}")
 
-  # write_array(f"{res_dir}/{outfile}", arr)
-  # print(f"Wrote to {res_dir}/{outfile}")
-  # reshaped_arr = read_np_output(f"{res_dir}/{outfile}")
-  # print(f"Array input shape: {reshaped_arr.shape}")
+    write_array(f"{res_dir}/test/{outfile}", arr)
+    print(f"Wrote to {res_dir}/test/{outfile}")
+    # reshaped_arr = read_np_output(f"{res_dir}/{outfile}")
+    # print(f"Array input shape: {reshaped_arr.shape}")
 
-  if plot:
-    number_densities = read_number_densities(f"{out_dir}/catalyst.csv")
-    fig, axes = plot_differences(model, number_densities)
-    plt.show()
+    if plot:
+      number_densities = read_number_densities(f"{out_dir}/catalyst.csv")
+      fig, axes = plot_differences(model, number_densities)
+      plt.show()
 
 
 if __name__ == "__main__":
