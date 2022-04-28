@@ -259,14 +259,14 @@ end
 PROJECT_DIR =  "/home/sdeshmukh/Documents/graphCRNs/julia"
 res_dir = "$(PROJECT_DIR)/res"
 out_dir = "$(PROJECT_DIR)/out"
-model_id = "d3t63g40mm30chem1"
+model_id = "d3t63g40mm30c20n20o20chem1"
 
 ##
 main(mm00_abundances, "$(res_dir)/test", "$(out_dir)/test"; precompile=true)
 
 ##
 reset_timer!(to)
-main(mm30_abundances, "$(res_dir)/$(model_id)", "$(out_dir)/$(model_id)";
+main(mm30a04c20n20o20_abundances, "$(res_dir)/$(model_id)", "$(out_dir)/$(model_id)";
     precompile=false)
 
 # TODO:
