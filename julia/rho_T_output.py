@@ -108,7 +108,7 @@ def main():
   out_dir = f"{PROJECT_DIR}/out"
   # model_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/res/cobold-runs/chem/d3t63g40mm20c01chem1rec4"
   model_dir = "/media/sdeshmukh/Crucial X6/cobold_runs/chem"
-  model_dir += "/d3t63g40mm30chem1"
+  model_dir += "/d3t36g10mm00chem1"
   loader = UIOLoader(model_dir)
   num_snaps_out = 20  # number of equidistant snapshots to pick
   num_snap_skip = 10  # number of snaps to skip when choosing output
