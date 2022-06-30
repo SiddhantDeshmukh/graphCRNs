@@ -99,16 +99,15 @@ def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
 
 
 def main():
-  write_subsample = True
-  test_case = False  # equivalent to 'precompile' option in the Julia version
+  write_subsample = False
+  test_case = True  # equivalent to 'precompile' option in the Julia version
   plot = False
 
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs/julia"
   res_dir = f"{PROJECT_DIR}/res"
   out_dir = f"{PROJECT_DIR}/out"
-  # model_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/res/cobold-runs/chem/d3t63g40mm20c01chem1rec4"
   model_dir = "/media/sdeshmukh/Crucial X6/cobold_runs/chem"
-  model_dir += "/d3t36g10mm00chem1"
+  model_dir += "/d3t63g40mm00chem2"
   loader = UIOLoader(model_dir)
   num_snaps_out = 20  # number of equidistant snapshots to pick
   num_snap_skip = 10  # number of snaps to skip when choosing output
@@ -128,7 +127,8 @@ def main():
 
     if test_case:
       # Sample uniform points from model
-      nz, ny, nx = 10, 5, 7
+      # nz, ny, nx = 10, 5, 7
+      nz, ny, nx = 30, 10, 14
       original_shape = model['rho'].shape
       idxs = product(*[np.linspace(0, original_shape[i] - 1, num=n, dtype=int)
                        for i, n in enumerate([nz, ny, nx])])

@@ -1,5 +1,5 @@
 # Testing ring reaction network with Catalyst
-using Catalyst, DifferentialEquations, ModelingToolkit, TimerOutputs
+using Catalyst, DifferentialEquations, ModelingToolkit, TimerOutputs, BenchmarkTools
 
 const to = TimerOutput()
 
@@ -38,6 +38,7 @@ function run()
   end
 end
 
+reset_timer!(to)
 @timeit to "complete run" run()
 
 show(to)

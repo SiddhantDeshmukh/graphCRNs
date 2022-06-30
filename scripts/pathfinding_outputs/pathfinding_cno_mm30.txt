@@ -1,0 +1,372 @@
+Initial abundances: 
+{
+	H: 12
+	H2: -4
+	OH: -12
+	C: 5.41
+	O: 6.06
+	N: 4.8
+	CH: -12
+	CO: -12
+	CN: -12
+	NH: -12
+	NO: -12
+	C2: -12
+	O2: -12
+	N2: -12
+	M: 11
+	X: 1
+	Y: 2
+	Z: 3
+}
+
+T = 3500.0 [K], log rho = -8.0
+t = 1.0e+05 [s]
+
+================================================================================
+5 paths from C -> CO.
+	3 steps:
+		(s.j.) C -> C + OH
+		1. C + OH -> CO + H with log timescale -6.38
+		(s.j.) CO + H -> CO
+		Total = -6.38 (log) [s / cm^3]
+	6 steps:
+		(s.j.) C -> C + H
+		1. C + H -> CH with log timescale -6.92
+		(s.j.) CH -> CH + O
+		2. CH + O -> C + OH with log timescale -4.83
+		3. C + OH -> CO + H with log timescale -6.38
+		(s.j.) CO + H -> CO
+		Total = -4.82 (log) [s / cm^3]
+	4 steps:
+		(s.j.) C -> C + OH
+		1. C + OH -> CH + O with log timescale -4.64
+		2. CH + O -> CO + H with log timescale -5.62
+		(s.j.) CO + H -> CO
+		Total = -4.60 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C -> C + NO
+		1. C + NO -> CO + N with log timescale -0.88
+		(s.j.) CO + N -> CO
+		Total = -0.88 (log) [s / cm^3]
+	4 steps:
+		(s.j.) C -> C + NO
+		1. C + NO -> CN + O with log timescale -0.70
+		2. CN + O -> CO + N with log timescale -4.12
+		(s.j.) CO + N -> CO
+		Total = -0.70 (log) [s / cm^3]
+5 paths from O -> CO.
+	3 steps:
+		(s.j.) O -> CH + O
+		1. CH + O -> CO + H with log timescale -5.62
+		(s.j.) CO + H -> CO
+		Total = -5.62 (log) [s / cm^3]
+	4 steps:
+		(s.j.) O -> CH + O
+		1. CH + O -> C + OH with log timescale -4.83
+		2. C + OH -> CO + H with log timescale -6.38
+		(s.j.) CO + H -> CO
+		Total = -4.82 (log) [s / cm^3]
+	3 steps:
+		(s.j.) O -> CN + O
+		1. CN + O -> CO + N with log timescale -4.12
+		(s.j.) CO + N -> CO
+		Total = -4.12 (log) [s / cm^3]
+	4 steps:
+		(s.j.) O -> CN + O
+		1. CN + O -> C + NO with log timescale -2.46
+		2. C + NO -> CO + N with log timescale -0.88
+		(s.j.) CO + N -> CO
+		Total = -0.86 (log) [s / cm^3]
+	3 steps:
+		(s.j.) O -> C2 + O
+		1. C2 + O -> C + CO with log timescale -0.78
+		(s.j.) C + CO -> CO
+		Total = -0.78 (log) [s / cm^3]
+5 paths from C -> CH.
+	3 steps:
+		(s.j.) C -> C + H2
+		1. C + H2 -> CH + H with log timescale -11.61
+		(s.j.) CH + H -> CH
+		Total = -11.61 (log) [s / cm^3]
+	2 steps:
+		(s.j.) C -> C + H
+		1. C + H -> CH with log timescale -6.92
+		Total = -6.92 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C -> C + OH
+		1. C + OH -> CH + O with log timescale -4.64
+		(s.j.) CH + O -> CH
+		Total = -4.64 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C -> C + NH
+		1. C + NH -> CH + N with log timescale -3.28
+		(s.j.) CH + N -> CH
+		Total = -3.28 (log) [s / cm^3]
+	5 steps:
+		(s.j.) C -> C + C
+		1. C + C -> C2 with log timescale 0.61
+		(s.j.) C2 -> C2 + H
+		2. C2 + H -> C + CH with log timescale -4.07
+		(s.j.) C + CH -> CH
+		Total = 0.61 (log) [s / cm^3]
+5 paths from C -> CN.
+	3 steps:
+		(s.j.) C -> C + NH
+		1. C + NH -> CN + H with log timescale -4.09
+		(s.j.) CN + H -> CN
+		Total = -4.09 (log) [s / cm^3]
+	6 steps:
+		(s.j.) C -> C + H
+		1. C + H -> CH with log timescale -6.92
+		(s.j.) CH -> CH + N
+		2. CH + N -> C + NH with log timescale -4.06
+		3. C + NH -> CN + H with log timescale -4.09
+		(s.j.) CN + H -> CN
+		Total = -3.77 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C -> C + N2
+		1. C + N2 -> CN + N with log timescale -3.42
+		(s.j.) CN + N -> CN
+		Total = -3.42 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C -> C + NO
+		1. C + NO -> CN + O with log timescale -0.70
+		(s.j.) CN + O -> CN
+		Total = -0.70 (log) [s / cm^3]
+	5 steps:
+		(s.j.) C -> C + C
+		1. C + C -> C2 with log timescale 0.61
+		(s.j.) C2 -> C2 + N
+		2. C2 + N -> C + CN with log timescale 1.39
+		(s.j.) C + CN -> CN
+		Total = 1.46 (log) [s / cm^3]
+5 paths from C -> C2.
+	3 steps:
+		(s.j.) C -> C + CH
+		1. C + CH -> C2 + H with log timescale -4.07
+		(s.j.) C2 + H -> C2
+		Total = -4.07 (log) [s / cm^3]
+	5 steps:
+		(s.j.) C -> C + H
+		1. C + H -> CH with log timescale -6.92
+		(s.j.) CH -> C + CH
+		2. C + CH -> C2 + H with log timescale -4.07
+		(s.j.) C2 + H -> C2
+		Total = -4.07 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C -> C + CN
+		1. C + CN -> C2 + N with log timescale -1.41
+		(s.j.) C2 + N -> C2
+		Total = -1.41 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C -> C + CO
+		1. C + CO -> C2 + O with log timescale -0.09
+		(s.j.) C2 + O -> C2
+		Total = -0.09 (log) [s / cm^3]
+	2 steps:
+		(s.j.) C -> C + C
+		1. C + C -> C2 with log timescale 0.61
+		Total = 0.61 (log) [s / cm^3]
+5 paths from O -> OH.
+	2 steps:
+		(s.j.) O -> H + O
+		1. H + O -> OH with log timescale -6.98
+		Total = -6.98 (log) [s / cm^3]
+	4 steps:
+		(s.j.) O -> CH + O
+		1. CH + O -> CO + H with log timescale -5.62
+		2. CO + H -> C + OH with log timescale -6.46
+		(s.j.) C + OH -> OH
+		Total = -5.56 (log) [s / cm^3]
+	4 steps:
+		(s.j.) O -> NH + O
+		1. NH + O -> H + NO with log timescale -5.70
+		2. H + NO -> N + OH with log timescale -6.08
+		(s.j.) N + OH -> OH
+		Total = -5.55 (log) [s / cm^3]
+	3 steps:
+		(s.j.) O -> CH + O
+		1. CH + O -> C + OH with log timescale -4.83
+		(s.j.) C + OH -> OH
+		Total = -4.83 (log) [s / cm^3]
+	3 steps:
+		(s.j.) O -> NH + O
+		1. NH + O -> N + OH with log timescale -4.55
+		(s.j.) N + OH -> OH
+		Total = -4.55 (log) [s / cm^3]
+5 paths from CO -> C.
+	3 steps:
+		(s.j.) CO -> CO + H
+		1. CO + H -> C + OH with log timescale -6.46
+		(s.j.) C + OH -> C
+		Total = -6.46 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CO -> CO + H
+		1. CO + H -> C + H + O with log timescale -2.53
+		(s.j.) C + H + O -> C
+		Total = -2.53 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CO -> CO + M
+		1. CO + M -> C + M + O with log timescale -1.55
+		(s.j.) C + M + O -> C
+		Total = -1.55 (log) [s / cm^3]
+	2 steps:
+		1. CO -> C + O with log timescale 0.61
+		(s.j.) C + O -> C
+		Total = 0.61 (log) [s / cm^3]
+	5 steps:
+		(s.j.) CO -> C + CO
+		1. C + CO -> C2 + O with log timescale -0.09
+		(s.j.) C2 + O -> C2
+		2. C2 -> C + C with log timescale 8.69
+		(s.j.) C + C -> C
+		Total = 8.69 (log) [s / cm^3]
+5 paths from CO -> O.
+	4 steps:
+		(s.j.) CO -> CO + H
+		1. CO + H -> C + OH with log timescale -6.46
+		2. C + OH -> CH + O with log timescale -4.64
+		(s.j.) CH + O -> O
+		Total = -4.63 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CO -> CO + H
+		1. CO + H -> C + H + O with log timescale -2.53
+		(s.j.) C + H + O -> O
+		Total = -2.53 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CO -> CO + M
+		1. CO + M -> C + M + O with log timescale -1.55
+		(s.j.) C + M + O -> O
+		Total = -1.55 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CO -> C + CO
+		1. C + CO -> C2 + O with log timescale -0.09
+		(s.j.) C2 + O -> O
+		Total = -0.09 (log) [s / cm^3]
+	2 steps:
+		1. CO -> C + O with log timescale 0.61
+		(s.j.) C + O -> O
+		Total = 0.61 (log) [s / cm^3]
+5 paths from CH -> C.
+	3 steps:
+		(s.j.) CH -> CH + H
+		1. CH + H -> C + H2 with log timescale -11.61
+		(s.j.) C + H2 -> C
+		Total = -11.61 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CH -> CH + H
+		1. CH + H -> C + H + H with log timescale -8.56
+		(s.j.) C + H + H -> C
+		Total = -8.56 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CH -> CH + N
+		1. CH + N -> C + NH with log timescale -4.06
+		(s.j.) C + NH -> C
+		Total = -4.06 (log) [s / cm^3]
+	5 steps:
+		(s.j.) CH -> CH + O
+		1. CH + O -> C + OH with log timescale -4.83
+		2. C + OH -> CO + H with log timescale -6.38
+		3. CO + H -> C + H + O with log timescale -2.53
+		(s.j.) C + H + O -> C
+		Total = -2.53 (log) [s / cm^3]
+	6 steps:
+		(s.j.) CH -> CH + N
+		1. CH + N -> C + NH with log timescale -4.06
+		2. C + NH -> CN + H with log timescale -4.09
+		(s.j.) CN + H -> CN
+		3. CN -> C + N with log timescale 4.77
+		(s.j.) C + N -> C
+		Total = 4.77 (log) [s / cm^3]
+5 paths from CN -> C.
+	3 steps:
+		(s.j.) CN -> CN + N
+		1. CN + N -> C + N2 with log timescale -3.17
+		(s.j.) C + N2 -> C
+		Total = -3.17 (log) [s / cm^3]
+	3 steps:
+		(s.j.) CN -> CN + O
+		1. CN + O -> C + NO with log timescale -2.46
+		(s.j.) C + NO -> C
+		Total = -2.46 (log) [s / cm^3]
+	6 steps:
+		(s.j.) CN -> CN + O
+		1. CN + O -> C + NO with log timescale -2.46
+		2. C + NO -> CO + N with log timescale -0.88
+		(s.j.) CO + N -> CO
+		3. CO -> C + O with log timescale 0.61
+		(s.j.) C + O -> C
+		Total = 0.62 (log) [s / cm^3]
+	2 steps:
+		1. CN -> C + N with log timescale 4.77
+		(s.j.) C + N -> C
+		Total = 4.77 (log) [s / cm^3]
+	5 steps:
+		(s.j.) CN -> C + CN
+		1. C + CN -> C2 + N with log timescale -1.41
+		(s.j.) C2 + N -> C2
+		2. C2 -> C + C with log timescale 8.69
+		(s.j.) C + C -> C
+		Total = 8.69 (log) [s / cm^3]
+5 paths from C2 -> C.
+	3 steps:
+		(s.j.) C2 -> C2 + H
+		1. C2 + H -> C + CH with log timescale -4.07
+		(s.j.) C + CH -> C
+		Total = -4.07 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C2 -> C2 + O
+		1. C2 + O -> C + CO with log timescale -0.78
+		(s.j.) C + CO -> C
+		Total = -0.78 (log) [s / cm^3]
+	3 steps:
+		(s.j.) C2 -> C2 + N
+		1. C2 + N -> C + CN with log timescale 1.39
+		(s.j.) C + CN -> C
+		Total = 1.39 (log) [s / cm^3]
+	5 steps:
+		(s.j.) C2 -> C2 + N
+		1. C2 + N -> C + CN with log timescale 1.39
+		(s.j.) C + CN -> CN
+		2. CN -> C + N with log timescale 4.77
+		(s.j.) C + N -> C
+		Total = 4.77 (log) [s / cm^3]
+	2 steps:
+		1. C2 -> C + C with log timescale 8.69
+		(s.j.) C + C -> C
+		Total = 8.69 (log) [s / cm^3]
+5 paths from OH -> O.
+	3 steps:
+		(s.j.) OH -> C + OH
+		1. C + OH -> CH + O with log timescale -4.64
+		(s.j.) CH + O -> O
+		Total = -4.64 (log) [s / cm^3]
+	4 steps:
+		(s.j.) OH -> C + OH
+		1. C + OH -> CO + H with log timescale -6.38
+		2. CO + H -> C + H + O with log timescale -2.53
+		(s.j.) C + H + O -> O
+		Total = -2.53 (log) [s / cm^3]
+	5 steps:
+		(s.j.) OH -> C + OH
+		1. C + OH -> CH + O with log timescale -4.64
+		2. CH + O -> CO + H with log timescale -5.62
+		3. CO + H -> C + H + O with log timescale -2.53
+		(s.j.) C + H + O -> O
+		Total = -2.53 (log) [s / cm^3]
+	5 steps:
+		(s.j.) OH -> C + OH
+		1. C + OH -> CO + H with log timescale -6.38
+		(s.j.) CO + H -> CO
+		2. CO -> C + O with log timescale 0.61
+		(s.j.) C + O -> O
+		Total = 0.61 (log) [s / cm^3]
+	6 steps:
+		(s.j.) OH -> C + OH
+		1. C + OH -> CH + O with log timescale -4.64
+		2. CH + O -> CO + H with log timescale -5.62
+		(s.j.) CO + H -> CO
+		3. CO -> C + O with log timescale 0.61
+		(s.j.) C + O -> O
+		Total = 0.61 (log) [s / cm^3]

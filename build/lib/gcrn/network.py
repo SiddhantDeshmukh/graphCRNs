@@ -136,7 +136,6 @@ class Network:
 
         else:
           split_line = line.split(',')
-          # print(split_line, rxn_format)
           for i, item in enumerate(rxn_format):
             format_dict[item].append(split_line[i])
 
@@ -522,15 +521,10 @@ class Network:
             **solver_kwargs) -> List[np.ndarray]:
     def f(t: float, y: np.ndarray, temperature=None) -> List[np.ndarray]:
       # Create RHS ZDK Exp(Z.T Ln(x))
-      # NOTE:
-      # Temperature sensitivity here is sort of ad-hoc, choosing a value
-      # that works well in stellar atmospheres which are 10^3-10^4 K
-      # So here the kinetics are updated if the temperature has changed by more
-      # than 10 K.
       # TODO:
       # How do we speed this up???
-      # if abs(temperature - self.temperature) > 1e1:
-      #   self.temperature = temperature
+      # I think it's slow because the rates vector eval is in Python, whereas
+      # it would be much faster if it were compiled
       S = self.stoichiometric_matrix
       Z = self.complex_composition_matrix
       K = self.complex_kinetics_matrix
@@ -594,7 +588,10 @@ class Network:
       prev_time = current_time
 
     self.number_densities = number_densities[-1]
-    return number_densities
+    if return_eqm_times:
+      return number_densities, eqm_times
+    else:
+      return number_densities
 
   # ----------------------------------------------------------------------------
   # Methods for creating matrices

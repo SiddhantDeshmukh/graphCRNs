@@ -136,7 +136,6 @@ class Network:
 
         else:
           split_line = line.split(',')
-          # print(split_line, rxn_format)
           for i, item in enumerate(rxn_format):
             format_dict[item].append(split_line[i])
 
@@ -589,7 +588,10 @@ class Network:
       prev_time = current_time
 
     self.number_densities = number_densities[-1]
-    return number_densities
+    if return_eqm_times:
+      return number_densities, eqm_times
+    else:
+      return number_densities
 
   # ----------------------------------------------------------------------------
   # Methods for creating matrices
