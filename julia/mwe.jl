@@ -169,23 +169,40 @@ end
 
 
 function run(to:: TimerOutput, odesys, iter, tspan, abundances)
-  @timeit to "create array" number_densities = zeros(size(iter)[1], length(species(odesys)))
-  @timeit to "main run" begin
+  number_densities = zeros(size(iter)[1], length(species(odesys)))
+  # @timeit to "main run" begin
     # First run
-    @timeit to "1st calc n" n = calculate_number_densities(iter[1, 1], abundances)
+    n = calculate_number_densities(iter[1, 1], abundances)
     u0vals = [n[str_replace(s)] for s in species(odesys)]
     u0 = Pair.(species(odesys), u0vals)
-    @timeit to "1st evolve system" prob, _ = evolve_system(odesys, u0, tspan, [iter[1, 2]]; prob=nothing)
-    # Loop
+    # TESTING
+    prob = ODEProblem(odesys, u0, tspan, [iter[1, 2]])
+    de = modelingtoolkitize(prob)
+    prob = ODEProblem(de, [], tspan, jac=true)
+    solve(prob, Rodas5(); saveeverystep=false)
+    reset_timer!(to)
     @inbounds for i in 1:size(iter)[1]
       p = [iter[i, 2]]
-      @timeit to "calc n" n = calculate_number_densities(iter[i, 1], abundances)
+      n = calculate_number_densities(iter[i, 1], abundances)
       u0 = [n[str_replace(s)] for s in species(odesys)]
-      # @views number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
-      @timeit to "evolve system" number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
-      # number_densities[i, :] = u0
-    end
+      # @timeit to "remake problem" prob = remake(prob; u0=u0, p=p, tspan=tspan)
+      remake(prob; u0=u0, p=p, tspan=tspan)
+      @timeit to "solve" number_densities[i, :] = solve(prob, Rodas5(); saveeverystep=false)[end]
+    # end
+    # END TESTING
+    # @timeit to "1st evolve system" prob, _ = evolve_system(odesys, u0, tspan, [iter[1, 2]]; prob=nothing)
+    # # Loop
+    # @inbounds for i in 1:size(iter)[1]
+    #   p = [iter[i, 2]]
+    #   @timeit to "calc n" n = calculate_number_densities(iter[i, 1], abundances)
+    #   u0 = [n[str_replace(s)] for s in species(odesys)]
+    #   # @views number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
+    #   @timeit to "evolve system" number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
+    #   # number_densities[i, :] = u0
+    # end
   end
+  @show to
+  println()
 
   return number_densities
 end
@@ -197,25 +214,25 @@ end
 function postprocess_file(infile::String, outfile::String, odesys, tspan,
                           abundances::Dict)
     println("$(current_time()): Postprocessing from $(infile), output to $(outfile)")
-    @timeit to "read rho-T file" arr = read_density_temperature_file(infile)
-    @timeit to "run" n = run(to, odesys, arr, tspan, abundances)
+    arr = read_density_temperature_file(infile)
+    n = run(to, odesys, arr, tspan, abundances)
 
-    header = [str_replace(s) for s in species(odesys)]
-    @timeit to "create table" table = Tables.table(n; header=header)
-    @timeit to "write csv" CSV.write(outfile, table; delim=',')
+    # header = [str_replace(s) for s in species(odesys)]
+    # @timeit to "create table" table = Tables.table(n; header=header)
+    # @timeit to "write csv" CSV.write(outfile, table; delim=',')
 end
 
 function main(abundances::Dict, input_dir::String, output_dir::String,
               network_file::String)
   # @show abundances
-  @timeit to "read network file" rn = read_network_file(network_file)
-  @timeit to "setup odesys" odesys = convert(ODESystem, rn; combinatoric_ratelaws=false)
+  rn = read_network_file(network_file)
+  odesys = convert(ODESystem, rn; combinatoric_ratelaws=false)
   tspan = (1e-8, 1e6)
   infile = "$(input_dir)/rho_T_test.csv"
   outfile = "$(output_dir)/catalyst_test.csv"
-  @timeit to "postprocess file" postprocess_file(infile, outfile, odesys, tspan, abundances)
-  @show to
-  println()
+  postprocess_file(infile, outfile, odesys, tspan, abundances)
+  # @show to
+  # println()
 end
 
 PROJECT_DIR =  "/home/sdeshmukh/Documents/graphCRNs/julia"
