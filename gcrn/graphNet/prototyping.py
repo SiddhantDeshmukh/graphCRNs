@@ -32,8 +32,8 @@ def tutorial():
 
 
 def main():
-  tutorial()
-  return
+  # tutorial()
+  graph_cnn()
 
 
 if __name__ == "__main__":

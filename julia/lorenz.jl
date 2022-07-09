@@ -1,9 +1,8 @@
 # Lorenz equations
 ##
-using DifferentialEquations, Plots, TimerOutputs, BenchmarkTools
-
-##
+using DifferentialEquations, Plots, TimerOutputs, BenchmarkTools, StatProfilerHTML
 const to = TimerOutput()
+##
 
 function lorenz(u, p, t)
   dx = 10.0 * (u[2] - u[1])
@@ -53,4 +52,4 @@ function main()
 end
 
 ##
-main()
+@profilehtml main()

@@ -5,3 +5,4 @@ out/**
 src/profiles/**
 julia/out/**
 julia/res/**
+julia/statprof/

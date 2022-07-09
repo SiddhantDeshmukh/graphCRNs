@@ -1,5 +1,7 @@
 using Catalyst, DifferentialEquations, ModelingToolkit, TimerOutputs
-using CSV, DelimitedFiles, Tables, Dates, DataStructures
+using CSV, DelimitedFiles, Tables, Dates, DataStructures, Profile, StatProfilerHTML
+
+Profile.init(; n=floor(Int, 1e8), delay=1e-6)
 
 const mass_hydrogen = 1.67262171e-24  # [g]
 const to = TimerOutput()
@@ -159,35 +161,45 @@ function evolve_system(odesys, u0, tspan, p; prob=nothing)
     @timeit to "make problem" prob = ODEProblem(odesys, u0, tspan, p)
     @timeit to "auto jac" de = modelingtoolkitize(prob)
     @timeit to "autojac problem" prob = ODEProblem(de, [], tspan, jac=true)
-    @timeit to "1st solve" sol = solve(prob, Rodas5(); saveeverystep=false)
+    @timeit to "1st solve" sol = solve(prob, Rodas5(); save_everystep=false)
     return prob, sol
   else
     @timeit to "remake problem" prob = remake(prob; u0=u0, p=p, tspan=tspan)
-    @timeit to "solve" @views return solve(prob, Rodas5(); saveeverystep=false)[end]
+    @timeit to "solve" @views return solve(prob, Rodas5(); save_everystep=false)[end]
   end
 end
 
 
 function run(to:: TimerOutput, odesys, iter, tspan, abundances)
-  number_densities = zeros(size(iter)[1], length(species(odesys)))
-  # @timeit to "main run" begin
+  @timeit to "create array" number_densities = zeros(size(iter)[1], length(species(odesys)))
+  @timeit to "main run" begin
     # First run
-    n = calculate_number_densities(iter[1, 1], abundances)
+    @timeit to "1st calc n" n = calculate_number_densities(iter[1, 1], abundances)
     u0vals = [n[str_replace(s)] for s in species(odesys)]
     u0 = Pair.(species(odesys), u0vals)
+<<<<<<< HEAD
     # TESTING
     prob = ODEProblem(odesys, u0, tspan, [iter[1, 2]])
     de = modelingtoolkitize(prob)
     prob = ODEProblem(de, [], tspan, jac=true)
-    solve(prob, Rodas5(); saveeverystep=false)
+    solve(prob, Rodas5(); save_everystep=false)
+    max_iter = 1000  # for profiling
     reset_timer!(to)
+=======
+    @timeit to "1st evolve system" prob, _ = evolve_system(odesys, u0, tspan, [iter[1, 2]]; prob=nothing)
+    # Loop
+>>>>>>> parent of cdf817f... lorenz oscillator benchmark
     @inbounds for i in 1:size(iter)[1]
+      if i > max_iter
+        return number_densities
+      end
       p = [iter[i, 2]]
-      n = calculate_number_densities(iter[i, 1], abundances)
+      @timeit to "calc n" n = calculate_number_densities(iter[i, 1], abundances)
       u0 = [n[str_replace(s)] for s in species(odesys)]
+<<<<<<< HEAD
       # @timeit to "remake problem" prob = remake(prob; u0=u0, p=p, tspan=tspan)
       remake(prob; u0=u0, p=p, tspan=tspan)
-      @timeit to "solve" number_densities[i, :] = solve(prob, Rodas5(); saveeverystep=false)[end]
+      @timeit to "solve" number_densities[i, :] = solve(prob, Rodas5(); save_everystep=false)[end]
     # end
     # END TESTING
     # @timeit to "1st evolve system" prob, _ = evolve_system(odesys, u0, tspan, [iter[1, 2]]; prob=nothing)
@@ -200,9 +212,13 @@ function run(to:: TimerOutput, odesys, iter, tspan, abundances)
     #   @timeit to "evolve system" number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
     #   # number_densities[i, :] = u0
     # end
+=======
+      # @views number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
+      @timeit to "evolve system" number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
+      # number_densities[i, :] = u0
+    end
+>>>>>>> parent of cdf817f... lorenz oscillator benchmark
   end
-  @show to
-  println()
 
   return number_densities
 end
@@ -214,25 +230,25 @@ end
 function postprocess_file(infile::String, outfile::String, odesys, tspan,
                           abundances::Dict)
     println("$(current_time()): Postprocessing from $(infile), output to $(outfile)")
-    arr = read_density_temperature_file(infile)
-    n = run(to, odesys, arr, tspan, abundances)
+    @timeit to "read rho-T file" arr = read_density_temperature_file(infile)
+    @timeit to "run" n = run(to, odesys, arr, tspan, abundances)
 
-    # header = [str_replace(s) for s in species(odesys)]
-    # @timeit to "create table" table = Tables.table(n; header=header)
-    # @timeit to "write csv" CSV.write(outfile, table; delim=',')
+    header = [str_replace(s) for s in species(odesys)]
+    @timeit to "create table" table = Tables.table(n; header=header)
+    @timeit to "write csv" CSV.write(outfile, table; delim=',')
 end
 
 function main(abundances::Dict, input_dir::String, output_dir::String,
               network_file::String)
   # @show abundances
-  rn = read_network_file(network_file)
-  odesys = convert(ODESystem, rn; combinatoric_ratelaws=false)
+  @timeit to "read network file" rn = read_network_file(network_file)
+  @timeit to "setup odesys" odesys = convert(ODESystem, rn; combinatoric_ratelaws=false)
   tspan = (1e-8, 1e6)
   infile = "$(input_dir)/rho_T_test.csv"
   outfile = "$(output_dir)/catalyst_test.csv"
-  postprocess_file(infile, outfile, odesys, tspan, abundances)
-  # @show to
-  # println()
+  @timeit to "postprocess file" postprocess_file(infile, outfile, odesys, tspan, abundances)
+  @show to
+  println()
 end
 
 PROJECT_DIR =  "/home/sdeshmukh/Documents/graphCRNs/julia"
@@ -242,4 +258,6 @@ out_dir = "$(PROJECT_DIR)/out"
 model_id = "d3t63g40mm00chem2"
 network_file = "$(network_dir)/cno.ntw"
 
-main(abundances, "$(res_dir)/test", "$(out_dir)/test", network_file)
+@profile main(abundances, "$(res_dir)/test", "$(out_dir)/test", network_file)
+
+statprofilehtml()
