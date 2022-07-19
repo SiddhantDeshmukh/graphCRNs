@@ -91,7 +91,8 @@ def metallicity_comparison_plot(network: Network, temperature: float,
    # Plot evolution at given temperature & density for 3 metallicities
    # [Fe/H] = 0.0, -2.0, -3.0
   times = np.logspace(-8, 6, num=1000)
-  fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, sharey=True)
+  fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, sharey=True,
+                           figsize=(4, 8))
   print("Metallicity comparison")
   for i, abundances in enumerate([mm00_abundances, mm20a04_abundances,
                                   mm30a04_abundances]):
@@ -109,7 +110,7 @@ def metallicity_comparison_plot(network: Network, temperature: float,
         line = axes[i].plot(np.log10(times), np.log10(n[j]), label=s)[0]
         axes[i].axvline(np.log10(eqm_times[j]), ls='--', c=line.get_color())
 
-  axes[1].legend(ncol=2)
+  axes[0].legend(ncol=2)
   axes[0].set_title("[Fe/H] = 0.0")
   axes[1].set_title("[Fe/H] = -2.0")
   axes[2].set_title("[Fe/H] = -3.0")
@@ -118,6 +119,7 @@ def metallicity_comparison_plot(network: Network, temperature: float,
   axes[1].set_ylabel(r"$\log{n}$ [cm$^{-3}$]")
   axes[2].set_ylabel(r"$\log{n}$ [cm$^{-3}$]")
   for ax in axes:
+    ax.xaxis.set_major_locator(MaxNLocator(7))
     ax.yaxis.set_major_locator(MaxNLocator(6))
 
   return fig, axes
@@ -129,7 +131,8 @@ def cemp_comparison_plot(network: Network, temperature: float,
   # Plot evolution at given temperature, density for [Fe/H] = -3.0 with
   # carbon enhancement models
   times = np.logspace(-8, 6, num=1000)
-  fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=True)
+  fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=True,
+                           figsize=(4, 8))
   print("CEMP comparison")
   for i, abundances in enumerate([mm30a04c20n20o04_abundances,
                                   mm30a04c20n20o20_abundances]):
@@ -146,23 +149,25 @@ def cemp_comparison_plot(network: Network, temperature: float,
       if s in species_to_plot:
         line = axes[i].plot(np.log10(times), np.log10(n[j]), label=s)[0]
         axes[i].axvline(np.log10(eqm_times[j]), ls='--', c=line.get_color())
-  axes[1].legend(ncol=2)
+  axes[0].legend(ncol=2)
   axes[0].set_title(r"C/O $= +1.33$")
   axes[1].set_title(r"C/O $= -0.27$")
   axes[1].set_xlabel(r"$\log{t}$ [s]")
   axes[0].set_ylabel(r"$\log{n}$ [cm$^{-3}$]")
   axes[1].set_ylabel(r"$\log{n}$ [cm$^{-3}$]")
   for ax in axes:
-    ax.yaxis.set_major_locator(MaxNLocator(prune='both', nbins=6))
+    ax.xaxis.set_major_locator(MaxNLocator(7))
+    ax.yaxis.set_major_locator(MaxNLocator(6))
+    # ax.yaxis.set_major_locator(MaxNLocator(prune='both', nbins=6))
 
   return fig, axes
 
 
 # Test case for plotting
-# evaluation_temperature = 3500
-# evaluation_density = 1e-8
-evaluation_temperature = 20000.
-evaluation_density = 10**(-8.)
+evaluation_temperature = 3500
+evaluation_density = 1e-8
+# evaluation_temperature = 20000.
+# evaluation_density = 10**(-8.)
 atol, rtol = 1e-30, 1e-6
 fig1, axes1 = metallicity_comparison_plot(network, evaluation_temperature,
                                           evaluation_density)
@@ -172,8 +177,8 @@ fig2, axes2 = cemp_comparison_plot(network, evaluation_temperature,
 print(len(network.reactions))
 
 out_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/writeup/figs"
-# fig1.savefig(f"{out_dir}/metallicity_comparison.png", bbox_inches="tight")
-# fig2.savefig(f"{out_dir}/cemp_comparison.png", bbox_inches="tight")
+fig1.savefig(f"{out_dir}/metallicity_comparison.png", bbox_inches="tight")
+fig2.savefig(f"{out_dir}/cemp_comparison.png", bbox_inches="tight")
 plt.show()
 exit()
 

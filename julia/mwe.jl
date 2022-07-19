@@ -1,8 +1,6 @@
 using Catalyst, DifferentialEquations, ModelingToolkit, TimerOutputs
 using CSV, DelimitedFiles, Tables, Dates, DataStructures, Profile, StatProfilerHTML
 
-Profile.init(; n=floor(Int, 1e8), delay=1e-6)
-
 const mass_hydrogen = 1.67262171e-24  # [g]
 const to = TimerOutput()
 const abundances = Dict(
@@ -172,23 +170,20 @@ end
 
 function run(to:: TimerOutput, odesys, iter, tspan, abundances)
   @timeit to "create array" number_densities = zeros(size(iter)[1], length(species(odesys)))
+  solver = Rodas4()
+  # solver = Imp
   @timeit to "main run" begin
     # First run
     @timeit to "1st calc n" n = calculate_number_densities(iter[1, 1], abundances)
     u0vals = [n[str_replace(s)] for s in species(odesys)]
     u0 = Pair.(species(odesys), u0vals)
-<<<<<<< HEAD
     # TESTING
     prob = ODEProblem(odesys, u0, tspan, [iter[1, 2]])
     de = modelingtoolkitize(prob)
     prob = ODEProblem(de, [], tspan, jac=true)
-    solve(prob, Rodas5(); save_everystep=false)
-    max_iter = 1000  # for profiling
+    solve(prob, solver; save_everystep=false)
+    max_iter = 10  # for profiling
     reset_timer!(to)
-=======
-    @timeit to "1st evolve system" prob, _ = evolve_system(odesys, u0, tspan, [iter[1, 2]]; prob=nothing)
-    # Loop
->>>>>>> parent of cdf817f... lorenz oscillator benchmark
     @inbounds for i in 1:size(iter)[1]
       if i > max_iter
         return number_densities
@@ -196,10 +191,9 @@ function run(to:: TimerOutput, odesys, iter, tspan, abundances)
       p = [iter[i, 2]]
       @timeit to "calc n" n = calculate_number_densities(iter[i, 1], abundances)
       u0 = [n[str_replace(s)] for s in species(odesys)]
-<<<<<<< HEAD
       # @timeit to "remake problem" prob = remake(prob; u0=u0, p=p, tspan=tspan)
       remake(prob; u0=u0, p=p, tspan=tspan)
-      @timeit to "solve" number_densities[i, :] = solve(prob, Rodas5(); save_everystep=false)[end]
+      @timeit to "solve" number_densities[i, :] = solve(prob, solver; save_everystep=false)[end]
     # end
     # END TESTING
     # @timeit to "1st evolve system" prob, _ = evolve_system(odesys, u0, tspan, [iter[1, 2]]; prob=nothing)
@@ -212,14 +206,8 @@ function run(to:: TimerOutput, odesys, iter, tspan, abundances)
     #   @timeit to "evolve system" number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
     #   # number_densities[i, :] = u0
     # end
-=======
-      # @views number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
-      @timeit to "evolve system" number_densities[i, :] = evolve_system(odesys, u0, tspan, p; prob=prob)
-      # number_densities[i, :] = u0
-    end
->>>>>>> parent of cdf817f... lorenz oscillator benchmark
   end
-
+  end
   return number_densities
 end
 
@@ -258,6 +246,4 @@ out_dir = "$(PROJECT_DIR)/out"
 model_id = "d3t63g40mm00chem2"
 network_file = "$(network_dir)/cno.ntw"
 
-@profile main(abundances, "$(res_dir)/test", "$(out_dir)/test", network_file)
-
-statprofilehtml()
+main(abundances, "$(res_dir)/test", "$(out_dir)/test", network_file)
