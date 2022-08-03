@@ -24,3 +24,7 @@ def find_equilibrium(evolution_times: np.ndarray,
     eqm_number_densities[i] = number_densities[threshold_idx, i]
 
   return eqm_times, eqm_number_densities
+
+
+def find_equilibrium_interpolate(evolution_times: np.ndarray,
+                                 number_densities: np.ndarray, threshold=1e-6):

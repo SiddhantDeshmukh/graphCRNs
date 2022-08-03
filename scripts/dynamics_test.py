@@ -21,9 +21,7 @@ def densities_from_abundances(abundances, gas_density, return_array=False):
   # Convert abundances to number densities by means of the hydrogen number
   # density from the gas density
   # Epsilon notation where H normalised to 1
-  abu_eps_lin = {
-      key: 10**(val - 12) for (key, val) in abundances.items()
-  }
+  abu_eps_lin = {key: 10**(val - 12) for (key, val) in abundances.items()}
 
   abundances_linear = {
       key: 10**val for (key, val) in abundances.items()
@@ -163,48 +161,49 @@ def cemp_comparison_plot(network: Network, temperature: float,
   return fig, axes
 
 
-# Test case for plotting
-evaluation_temperature = 3500
-evaluation_density = 1e-8
-# evaluation_temperature = 20000.
-# evaluation_density = 10**(-8.)
-atol, rtol = 1e-30, 1e-6
-fig1, axes1 = metallicity_comparison_plot(network, evaluation_temperature,
-                                          evaluation_density)
-fig2, axes2 = cemp_comparison_plot(network, evaluation_temperature,
-                                   evaluation_density)
+if __name__ == "__main__":
+  # Test case for plotting
+  evaluation_temperature = 3500
+  evaluation_density = 1e-8
+  # evaluation_temperature = 20000.
+  # evaluation_density = 10**(-8.)
+  atol, rtol = 1e-30, 1e-6
+  fig1, axes1 = metallicity_comparison_plot(network, evaluation_temperature,
+                                            evaluation_density)
+  fig2, axes2 = cemp_comparison_plot(network, evaluation_temperature,
+                                     evaluation_density)
 
-print(len(network.reactions))
+  print(len(network.reactions))
 
-out_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/writeup/figs"
-fig1.savefig(f"{out_dir}/metallicity_comparison.png", bbox_inches="tight")
-fig2.savefig(f"{out_dir}/cemp_comparison.png", bbox_inches="tight")
-plt.show()
-exit()
+  out_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/writeup/figs"
+  fig1.savefig(f"{out_dir}/metallicity_comparison.png", bbox_inches="tight")
+  fig2.savefig(f"{out_dir}/cemp_comparison.png", bbox_inches="tight")
+  plt.show()
+  exit()
 
-# print(len(network.species))
-# print(len(network.reactions))
+  # print(len(network.species))
+  # print(len(network.reactions))
 
-# print(network.species)
-# print(eqm_times)
+  # print(network.species)
+  # print(eqm_times)
 
-for j, s in enumerate(network.species):
-  axes[0].plot(np.log10(times), np.log10(n[j]))
-  axes[1].plot(np.log10(times[:-1]), np.log10(np.abs(np.diff(n[j]))), label=s)
-  axes[2].plot(np.log10(times[:-1]), np.log10(1. - ratio(n[j], axis=0)))
+  for j, s in enumerate(network.species):
+    axes[0].plot(np.log10(times), np.log10(n[j]))
+    axes[1].plot(np.log10(times[:-1]), np.log10(np.abs(np.diff(n[j]))), label=s)
+    axes[2].plot(np.log10(times[:-1]), np.log10(1. - ratio(n[j], axis=0)))
 
-  # axes[0].axvline(np.log10(eqm_times[j]), c=colors[j], ls='--')
+    # axes[0].axvline(np.log10(eqm_times[j]), c=colors[j], ls='--')
 
-axes[1].axhline(np.log10(atol), c='k', ls=':')
-axes[2].axhline(np.log10(rtol), c='k', ls=':')
+  axes[1].axhline(np.log10(atol), c='k', ls=':')
+  axes[2].axhline(np.log10(rtol), c='k', ls=':')
 
-for ax in axes:
-  ax.plot(np.log10(times), [0.] * len(times), ls='none', marker='o', c='k')
+  for ax in axes:
+    ax.plot(np.log10(times), [0.] * len(times), ls='none', marker='o', c='k')
 
-axes[1].legend()
-axes[2].set_xlabel("log time [s]")
-axes[0].set_ylabel(r"log n [cm$^{-3}$]")
-axes[1].set_ylabel(r"diff log n [cm$^{-3}$]")
-axes[2].set_ylabel(r"ratio log n [cm$^{-3}$]")
+  axes[1].legend()
+  axes[2].set_xlabel("log time [s]")
+  axes[0].set_ylabel(r"log n [cm$^{-3}$]")
+  axes[1].set_ylabel(r"diff log n [cm$^{-3}$]")
+  axes[2].set_ylabel(r"ratio log n [cm$^{-3}$]")
 
-plt.show()
+  plt.show()
