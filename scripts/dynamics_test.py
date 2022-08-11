@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from abundances import *
+from gcrn.timescales import find_equilibrium
 
 
 mass_hydrogen = 1.67262171e-24  # [g]
@@ -97,8 +98,8 @@ def metallicity_comparison_plot(network: Network, temperature: float,
     n = calculate_number_densities(abundances, np.log10(density))
     network.temperature = temperature
     network.number_densities = n
-    n, eqm_times = network.solve(times, eqm_tolerance=1e-5, n_subtime=10,
-                                 return_eqm_times=True)
+    n = network.solve(times, n_subtime=1)
+    eqm_times, _ = find_equilibrium(times, n, threshold=1e-6)
     n = n.T
     print(f"Abundance {i}")
     print({s: f"{t:.1f}" for s, t in zip(network.species, eqm_times)
@@ -137,8 +138,8 @@ def cemp_comparison_plot(network: Network, temperature: float,
     n = calculate_number_densities(abundances, np.log10(density))
     network.temperature = temperature
     network.number_densities = n
-    n, eqm_times = network.solve(times, eqm_tolerance=1e-5, n_subtime=10,
-                                 return_eqm_times=True)
+    n = network.solve(times, n_subtime=1)
+    eqm_times, _ = find_equilibrium(times, n, threshold=1e-6)
     n = n.T
     print(f"Abundance {i}")
     print({s: f"{t:.1f}" for s, t in zip(network.species, eqm_times)
@@ -175,9 +176,9 @@ if __name__ == "__main__":
 
   print(len(network.reactions))
 
-  out_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/writeup/figs"
-  fig1.savefig(f"{out_dir}/metallicity_comparison.png", bbox_inches="tight")
-  fig2.savefig(f"{out_dir}/cemp_comparison.png", bbox_inches="tight")
+  # out_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/writeup/figs"
+  # fig1.savefig(f"{out_dir}/metallicity_comparison.png", bbox_inches="tight")
+  # fig2.savefig(f"{out_dir}/cemp_comparison.png", bbox_inches="tight")
   plt.show()
   exit()
 
