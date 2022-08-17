@@ -68,17 +68,32 @@ def main():
 
   G = nx.MultiDiGraph()
   G.add_edges_from(edges)
-  plt.figure()
+  fig, ax = plt.subplots()
+  # Layout
   options = {
-      "node_color": "orange",
-      "with_labels": True,
-      'font_size': 11,
+      # "node_color": "orange",
+      "node_size": 500,
+      # "with_labels": True,
+      # 'font_size': 11,
       'linewidths': 1,
-      # 'width': 0
-
+      "edgecolors": "black",
+      # 'width': 1
   }
-
-  nx.draw_shell(G,  **options)
+  pos = nx.shell_layout(G)
+  # General edges and labels
+  nx.draw_networkx_edges(G, pos, ax=ax, arrowsize=1)
+  nx.draw_networkx_labels(G, pos, ax=ax)
+  # Atoms
+  nx.draw_networkx_nodes(G, pos, ax=ax, nodelist=["H", "C", "N", "O"],
+                         node_color="tomato", **options)
+  # Important Molecules
+  nx.draw_networkx_nodes(G, pos, ax=ax, nodelist=["C2", "OH", "CO", "CH", "CN"],
+                         node_color="tab:cyan", **options)
+  # Other Molecules
+  nx.draw_networkx_nodes(G, pos, ax=ax, nodelist=["H2", "N2", "O2", "NH", "NO"],
+                         node_color="lightgrey", **options)
+  plt.tight_layout()
+  plt.savefig("../out/figs/cno_diagram.png")
   plt.show()
 
 
