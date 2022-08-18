@@ -8,6 +8,11 @@ import re
 from collections import Counter
 
 
+# TODO:
+# Move these helper functions into a different script and write a small plotting
+# library for network visualisation (nice features like auto-colouring atomic
+# and molecular features with override options)
+
 # ==============================================================================
 # https://codereview.stackexchange.com/questions/232630/parsing-molecular-formula/232671#232671
 def parse_molecule(molecule):
@@ -35,9 +40,8 @@ def parse_molecule(molecule):
 def tokenize_molecule(molecule):
   return re.findall('[A-Z][a-z]?|\d+|.', molecule)
 
+
 # ==============================================================================
-
-
 def shares_keys(d1: Dict, d2: Dict):
   # Return 'True' if any keys in 'd1' match those in 'd2' (one-way dumb check)
   # and 'False' otherwise
@@ -45,7 +49,10 @@ def shares_keys(d1: Dict, d2: Dict):
 
 
 def main():
-  network = Network.from_krome_file("../res/cno.ntw")
+  PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs"
+  RES_DIR = f"{PROJECT_DIR}/res"
+  FIG_DIR = f"{PROJECT_DIR}/out/figs"
+  network = Network.from_krome_file(f"{RES_DIR}/cno.ntw")
   species = network.species
 
   # For plotting, create a smaller graph with single reaction pathways for
@@ -92,8 +99,10 @@ def main():
   # Other Molecules
   nx.draw_networkx_nodes(G, pos, ax=ax, nodelist=["H2", "N2", "O2", "NH", "NO"],
                          node_color="lightgrey", **options)
+  # Plot aesthetics
+  ax.axis("off")
   plt.tight_layout()
-  plt.savefig("../out/figs/cno_diagram.png")
+  plt.savefig(f"{FIG_DIR}/cno_diagram.png")
   plt.show()
 
 
