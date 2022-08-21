@@ -63,7 +63,8 @@ def plot_differences(model, gcrn_n):
 
 
 def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
-                             out_dir: str, num_snap_skip=1):
+                             out_dir: str, snap_out_idxs=None,
+                             num_snap_skip=1):
   def reset(loader):
     loader.load_first_model()
     loader.current_model.first_snapshot()
@@ -73,13 +74,15 @@ def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
   total_snaps = loader.num_models * \
       loader.current_model.final_snap_idx - num_snap_skip
   snap_out_frequency = total_snaps // num_snaps_out
-  snap_out_idxs = list(range(num_snap_skip, total_snaps, snap_out_frequency))
+  if not snap_out_idxs:
+    snap_out_idxs = list(range(num_snap_skip, total_snaps, snap_out_frequency))
   system(f"mkdir -p {out_dir}")
 
   for model in loader:
     model = loader.current_model
     for _ in range(model.final_snap_idx):
       if current_snap_num >= num_snap_skip and current_snap_num in snap_out_idxs:
+        print(f"Writing snap {current_snap_num}")
         density, temperature = model['rho'], model['temperature']
         arr = np.array([density.flatten(), temperature.flatten()]).T
         snap_num = str(current_snap_num).zfill(3)
@@ -112,9 +115,14 @@ def main():
   num_snaps_out = 20  # number of equidistant snapshots to pick
   num_snap_skip = 10  # number of snaps to skip when choosing output
 
+  # To redo!
+  am_snap_out_idxs = [45, 73, 108, 136]
+  ac_snap_out_idxs = [28, 46, 64, 82, 100, 118]
+
   if write_subsample:
     save_subsample_snapshots(loader, num_snaps_out,
                              f"{res_dir}/{loader.current_model.id}",
+                             snap_out_idxs=am_snap_out_idxs,
                              num_snap_skip=num_snap_skip)
   else:
     # Write single
