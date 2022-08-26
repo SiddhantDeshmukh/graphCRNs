@@ -337,17 +337,18 @@ PROJECT_DIR =  "/home/sdeshmukh/Documents/graphCRNs/julia"
 network_dir = "/home/sdeshmukh/Documents/graphCRNs/res"
 res_dir = "$(PROJECT_DIR)/res"
 out_dir = "$(PROJECT_DIR)/out"
-model_id = "d3t63g40mm00chem2"
+# model_id = "d3t63g40mm00chem2"
 # model_id = "d3t63g40mm20chem2"
-# model_id = "d3t63g40mm30chem2"
+model_id = "d3t63g40mm30chem2"
 # model_id = "d3t63g40mm30c20n20o04chem2"
-network_file = "$(network_dir)/cno.ntw"
+# network_file = "$(network_dir)/cno.ntw"
+network_file = "$(network_dir)/solar_co_w05.ntw"
 
 ##
 reset_timer!(to)
 # @btime main(mm30a04c20n20o04_abundances, "$(res_dir)/test", "$(out_dir)/test", network_file;
 #     precompile=true)
-main(mm00_abundances, "$(res_dir)/test",
+main(mm30a04_abundances, "$(res_dir)/test",
               "$(out_dir)/test", network_file;
               precompile=true)
 
@@ -359,9 +360,9 @@ main(mm00_abundances, "$(res_dir)/test",
 # end
 
 ##
-reset_timer!(to)
-main(mm00_abundances, "$(res_dir)/$(model_id)", "$(out_dir)/$(model_id)",
-    network_file; precompile=false)
+# reset_timer!(to)
+# main(mm00_abundances, "$(res_dir)/$(model_id)", "$(out_dir)/$(model_id)",
+#     network_file; precompile=false)
 
 # TODO:
 # - add types to all funcargs for speeeeeeed

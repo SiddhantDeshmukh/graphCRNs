@@ -6,6 +6,7 @@ import numpy as np
 from uio_tools.uio_loader import UIOLoader
 import matplotlib.pyplot as plt
 import pandas as pd
+from sadchem.io.interface.gcrn_uio import load_corresponding_snapshot
 
 
 def read_np_output(infile: str, ncols=2) -> np.ndarray:
@@ -77,32 +78,26 @@ def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
   if not snap_out_idxs:
     snap_out_idxs = list(range(num_snap_skip, total_snaps, snap_out_frequency))
   system(f"mkdir -p {out_dir}")
+  for snap_num in snap_out_idxs:
+    model = load_corresponding_snapshot(loader, snap_num)
+    print(f"Writing snap {snap_num}")
+    density, temperature = model['rho'], model['temperature']
+    arr = np.array([density.flatten(), temperature.flatten()]).T
+    current_snap_num = str(snap_num).zfill(3)
+    outfile = f"rho_T_{current_snap_num}.csv"
+    write_array(f"{out_dir}/{outfile}", arr)
+    written_files += 1
+    print(f"{written_files}/{num_snaps_out} files written to {out_dir}.")
 
-  for model in loader:
-    model = loader.current_model
-    for _ in range(model.final_snap_idx):
-      if current_snap_num >= num_snap_skip and current_snap_num in snap_out_idxs:
-        print(f"Writing snap {current_snap_num}")
-        density, temperature = model['rho'], model['temperature']
-        arr = np.array([density.flatten(), temperature.flatten()]).T
-        snap_num = str(current_snap_num).zfill(3)
-        outfile = f"rho_T_{snap_num}.csv"
-        write_array(f"{out_dir}/{outfile}", arr)
-        written_files += 1
-        print(f"{written_files}/{num_snaps_out} files written to {out_dir}.")
-
-        if written_files == num_snaps_out:
-          reset(loader)
-          return
-
-      model.next_snapshot()
-      current_snap_num += 1
+    if written_files == num_snaps_out:
+      reset(loader)
+      return
 
   reset(loader)
 
 
 def main():
-  write_subsample = False
+  write_subsample = True
   test_case = True  # equivalent to 'precompile' option in the Julia version
   plot = False
 
@@ -110,7 +105,7 @@ def main():
   res_dir = f"{PROJECT_DIR}/res"
   out_dir = f"{PROJECT_DIR}/out"
   model_dir = "/media/sdeshmukh/Crucial X6/cobold_runs/chem"
-  model_dir += "/d3t63g40mm00chem2"
+  model_dir += "/d3t63g40mm30c20n20o04chem2"
   loader = UIOLoader(model_dir)
   num_snaps_out = 20  # number of equidistant snapshots to pick
   num_snap_skip = 10  # number of snaps to skip when choosing output
@@ -122,9 +117,10 @@ def main():
   if write_subsample:
     save_subsample_snapshots(loader, num_snaps_out,
                              f"{res_dir}/{loader.current_model.id}",
-                             snap_out_idxs=am_snap_out_idxs,
+                             snap_out_idxs=ac_snap_out_idxs,
                              num_snap_skip=num_snap_skip)
-  else:
+
+  if test_case:
     # Write single
     for i in range(3):
       loader.load_next_model()
@@ -132,39 +128,37 @@ def main():
     model = loader.current_model
     for i in range(5):
       model.next_snapshot()
+    # Sample uniform points from model
+    # nz, ny, nx = 10, 5, 7
+    nz, ny, nx = 30, 10, 14
+    original_shape = model['rho'].shape
+    idxs = product(*[np.linspace(0, original_shape[i] - 1, num=n, dtype=int)
+                     for i, n in enumerate([nz, ny, nx])])
+    density = np.zeros((nz * ny * nx))
+    temperature = np.zeros((nz * ny * nx))
+    for i, p in enumerate(idxs):
+      density[i] = model['rho'][p]
+      temperature[i] = model['temperature'][p]
 
-    if test_case:
-      # Sample uniform points from model
-      # nz, ny, nx = 10, 5, 7
-      nz, ny, nx = 30, 10, 14
-      original_shape = model['rho'].shape
-      idxs = product(*[np.linspace(0, original_shape[i] - 1, num=n, dtype=int)
-                       for i, n in enumerate([nz, ny, nx])])
-      density = np.zeros((nz * ny * nx))
-      temperature = np.zeros((nz * ny * nx))
-      for i, p in enumerate(idxs):
-        density[i] = model['rho'][p]
-        temperature[i] = model['temperature'][p]
+    arr = np.array([density, temperature]).T
+    outfile = "rho_T_test.csv"
+  else:
+    # Read full from model
+    density, temperature = model['rho'], model['temperature']
+    arr = np.array([density.flatten(), temperature.flatten()]).T
+    outfile = "rho_T.csv"
 
-      arr = np.array([density, temperature]).T
-      outfile = "rho_T_test.csv"
-    else:
-      # Read full from model
-      density, temperature = model['rho'], model['temperature']
-      arr = np.array([density.flatten(), temperature.flatten()]).T
-      outfile = "rho_T.csv"
+  print(f"Array output shape: {arr.shape}")
 
-    print(f"Array output shape: {arr.shape}")
+  write_array(f"{res_dir}/test/{outfile}", arr)
+  print(f"Wrote to {res_dir}/test/{outfile}")
+  # reshaped_arr = read_np_output(f"{res_dir}/{outfile}")
+  # print(f"Array input shape: {reshaped_arr.shape}")
 
-    write_array(f"{res_dir}/test/{outfile}", arr)
-    print(f"Wrote to {res_dir}/test/{outfile}")
-    # reshaped_arr = read_np_output(f"{res_dir}/{outfile}")
-    # print(f"Array input shape: {reshaped_arr.shape}")
-
-    if plot:
-      number_densities = read_number_densities(f"{out_dir}/catalyst.csv")
-      fig, axes = plot_differences(model, number_densities)
-      plt.show()
+  if plot:
+    number_densities = read_number_densities(f"{out_dir}/catalyst.csv")
+    fig, axes = plot_differences(model, number_densities)
+    plt.show()
 
 
 if __name__ == "__main__":

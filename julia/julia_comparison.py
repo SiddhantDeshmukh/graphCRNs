@@ -1,4 +1,5 @@
 # Compare Julia to Python GCRN
+import os
 from typing import Dict
 import numpy as np
 from gcrn.helper_functions import setup_number_densities
@@ -55,14 +56,18 @@ def calculate_number_densities(abundances: Dict, log_gas_density: float):
 def main():
   abundances = {
       "H": 12,
+      "M": 11,
+      "C": 5.41,  # mm30a04
+      "N": 4.80,  # mm30a04
+      "O": 6.06,  # mm30a04
+      # "C": 8.39,  # solar
+      # "N": 7.83,  # solar
+      # "O": 8.66,  # solar
+      # "C": 6.41,  # mm20a04
+      # "N": 5.80,  # mm20a04
+      # "O": 7.06,  # mm20a04
       "H2": -4,
       "OH": -12,
-      # "C": 8.39,  # solar
-      # "O": 8.66,  # solar
-      # "N": 7.83,  # solar
-      "C": 6.41,  # mm20a04
-      "O": 7.06,  # mm20a04
-      "N": 5.80,  # mm20a04
       "CH": -12,
       "CO": -12,
       "CN": -12,
@@ -71,26 +76,22 @@ def main():
       "C2": -12,
       "O2": -12,
       "N2": -12,
-      "M": 11,
   }
 
   # network = Network.from_krome_file('../res/solar_co_w05.ntw')
-  # network = Network.from_krome_file('../res/cno.ntw')
-  # # network = Network.from_krome_file('../res/mass_action.ntw')
+  network = Network.from_krome_file('../res/cno.ntw')
+  # network = Network.from_krome_file('../res/mass_action.ntw')
   # densities = np.logspace(-12, -6., num=20)
   # temperatures = np.linspace(1000., 15000., num=20)
-  # # Load from file
-  # arr = np.loadtxt('./res/rho_T_test.csv', delimiter=',')
-  # densities, temperatures = arr[:, 0], arr[:, 1]
+  # Load from file
+  arr = np.loadtxt('./res/test/rho_T_test.csv', delimiter=',')
+  densities, temperatures = arr[:, 0], arr[:, 1]
   # number_densities = np.zeros((len(densities), len(network.species)))
   # times = np.linspace(1e-8, 1e6, num=1000)
   # start_time = time.time()
   # for i, (density, temperature) in enumerate(zip(densities, temperatures)):
   #   network.number_densities = calculate_number_densities(abundances,
   #                                                         np.log10(density))
-  #   if i == 0:
-  #     print(network.number_densities_dict)
-  #     print(density)
   #   network.temperature = temperature
   #   number_densities[i] = network.solve(times, n_subtime=1)[-1]
   # number_densities[i] = network.number_densities  # don't solve!
@@ -100,27 +101,37 @@ def main():
   # print(f"Total time: {(end_time - start_time):.2f} [s]")
 
   # print(number_densities.shape)
-  # np.savetxt('./out/gcrn_test.csv', number_densities, delimiter=',',
+  # np.savetxt('./out/test/gcrn_test.csv', number_densities, delimiter=',',
   #            header=','.join(network.species), comments='')
 
   # Plot differences between Python and Julia
-  df_python = pd.read_csv('./out/gcrn_test.csv', delimiter=',')
-  df_julia = pd.read_csv('./out/catalyst_test.csv', delimiter=',')
-
-  fig, axes = plt.subplots(3, 3)
-  for i, key in enumerate(df_python.keys()):
-    i_x, i_y = i // 3, i % 3
-    # axes[i_x, i_y].plot(np.log10(df_python[key]), ls='none', marker='o')
-    # axes[i_x, i_y].plot(np.log10(df_julia[key]), ls='-', label=key)
-    difference = np.log10(df_python[key]) - np.log10(df_julia[key])
-    # mean_difference = np.mean(np.abs(difference))
-    mean_difference = np.median(np.abs(difference))
-    axes[i_x, i_y].plot(difference,  # quick calc shows 1e-10 numerics
-                        label=f"{key}\nMedian Diff = {mean_difference:1.3e}")
-    axes[i_x, i_y].axhline(c='k', ls=':')
-    # axes[i_x, i_y].set_ylim(-1e-5, 1e-5)
-
-    axes[i_x, i_y].legend()
+  files = [f"./out/test/{f}" for f in os.listdir('./out/test')]
+  skip_solvers = ["bdf", "trbdf2", "rodas5", "rosenbrock23"]
+  df_compare = pd.read_csv("./out/test/catalyst_test_rodas5.csv", delimiter=",")
+  fig, axes = plt.subplots(4, 4, figsize=(12, 12))
+  for file_ in files:
+    print(file_)
+    df = pd.read_csv(file_, delimiter=',')
+    solver = file_.split('_')[-1].split('.')[0]
+    if solver in skip_solvers:
+      continue
+    for i, key in enumerate(sorted(df.keys())):
+      i_x, i_y = i // 4, i % 4
+      # axes[i_x, i_y].plot(np.log10(densities), np.log10(df[key]), ls='none',
+      #                     marker='o', mfc="none", ms=3, label=solver)
+      # difference = df[key] - df_compare[key]
+      difference = np.log10(np.abs((df[key] - df_compare[key]) / df_compare[key]))
+      line = axes[i_x, i_y].plot(np.log10(densities), difference,
+                          ls='none', marker='o', mfc="none", ms=3, label=solver)
+      axes[i_x, i_y].axhline(np.median(difference), ls='--', c=line[-1].get_color())
+  for i, key in enumerate(df.keys()):
+    i_x, i_y = i // 4, i % 4
+    axes[i_x, i_y].set_xlabel("Log Density (cgs)")
+    axes[i_x, i_y].set_ylabel(key)
+    axes[i_x, i_y].axhline(ls=':', c='k')
+    # axes[i_x, i_y].set_ylim(-0.02, 0.02)
+  
+  axes[3, 2].legend()
 
   plt.show()
 
