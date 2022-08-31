@@ -97,28 +97,23 @@ def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
 
 
 def main():
-  write_subsample = True
   test_case = True  # equivalent to 'precompile' option in the Julia version
+  write_subsample = True
   plot = False
 
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs/julia"
   res_dir = f"{PROJECT_DIR}/res"
   out_dir = f"{PROJECT_DIR}/out"
   model_dir = "/media/sdeshmukh/Crucial X6/cobold_runs/chem"
+  # model_dir += "/d3t63g40mm00chem2"
+  # model_dir += "/d3t63g40mm20chem2"
+  # model_dir += "/d3t63g40mm30chem2"
+  # model_dir += "/d3t63g40mm30c20n20o20chem2"
   model_dir += "/d3t63g40mm30c20n20o04chem2"
   loader = UIOLoader(model_dir)
   num_snaps_out = 20  # number of equidistant snapshots to pick
-  num_snap_skip = 10  # number of snaps to skip when choosing output
+  num_snap_skip = 5  # number of snaps to skip when choosing output
 
-  # To redo!
-  am_snap_out_idxs = [45, 73, 108, 136]
-  ac_snap_out_idxs = [28, 46, 64, 82, 100, 118]
-
-  if write_subsample:
-    save_subsample_snapshots(loader, num_snaps_out,
-                             f"{res_dir}/{loader.current_model.id}",
-                             snap_out_idxs=ac_snap_out_idxs,
-                             num_snap_skip=num_snap_skip)
 
   if test_case:
     # Write single
@@ -147,6 +142,11 @@ def main():
     density, temperature = model['rho'], model['temperature']
     arr = np.array([density.flatten(), temperature.flatten()]).T
     outfile = "rho_T.csv"
+
+  if write_subsample:
+    save_subsample_snapshots(loader, num_snaps_out,
+                             f"{res_dir}/{loader.current_model.id}",
+                             num_snap_skip=num_snap_skip)
 
   print(f"Array output shape: {arr.shape}")
 

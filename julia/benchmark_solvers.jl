@@ -232,10 +232,10 @@ network_file = "$(network_dir)/cno.ntw"
 abundances = mm30a04_abundances
 @show abundances
 solver_dict = Dict(
-  CVODE_BDF() => "cvode_bdf",  # bad precision
+  # CVODE_BDF() => "cvode_bdf",  # bad precision
   Rodas5() => "rodas5",
-  Rosenbrock23() => "rosenbrock23",
-  TRBDF2() => "trbdf2",
+  # Rosenbrock23() => "rosenbrock23",
+  # TRBDF2() => "trbdf2",
   radau() => "radau",
   radau5() => "radau5",
   ImplicitEulerExtrapolation() => "ImplicitEulerExtpl",

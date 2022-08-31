@@ -313,7 +313,7 @@ function main(abundances::Dict, input_dir::String, output_dir::String,
               network_file::String, solver; precompile=true)
   rn = read_network_file(network_file)
   odesys = convert(ODESystem, rn; combinatoric_ratelaws=false)
-  tspan = (1e-6, 1e5)
+  tspan = (1e-8, 1e6)
   if (precompile)  # single file test case
     infile = "$(input_dir)/rho_T_test.csv"
     outfile = "$(output_dir)/catalyst_test.csv"
