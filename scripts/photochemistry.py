@@ -207,21 +207,21 @@ def main():
                                                           np.log10(rho))
   # Solve photochem network
   print(len(network_photo.reactions))
-  n = network_photo.solve(times, n_subtime=1)
+  n_photo = network_photo.solve(times, n_subtime=1)
   colours = []
   for j, s in enumerate(species):
     # Photo in lines
-    l = axes.plot(np.log10(times), np.log10(n[:, j]))
+    l = axes.plot(np.log10(times), np.log10(n_photo[:, j]))
     colours.append(l[0].get_color())
 
   # Solve kinetic-only network
   print(len(network_kinetic.reactions))
-  n = network_kinetic.solve(times, n_subtime=1)
+  n_kinetic = network_kinetic.solve(times, n_subtime=1)
   # Kinetic in points
   for j, s in enumerate(species):
     # Photo in lines
-    axes.plot(np.log10(times), np.log10(n[:, j]), label=s, ls='none', marker='o',
-              mfc=colours[j], c='k')
+    axes.plot(np.log10(times), np.log10(n_kinetic[:, j]), label=s, ls='none',
+              marker='o', mfc=colours[j], c='k')
 
   axes.legend()
   plt.show()

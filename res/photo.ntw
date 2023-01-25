@@ -111,6 +111,11 @@
 9003,CH,C,H,10,41000,1.08d-07,weak
 9004,OH,O,H,10,41000,2.24d-08,weak
 9005,CN,C,N,10,41000,9.96d-11,weak
+# 9001,CO,C,O,10,41000,8.09d-1,weak
+# 9002,C2,C,C,10,41000,9.56d-1,weak
+# 9003,CH,C,H,10,41000,1.08d-1,weak
+# 9004,OH,O,H,10,41000,2.24d-1,weak
+# 9005,CN,C,N,10,41000,9.96d-1,weak
 #
 # Collisional disassociation
 @format:idx,R,R,P,P,P,Tmin,Tmax,rate,limit
