@@ -65,7 +65,7 @@ def plot_differences(model, gcrn_n):
 
 def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
                              out_dir: str, snap_out_idxs=None,
-                             num_snap_skip=1):
+                             num_snap_skip=1, has_full_mean_mismatch=False):
   def reset(loader):
     loader.load_first_model()
     loader.current_model.first_snapshot()
@@ -78,8 +78,21 @@ def save_subsample_snapshots(loader: UIOLoader, num_snaps_out: int,
   if not snap_out_idxs:
     snap_out_idxs = list(range(num_snap_skip, total_snaps, snap_out_frequency))
   system(f"mkdir -p {out_dir}")
+  model_out_dir = out_dir.replace("/res/", "/out/")
+  system(f"mkdir -p {model_out_dir}")
   for snap_num in snap_out_idxs:
-    model = load_corresponding_snapshot(loader, snap_num)
+    if has_full_mean_mismatch:
+      # Full and mean file data are at different cadences
+      # Often full file entry for every 10 mean files
+      # Just load the corresponding model
+      loader.load_first_model()
+      for i in range(snap_num):
+        loader.load_next_model()
+
+      model = loader.current_model
+
+    else:
+      model = load_corresponding_snapshot(loader, snap_num)
     print(f"Writing snap {snap_num}")
     density, temperature = model['rho'], model['temperature']
     arr = np.array([density.flatten(), temperature.flatten()]).T
@@ -104,61 +117,89 @@ def main():
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs/julia"
   res_dir = f"{PROJECT_DIR}/res"
   out_dir = f"{PROJECT_DIR}/out"
-  model_dir = "/media/sdeshmukh/Crucial X6/cobold_runs/chem"
   # model_dir += "/d3t63g40mm00chem2"
   # model_dir += "/d3t63g40mm20chem2"
   # model_dir += "/d3t63g40mm30chem2"
   # model_dir += "/d3t63g40mm30c20n20o20chem2"
-  model_dir += "/d3t63g40mm30c20n20o04chem2"
-  loader = UIOLoader(model_dir)
-  num_snaps_out = 20  # number of equidistant snapshots to pick
-  num_snap_skip = 5  # number of snaps to skip when choosing output
+  # model_dir += "/d3t63g40mm30c20n20o04chem2"
+  # model_dir += "/d3t36g10mm00chem2"
+  # model_dir += "/d3t40g15mm00chem2"
+  # model_dir += "/d3t40g15mm20chem2"
+  # model_dir += "/d3t40g15mm30chem2"
+  # model_dir += "/d3t50g25mm00chem2"
+  # model_dir += "/d3t50g25mm20chem2"
+  # model_dir += "/d3t50g25mm30chem2"
+  model_ids = [
+      # "d3t63g40mm00chem2",
+      # "d3t63g40mm20chem2",
+      # "d3t63g40mm30chem2",
+      # "d3t63g40mm30c20n20o20chem2",
+      # "d3t63g40mm30c20n20o04chem2",
+      "d3t36g10mm00chem2",
+      # "d3t40g15mm00chem2",
+      "d3t40g15mm20chem2",
+      "d3t40g15mm30chem2",
+      "d3t50g25mm00chem2",
+      "d3t50g25mm20chem2",
+      "d3t50g25mm30chem2",
+      # # "d3t57g44b000chem1",
+      # # "d3t57g44b200chem1",
+      # # "d3t57g44b800chem1",
+      # # "d3t57g44b1600chem1",
+  ]
+  # snap_out_idxs = [int(i) for i in np.linspace(1, 20, num=20)]
+  for model_id in model_ids:
+    model_dir = f"/media/sdeshmukh/Crucial X6/cobold_runs/chem/{model_id}"
+    loader = UIOLoader(model_dir)
+    num_snaps_out = 20  # number of equidistant snapshots to pick
+    num_snap_skip = 5  # number of snaps to skip when choosing output
 
+    if test_case:
+      # Write single
+      for i in range(3):
+        loader.load_next_model()
 
-  if test_case:
-    # Write single
-    for i in range(3):
-      loader.load_next_model()
+      model = loader.current_model
+      for i in range(5):
+        model.next_snapshot()
+      # Sample uniform points from model
+      # nz, ny, nx = 10, 5, 7
+      nz, ny, nx = 30, 10, 14
+      original_shape = model['rho'].shape
+      idxs = product(*[np.linspace(0, original_shape[i] - 1, num=n, dtype=int)
+                       for i, n in enumerate([nz, ny, nx])])
+      density = np.zeros((nz * ny * nx))
+      temperature = np.zeros((nz * ny * nx))
+      for i, p in enumerate(idxs):
+        density[i] = model['rho'][p]
+        temperature[i] = model['temperature'][p]
 
-    model = loader.current_model
-    for i in range(5):
-      model.next_snapshot()
-    # Sample uniform points from model
-    # nz, ny, nx = 10, 5, 7
-    nz, ny, nx = 30, 10, 14
-    original_shape = model['rho'].shape
-    idxs = product(*[np.linspace(0, original_shape[i] - 1, num=n, dtype=int)
-                     for i, n in enumerate([nz, ny, nx])])
-    density = np.zeros((nz * ny * nx))
-    temperature = np.zeros((nz * ny * nx))
-    for i, p in enumerate(idxs):
-      density[i] = model['rho'][p]
-      temperature[i] = model['temperature'][p]
+      arr = np.array([density, temperature]).T
+      outfile = "rho_T_test.csv"
+    else:
+      # Read full from model
+      density, temperature = model['rho'], model['temperature']
+      arr = np.array([density.flatten(), temperature.flatten()]).T
+      outfile = "rho_T.csv"
 
-    arr = np.array([density, temperature]).T
-    outfile = "rho_T_test.csv"
-  else:
-    # Read full from model
-    density, temperature = model['rho'], model['temperature']
-    arr = np.array([density.flatten(), temperature.flatten()]).T
-    outfile = "rho_T.csv"
+    if write_subsample:
+      save_subsample_snapshots(loader, num_snaps_out,
+                               f"{res_dir}/{loader.current_model.id}",
+                               #  snap_out_idxs=snap_out_idxs,
+                               num_snap_skip=num_snap_skip,
+                               has_full_mean_mismatch=False)
 
-  if write_subsample:
-    save_subsample_snapshots(loader, num_snaps_out,
-                             f"{res_dir}/{loader.current_model.id}",
-                             num_snap_skip=num_snap_skip)
+    print(f"Array output shape: {arr.shape}")
 
-  print(f"Array output shape: {arr.shape}")
+    write_array(f"{res_dir}/test/{outfile}", arr)
+    print(f"Wrote to {res_dir}/test/{outfile}")
+    # reshaped_arr = read_np_output(f"{res_dir}/{outfile}")
+    # print(f"Array input shape: {reshaped_arr.shape}")
 
-  write_array(f"{res_dir}/test/{outfile}", arr)
-  print(f"Wrote to {res_dir}/test/{outfile}")
-  # reshaped_arr = read_np_output(f"{res_dir}/{outfile}")
-  # print(f"Array input shape: {reshaped_arr.shape}")
-
-  if plot:
-    number_densities = read_number_densities(f"{out_dir}/catalyst.csv")
-    fig, axes = plot_differences(model, number_densities)
-    plt.show()
+    if plot:
+      number_densities = read_number_densities(f"{out_dir}/catalyst.csv")
+      fig, axes = plot_differences(model, number_densities)
+      plt.show()
 
 
 if __name__ == "__main__":

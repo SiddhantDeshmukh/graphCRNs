@@ -163,14 +163,15 @@ end
 
 function evolve_system(odesys, u0, tspan, p, solver; prob=nothing)
   if (isnothing(prob))
-    prob = ODEProblem(odesys, u0, tspan, p)
-    de = modelingtoolkitize(prob)
-    prob = ODEProblem(de, [], tspan, jac=true)
+    # prob = ODEProblem(odesys, u0, tspan, p)
+    prob = SteadyStateProblem(odesys, u0, p)
+    # de = modelingtoolkitize(prob)
+    # prob = ODEProblem(de, [], jac=true)
     sol = solve(prob, solver; save_everystep=false)
     return prob, sol
   else
-    # Have to assign here otherwise it doesn't update
-    prob = remake(prob; u0=u0, p=p, tspan=tspan)
+    # prob = remake(prob; u0=u0, p=p, tspan=tspan)
+    prob = remake(prob; u0=u0, p=p)
     return solve(prob, solver; save_everystep=false)[end]
   end
 end

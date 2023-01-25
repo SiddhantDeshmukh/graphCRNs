@@ -113,12 +113,12 @@ const mm30a04c20n20o20_abundances = Dict(
 
 ##
 
-arrhenius(a::Float64, b::Float64, c::Float64, T) = @. a * (T / 300.)^b * exp(-c / T)
+arrhenius(a::Float64, b::Float64, c::Float64, T) = @. a * (T / 300.0)^b * exp(-c / T)
 str_replace(term::Term; token="(t)", replacement="") = replace(string(term), token => replacement)
 
 function calculate_number_densities(gas_density, abundances::Dict)
-  abu_eps_lin = Dict([k => 10. ^(v - 12.) for (k, v) in abundances])
-  abundances_linear = Dict([k => 10. ^v for (k, v) in abundances])
+  abu_eps_lin = Dict([k => 10.0^(v - 12.0) for (k, v) in abundances])
+  abundances_linear = Dict([k => 10.0^v for (k, v) in abundances])
   total_abundances = sum(values(abundances_linear))
   abundances_ratio = Dict([k => v / total_abundances for (k, v) in abundances_linear])
   h_number_density = gas_density / mass_hydrogen * abundances_ratio["H"]
@@ -129,10 +129,10 @@ end
 function str_to_arrhenius(rxn_str::String)
   # Read Arrhenius rate and return alpha, beta, gamma, i.e.
   # r(T) = alpha * (Tgas/300)**beta * exp(-gamma / Tgas)
-  function constants_from_part(part:: String; alpha=0., beta=0., gamma=0.)
+  function constants_from_part(part::String; alpha=0.0, beta=0.0, gamma=0.0)
     if isdigit(strip(part)[1])
       alpha = parse(Float64, replace(part, "d" => "e"))
-    elseif  '^' in part
+    elseif '^' in part
       beta = parse(Float64, replace(replace(split(part, '^')[end], '(' => ""), ')' => ""))
     elseif startswith(strip(part), "exp")
       # Note minus sign: 'rate' has '-gamma' in it because of Arrhenius form
@@ -141,7 +141,7 @@ function str_to_arrhenius(rxn_str::String)
     return alpha, beta, gamma
   end
 
-  alpha, beta, gamma = 0., 0., 0.
+  alpha, beta, gamma = 0.0, 0.0, 0.0
   # Change '**' to '^' for a unique identifier
   rate = replace(rxn_str, "**" => '^')
   if contains(rate, "*")
@@ -149,12 +149,12 @@ function str_to_arrhenius(rxn_str::String)
     for part in parts
       part = replace(string(part), 'd' => 'e')
       alpha, beta, gamma = constants_from_part(part;
-                                               alpha=alpha, beta=beta, gamma=gamma)
+        alpha=alpha, beta=beta, gamma=gamma)
     end
   else
     rate = replace(string(rate), 'd' => 'e')
     alpha, beta, gamma = constants_from_part(rate;
-                                            alpha=alpha, beta=beta, gamma=gamma)
+      alpha=alpha, beta=beta, gamma=gamma)
   end
 
   return alpha, beta, gamma
@@ -247,20 +247,44 @@ function read_density_temperature_file(infile::String)
 end
 
 function evolve_system(odesys, u0, tspan, p, solver; prob=nothing)
+  # REFACTOR:
+  # 'tspan' not used since we evolve to steady-state.
+  # Should make a new function that overloads _without_ 'tspan', and add types
+  # to all functions
+  # WARNING:
+  # 'u0' is a Pair when prob is being initialised,
+  # (species => value)
+  # but is a vector of values when called with remake
+  # abstol = 1e-30
+  # reltol = 1e-4
+  maxiters = 1e6
+  alg_hints = [:stiff]
   if (isnothing(prob))
-    prob = ODEProblem(odesys, u0, tspan, p)
-    de = modelingtoolkitize(prob)
-    prob = ODEProblem(de, [], tspan, jac=true)
-    sol = solve(prob, solver; save_everystep=false)
+    # Initialise SteadyStateProblem
+    prob = SteadyStateProblem(odesys, u0, p)
+    sol = solve(prob, DynamicSS(solver); maxiters=maxiters, dt=1e-8,
+      alg_hints=alg_hints)
+    # DEPRECATED: Using 1e6 tspan
+    # prob = ODEProblem(odesys, u0, tspan, p)
+    # de = modelingtoolkitize(prob)
+    # prob = ODEProblem(de, [], tspan, jac=true)
+    # sol = solve(prob, solver; alg_hints=alg_hints, save_everystep=false,
+    #   maxiters=maxiters, abstol=abstol, reltol=reltol)
     return prob, sol
   else
-    # Have to assign here otherwise it doesn't update
-    prob = remake(prob; u0=u0, p=p, tspan=tspan)
-    return solve(prob, solver; save_everystep=false)[end]
+    # Remake problem with new params
+    prob = remake(prob; u0=u0, p=p)
+    return solve(prob, DynamicSS(solver); maxiters=maxiters, dt=1e-8,
+      alg_hints=alg_hints)
+    # DEPRECATED: Using 1e6 tspan
+    # # Have to assign here otherwise it doesn't update
+    # prob = remake(prob; u0=u0, p=p, tspan=tspan)
+    # return solve(prob, solver; alg_hints=alg_hints, save_everystep=false,
+    #   maxiters=maxiters, abstol=abstol, reltol=reltol)[end]
   end
 end
 
-function run(to:: TimerOutput, odesys, iter, tspan, abundances, solver)
+function run(to::TimerOutput, odesys, iter, tspan, abundances, solver)
   # 'iter' must be size(num_points, 2); [:, 1] == density, [:, 2] == temperature
   # TODO:
   # - make a 2D Array instead and use a spread operator to populate in loop
@@ -270,21 +294,23 @@ function run(to:: TimerOutput, odesys, iter, tspan, abundances, solver)
   @timeit to "main run" begin
     # First run
     n = calculate_number_densities(iter[1, 1], abundances)
+    # u0vals is a vector
     u0vals = [n[str_replace(s)] for s in species(odesys)]
+    # u0 is Pair
     u0 = Pair.(species(odesys), u0vals)
     prob, _ = evolve_system(odesys, u0, tspan, [iter[1, 2]], solver; prob=nothing)
     # Loop
     @inbounds Threads.@threads for i in 1:size(iter)[1]
-    # @inbounds for i in 1:size(iter)[1]
+      # @inbounds for i in 1:size(iter)[1]
       p = [iter[i, 2]]
       Threads.lock(l)
       n = calculate_number_densities(iter[i, 1], abundances)
       u0 = [n[str_replace(s)] for s in species(odesys)]
       Threads.unlock(l)
       number_densities[i, :] = evolve_system(odesys, u0, tspan, p, solver; prob=prob)
-      if i % 10000 == 0
+      if i % 100000 == 0
         count += 1
-        println("Done $(count) of 294 chunks.\r")
+        println("Done $(count) chunks.\r")
         GC.gc()
       end
     end
@@ -294,15 +320,16 @@ function run(to:: TimerOutput, odesys, iter, tspan, abundances, solver)
 end
 
 function postprocess_file(infile::String, outfile::String, odesys, tspan,
-                          abundances::Dict, solver)
-    println("$(current_time()): Postprocessing from $(infile), output to $(outfile)")
-    arr = read_density_temperature_file(infile)
-    n = run(to, odesys, arr, tspan, abundances, solver)
-    GC.gc()
+  abundances::Dict, solver)
+  # REFACTOR: 'tspan' not needed for steady-state
+  println("$(current_time()): Postprocessing from $(infile), output to $(outfile)")
+  arr = read_density_temperature_file(infile)
+  n = run(to, odesys, arr, tspan, abundances, solver)
+  GC.gc()
 
-    header = [str_replace(s) for s in species(odesys)]
-    table = Tables.table(n; header=header)
-    CSV.write(outfile, table; delim=',')
+  header = [str_replace(s) for s in species(odesys)]
+  table = Tables.table(n; header=header)
+  CSV.write(outfile, table; delim=',')
 end
 
 function current_time()
@@ -310,10 +337,12 @@ function current_time()
 end
 
 function main(abundances::Dict, input_dir::String, output_dir::String,
-              network_file::String, solver; precompile=true)
+  network_file::String, solver; precompile=true)
   rn = read_network_file(network_file)
   odesys = convert(ODESystem, rn; combinatoric_ratelaws=false)
-  tspan = (1e-8, 1e6)
+  @show length(reactions(rn))
+  @show species(rn)
+  tspan = (1e-6, 1e6)  # REFACTOR
   if (precompile)  # single file test case
     infile = "$(input_dir)/rho_T_test.csv"
     outfile = "$(output_dir)/catalyst_test.csv"
@@ -337,23 +366,40 @@ function main(abundances::Dict, input_dir::String, output_dir::String,
 end
 
 ##
-PROJECT_DIR =  "/home/sdeshmukh/Documents/graphCRNs/julia"
+PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs/julia"
 network_dir = "/home/sdeshmukh/Documents/graphCRNs/res"
 res_dir = "$(PROJECT_DIR)/res"
 out_dir = "$(PROJECT_DIR)/out"
 model_id = ARGS[1]
-network_file = "$(network_dir)/cno.ntw"
-solver = ImplicitEulerExtrapolation()
+# Default is 'chem1' unless 'chem2' specified in model
+network_id = endswith(model_id, "chem2") ? "cno.ntw" : "solar_co_w05.ntw"
+network_file = "$(network_dir)/$(network_id)"
+#network_file = "$(network_dir)/cno.ntw"
+# solver = ImplicitEulerExtrapolation()
+solver = Rodas5()  # for DynamicSS()
 # Model ID -> abundance
 abundance_mapping = Dict(
   "d3t63g40mm00chem2" => mm00_abundances,
   "d3t63g40mm20chem2" => mm20a04_abundances,
   "d3t63g40mm30chem2" => mm30a04_abundances,
   "d3t63g40mm30c20n20o20chem2" => mm30a04c20n20o20_abundances,
-  "d3t63g40mm30c20n20o04chem2" => mm30a04c20n20o04_abundances
+  "d3t63g40mm30c20n20o04chem2" => mm30a04c20n20o04_abundances,
+  "d3t50g25mm00chem2" => mm00_abundances,
+  "d3t50g25mm20chem2" => mm20a04_abundances,
+  "d3t50g25mm30chem2" => mm30a04_abundances,
+  "d3t40g15mm00chem2" => mm00_abundances,
+  "d3t40g15mm20chem2" => mm20a04_abundances,
+  "d3t40g15mm30chem2" => mm30a04_abundances,
+  # "d3t36g10mm00chem2" => mm00_abundances,
+  "d3t36g10mm00chem2" => mm30a04_abundances,  # inconsistent!
+  "d3t57g44b000chem1" => mm00_abundances,
+  "d3t57g44b200chem1" => mm00_abundances,
+  "d3t57g44b800chem1" => mm00_abundances,
+  "d3t57g44b1600chem1" => mm00_abundances
 )
 abundances = abundance_mapping[model_id]
 @show abundances
+@show network_file
 
 ##
 # Precompile
@@ -362,4 +408,9 @@ main(abundances, "$(res_dir)/test", "$(out_dir)/test", network_file, solver; pre
 ##
 reset_timer!(to)
 main(abundances, "$(res_dir)/$(model_id)/wrk", "$(out_dir)/$(model_id)",
-    network_file, solver; precompile=false)
+  network_file, solver; precompile=false)
+
+#=
+TODO:
+- change all solver calls to SteadyStateProblem
+=#

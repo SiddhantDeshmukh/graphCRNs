@@ -133,8 +133,6 @@ def main():
       print(f'\t\tTotal = {np.log10(total_timescale):.2f} (log) [s / cm^3]')
       current_step = 0
 
-  print(network.crea)
-
 
 if __name__ == "__main__":
   main()

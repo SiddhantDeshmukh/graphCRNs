@@ -42,10 +42,12 @@ def main():
   # tutorial()
   # graph_cnn()
   # (rho, T, tspan)
-  num_points = 1000
+  num_points = 100000
   # x & z uniform in log-space, y uniform in linear space
   bounds = [(-10, -6), (3000., 30000.), (-6, 6)]
   samples = sample_nd(bounds, num_points)
+  samples[:, 0] = 10**samples[:, 0]
+  samples[:, 2] = 10**samples[:, 2]
   write_samples(samples, "./samples.csv")
 
 

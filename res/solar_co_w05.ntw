@@ -2,7 +2,7 @@
 @format:idx,R,R,P,Tmin,Tmax,rate,limit,ref
 3681,H,C,CH,10,300,1.0000d-17,weak,UMIST99
 3683,H,O,OH,10,300,9.9000d-19 * (Tgas / 3d2)**(-3.8000d-01),weak,UMIST99
-3707,C,O,CO,10,14700,1.58d-17 * (Tgas / 3d2)**(3.4000d-01) * exp(-1.2974d03 / Tgas),weak,UMIST99
+3707,C,O,CO,10,14700,1.58d-17 * (Tgas / 3d2)**(3.4000d-01) * exp(-1.2970d03 / Tgas),weak,UMIST99
 #
 # 3-body association
 @format:idx,R,R,R,P,P,Tmin,Tmax,rate,limit,ref

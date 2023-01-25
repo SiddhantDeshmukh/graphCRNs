@@ -2,24 +2,32 @@
 # First and only argument is model ID
 PROJECT_DIR="/home/sdeshmukh/Documents/graphCRNs/julia"
 RES_DIR="${PROJECT_DIR}/res"
+OUT_DIR="${PROJECT_DIR}/out"
+SSD_DIR="/media/sdeshmukh/'Crucial X6'/jcrn_runs"
 # List files in RES_DIR/model_id
 
 # For each file, move the current file to the wrk directory
 # (create if it doesn't exist), call JCRN with the wrk directory as the arg
 # and then move the file back
 base_dir=${RES_DIR}/$1
+save_dir=${OUT_DIR}/$1
+mkdir -p ${save_dir}
 for file in $(find $base_dir -maxdepth 1 -name "*.csv")
 do
   new_dir="$(dirname $file)/wrk"
+  done_dir="$(dirname $file)/done"
   base_name=$(basename $file)
   # Move file to wrk directory
   echo "Moving $file to $new_dir"
   mkdir -p $new_dir
+  mkdir -p $done_dir
   mv $file $new_dir
   # Call JCRN with wrk dir as argument
   echo "Running JCRN in $new_dir"
   julia --sysimage ~/julia_sysimages/sys_catalyst.so run_jcrn.jl $1
   # Move file back to original directory
-  echo "Moving $new_dir/$base_name back to $base_dir"
-  mv $new_dir/$base_name $base_dir
+  echo "Moving $new_dir/$base_name to $done_dir"
+  mv $new_dir/$base_name $done_dir
 done
+# Move to SSD
+#mv $base_dir $SSD_DIR/
