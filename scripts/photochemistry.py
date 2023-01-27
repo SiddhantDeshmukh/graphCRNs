@@ -8,7 +8,7 @@ import os
 import re
 from typing import List
 import pandas as pd
-from scipy.integrate import cumulative_trapezoid
+from scipy.integrate import cumulative_trapezoid, trapezoid
 from gcrn.network import Network
 from abundances import mm30a04_abundances
 from sadchem.postprocessing import calculate_number_densities
@@ -98,6 +98,15 @@ def get_wavelength_range(df: pd.DataFrame):
     return np.min(df.index), np.max(df.index)
 
 
+def get_wavelength_stats(df: pd.DataFrame):
+  # Compute min & max wavelength alongside stepping
+  wavelengths = df.index.values
+  min_wl, max_wl = get_wavelength_range(df)
+  stepping = np.diff(wavelengths)
+  print(min_wl, max_wl)
+  # print(stepping)
+
+
 def add_flux_col(df: pd.DataFrame, temperature: float):
   # Add unattenuated blackbody flux as a column to 'df'
   flux = planck_function(const, temperature,
@@ -106,14 +115,27 @@ def add_flux_col(df: pd.DataFrame, temperature: float):
   return df
 
 
-def compute_photo_rate(df: pd.DataFrame, branches=["Total"]):
+def compute_photo_rate(flux: np.ndarray, cross_section: np.ndarray,
+                       wavelengths: np.ndarray, cumulative=True):
+  # Inputs must be in SI units, since rates scale with 1/r^2 and are otherwise
+  # calculated at 1 AU, scale by r^2 to get rates in the star
+  if cumulative:
+    return cumulative_trapezoid(flux * (cross_section * 1e-4),
+                                x=wavelengths) * (1.495979e+11**2)
+  else:
+    return np.array([trapezoid(wavelengths * (cross_section * 1e-4),
+                               x=wavelengths)] * len(wavelengths)) * (1.495979e+11**2)
+
+
+def total_photo_rate(df: pd.DataFrame, branches=["Total"]):
   # From cross-sections and 'Flux' columns, compute the integrated
-  # photodissociation rate for the given branches
+  # photodissociation rate for the given branches and multiply by the bin width
+  bin_widths = np.diff(df.index.values) * 1e-10
   rates = {}
   for branch in branches:
-    rates[branch] = cumulative_trapezoid(df['Flux'] * (df[branch] * 1e-4),
-                                         x=df.index.values,
-                                         initial=0)
+    rates[branch] = np.sum(compute_photo_rate(df['Flux'], df[branch] * 1e-4,
+                                              df.index.values * 1e-10)
+                           * bin_widths)
 
   return rates
 
@@ -165,21 +187,22 @@ def determine_branch(file_id: str):
 
 def main():
   plt.style.use("standard-scientific")
-  # photo_dir = "/home/sdeshmukh/Documents/graphCRNs/res/photo"
-  # cross_sect_files = [f"{photo_dir}/{f}" for f in os.listdir(photo_dir)]
-  # # cross_sect_files = ["/home/sdeshmukh/Documents/graphCRNs/res/photo/ch.txt"]
-  # cross_sect_dfs = [read_cross_sects(f) for f in cross_sect_files]
+  photo_dir = "/home/sdeshmukh/Documents/graphCRNs/res/photo"
+  cross_sect_files = [f"{photo_dir}/{f}" for f in os.listdir(photo_dir)]
+  # cross_sect_files = ["/home/sdeshmukh/Documents/graphCRNs/res/photo/ch.txt"]
+  cross_sect_dfs = [read_cross_sects(f) for f in cross_sect_files]
   temperature = 5772.  # Teff for Sun
   rho = 1e-8
   # # # temperature = 7000.  # Teff
 
-  # for file_, df in zip(cross_sect_files, cross_sect_dfs):
-  #   cross_sect_id = file_.split("/")[-1].replace(".txt", "")
-  #   branch = determine_branch(cross_sect_id)
-  #   print(file_.split("/")[-1])
-  #   df = add_flux_col(df, temperature)
-  #   df[f"Rate_{branch}"] = compute_photo_rate(df, branches=[branch])[branch]
-  #   print(np.mean(df[f"Rate_{branch}"]))
+  for file_, df in zip(cross_sect_files, cross_sect_dfs):
+    cross_sect_id = file_.split("/")[-1].replace(".txt", "")
+    branch = determine_branch(cross_sect_id)
+    print(file_.split("/")[-1])
+    df = add_flux_col(df, temperature)
+    total_rate = total_photo_rate(df, branches=[branch])[branch]
+    get_wavelength_stats(df)
+    print(total_rate)
 
   # fig, axes = plot_df(df, branch=branch)
 
@@ -191,40 +214,40 @@ def main():
   # plt.show()
 
   # Photochem network comparison
-  network_dir = "/home/sdeshmukh/Documents/graphCRNs/res/"
-  network_kinetic = Network.from_krome_file(f"{network_dir}/cno_fix.ntw")
-  network_photo = Network.from_krome_file(f"{network_dir}/photo.ntw")
-  species = ["C", "O", "N", "CH", "OH", "C2", "CO", "CN"]
-  species.sort()
-  networks = [network_kinetic, network_photo]
-  network_labels = ["Kinetic", "Photo"]
-  fig, axes = plt.subplots(1, 1)
-  # Setup
-  times = np.logspace(-8, 3, num=2000)
-  for network in [network_kinetic, network_photo]:
-    network.temperature = temperature
-    network.number_densities = calculate_number_densities(mm30a04_abundances,
-                                                          np.log10(rho))
-  # Solve photochem network
-  print(len(network_photo.reactions))
-  n_photo = network_photo.solve(times, n_subtime=1)
-  colours = []
-  for j, s in enumerate(species):
-    # Photo in lines
-    l = axes.plot(np.log10(times), np.log10(n_photo[:, j]))
-    colours.append(l[0].get_color())
+  # network_dir = "/home/sdeshmukh/Documents/graphCRNs/res/"
+  # network_kinetic = Network.from_krome_file(f"{network_dir}/cno_fix.ntw")
+  # network_photo = Network.from_krome_file(f"{network_dir}/photo.ntw")
+  # species = ["C", "O", "N", "CH", "OH", "C2", "CO", "CN"]
+  # species.sort()
+  # networks = [network_kinetic, network_photo]
+  # network_labels = ["Kinetic", "Photo"]
+  # fig, axes = plt.subplots(1, 1)
+  # # Setup
+  # times = np.logspace(-8, 3, num=2000)
+  # for network in [network_kinetic, network_photo]:
+  #   network.temperature = temperature
+  #   network.number_densities = calculate_number_densities(mm30a04_abundances,
+  #                                                         np.log10(rho))
+  # # Solve photochem network
+  # print(len(network_photo.reactions))
+  # n_photo = network_photo.solve(times, n_subtime=1)
+  # colours = []
+  # for j, s in enumerate(species):
+  #   # Photo in lines
+  #   l = axes.plot(np.log10(times), np.log10(n_photo[:, j]))
+  #   colours.append(l[0].get_color())
 
-  # Solve kinetic-only network
-  print(len(network_kinetic.reactions))
-  n_kinetic = network_kinetic.solve(times, n_subtime=1)
-  # Kinetic in points
-  for j, s in enumerate(species):
-    # Photo in lines
-    axes.plot(np.log10(times), np.log10(n_kinetic[:, j]), label=s, ls='none',
-              marker='o', mfc=colours[j], c='k')
+  # # Solve kinetic-only network
+  # print(len(network_kinetic.reactions))
+  # n_kinetic = network_kinetic.solve(times, n_subtime=1)
+  # # Kinetic in points
+  # for j, s in enumerate(species):
+  #   # Photo in lines
+  #   axes.plot(np.log10(times), np.log10(n_kinetic[:, j]), label=s, ls='none',
+  #             marker='o', mfc=colours[j], c='k')
 
-  axes.legend()
-  plt.show()
+  # axes.legend()
+  # plt.show()
 
 
 if __name__ == "__main__":

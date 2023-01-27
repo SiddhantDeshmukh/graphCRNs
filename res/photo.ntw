@@ -105,6 +105,8 @@
 7601,NH,O2,NO,OH,298,3300,2.5400d-14 * (Tgas / 3d2)**(1.1800d00) * exp(-3.1200d02 / Tgas),weak
 #
 # Radiative dissociation
+# TODO: fit a powerlaw that depends on blackbody temperature for these to get
+# the summed, cumulative rate
 @format:idx,R,P,P,Tmin,Tmax,rate,limit
 9001,CO,C,O,10,41000,8.09d-13,weak
 9002,C2,C,C,10,41000,9.56d-12,weak

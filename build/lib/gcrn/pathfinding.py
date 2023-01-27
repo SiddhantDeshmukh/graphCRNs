@@ -175,7 +175,7 @@ def find_paths(network: Network, source: str, target: str, cutoff=4,
 
 def all_paths(network: Network, source: str, target: str,
               cutoff=4, max_paths=100):
-  # Use a customi pathfinding alg to find paths on species-complex graph
+  # Use a custom pathfinding alg to find paths on species-complex graph
   # with rules of species-jumps
   # Species-Complex graph:
   # Complex graph with edge connections + 0-weight edge connections to all

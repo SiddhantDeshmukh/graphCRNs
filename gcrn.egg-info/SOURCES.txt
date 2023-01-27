@@ -62,11 +62,12 @@ julia/co_test.jl
 julia/diagnostics.md
 julia/julia_comparison.py
 julia/lorenz.jl
+julia/models_to_run
 julia/mwe.jl
 julia/precompile.jl
 julia/prototyping.jl
 julia/rho_T_output.py
-julia/run.sh
+julia/run
 julia/run_jcrn.jl
 julia/speed_check.py
 julia/test.py
@@ -82,11 +83,13 @@ res/catalyst_co.ntw
 res/ch_oh_co.ntw
 res/chem.dat
 res/cno.ntw
+res/cno_fix.ntw
 res/co_dummy.ntw
 res/co_test.ntw
 res/diamond-network.ntw
 res/mass_action.ntw
 res/multi-species-line.ntw
+res/photo.ntw
 res/quad-ring-reaction.ntw
 res/reverse-3.ntw
 res/reverse.ntw
@@ -95,6 +98,11 @@ res/ring_single.ntw
 res/ring_temperature.ntw
 res/simplified_co.ntw
 res/solar_co_w05.ntw
+res/photo/c2.txt
+res/photo/ch.txt
+res/photo/cn.txt
+res/photo/co.txt
+res/photo/oh.txt
 scripts/abundances.py
 scripts/co_profile.txt
 scripts/eqm_time.py
@@ -103,6 +111,7 @@ scripts/limits.py
 scripts/parser.py
 scripts/pathfinding_test.py
 scripts/pfa.py
+scripts/photochemistry.py
 scripts/profile.txt
 scripts/profile_network.py
 scripts/rho_T_grid.py

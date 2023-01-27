@@ -478,7 +478,7 @@ class Network:
                         number_densities: np.ndarray) -> np.ndarray:
     # Evaluate the function Jacobian by calling each element with the provided
     # temperature and number densities
-    if not self.jacobian_func:
+    if self.jacobian_func is None:
       self.rate_dict = self.create_rate_dict()
       self.jacobian_func = self.create_jacobian()
     jacobian = np.zeros_like(self.jacobian_func, dtype=float)

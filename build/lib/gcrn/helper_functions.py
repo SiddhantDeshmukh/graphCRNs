@@ -183,12 +183,12 @@ def number_densities_from_abundances(abundances: Dict,
 # -----------------------------------------------------------------------------
 
 
-def jacobian_timescale(jacobian: np.ndarray) -> float:
+def jacobian_timescales(jacobian: np.ndarray) -> float:
   # Return the characteristic timescale of the longest mode from the Jacobian
   # eigenvalue decomposition
   # If timescale exceeds bounds, set it to these
-  MIN_TIME = 1e-9
-  MAX_TIME = 1e6
+  # MIN_TIME = 1e-9
+  # MAX_TIME = 1e6
 
   # Jacobian analysis
   eigenvalues, eigenvectors = np.linalg.eig(jacobian)
@@ -201,11 +201,13 @@ def jacobian_timescale(jacobian: np.ndarray) -> float:
   # Have to do this because otherwise KROME can fail...but why? I think
   # it has to do with computing negative number densities afterwards, but
   # I would have thought there would be some check for this...
-  timescales = [time for time in timescales if time >
-                MIN_TIME and time < MAX_TIME]
-  max_timescale = max(timescales)  # representative for eqm
+  # timescales = [time for time in timescales if time >
+  #               MIN_TIME and time < MAX_TIME]
+  # max_timescale = max(timescales)  # representative for eqm
+  print(", ".join([f"{t:1.2e}" for t in timescales]))
+  print(", ".join([f"{e:1.2e}" for e in eigenvalues]))
 
-  return max_timescale
+  return timescales
 
 
 def nullspace(A: np.ndarray, atol=1e-13, rtol=0, return_decomposition=False):
