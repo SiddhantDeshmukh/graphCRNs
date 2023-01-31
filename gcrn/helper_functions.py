@@ -194,8 +194,9 @@ def jacobian_timescales(jacobian: np.ndarray) -> float:
   eigenvalues, eigenvectors = np.linalg.eig(jacobian)
 
   # Calculate timescales
-  neg_evals = [e for e in eigenvalues if e < 0]
-  timescales = [1 / np.abs(e) for e in neg_evals]
+  timescales = [1 / np.abs(e) if e < 0 else 0 for e in eigenvalues]
+  # neg_evals = [e for e in eigenvalues if e < 0]
+  # timescales = [1 / np.abs(e) for e in neg_evals]
 
   # Filter timescales to make sure they are within set bounds
   # Have to do this because otherwise KROME can fail...but why? I think
@@ -204,8 +205,8 @@ def jacobian_timescales(jacobian: np.ndarray) -> float:
   # timescales = [time for time in timescales if time >
   #               MIN_TIME and time < MAX_TIME]
   # max_timescale = max(timescales)  # representative for eqm
-  print(", ".join([f"{t:1.2e}" for t in timescales]))
-  print(", ".join([f"{e:1.2e}" for e in eigenvalues]))
+  # print(", ".join([f"{t:1.2e}" for t in timescales]))
+  # print(", ".join([f"{e:1.2e}" for e in eigenvalues]))
 
   return timescales
 

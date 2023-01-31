@@ -119,6 +119,7 @@ scripts/simplify.py
 scripts/step_size.py
 scripts/test.dat
 scripts/test.ntw
+scripts/timescale_evaluation.py
 scripts/__pycache__/abundances.cpython-38.pyc
 scripts/__pycache__/dynamics_test.cpython-38.pyc
 scripts/__pycache__/helper_functions.cpython-38.pyc

@@ -379,6 +379,24 @@ network_file = "$(network_dir)/$(network_id)"
 solver = Rodas5()  # for DynamicSS()
 # Model ID -> abundance
 abundance_mapping = Dict(
+  # chem1
+  "d3t63g40mm00chem1" => mm00_abundances,
+  "d3t63g40mm20chem1" => mm20a04_abundances,
+  "d3t63g40mm30chem1" => mm30a04_abundances,
+  "d3t63g40mm30c20n20o20chem1" => mm30a04c20n20o20_abundances,
+  "d3t63g40mm30c20n20o04chem1" => mm30a04c20n20o04_abundances,
+  "d3t50g25mm00chem1" => mm00_abundances,
+  "d3t50g25mm20chem1" => mm20a04_abundances,
+  "d3t50g25mm30chem1" => mm30a04_abundances,
+  "d3t40g15mm00chem1" => mm00_abundances,
+  "d3t40g15mm20chem1" => mm20a04_abundances,
+  "d3t40g15mm30chem1" => mm30a04_abundances,
+  "d3t36g10mm00chem1" => mm00_abundances,
+  "d3t57g44b000chem1" => mm00_abundances,
+  "d3t57g44b200chem1" => mm00_abundances,
+  "d3t57g44b800chem1" => mm00_abundances,
+  "d3t57g44b1600chem1" => mm00_abundances,
+  # chem2
   "d3t63g40mm00chem2" => mm00_abundances,
   "d3t63g40mm20chem2" => mm20a04_abundances,
   "d3t63g40mm30chem2" => mm30a04_abundances,
@@ -391,12 +409,7 @@ abundance_mapping = Dict(
   "d3t40g15mm20chem2" => mm20a04_abundances,
   "d3t40g15mm30chem2" => mm30a04_abundances,
   # "d3t36g10mm00chem2" => mm00_abundances,
-  "d3t36g10mm00chem1" => mm00_abundances,
   # "d3t36g10mm00chem2" => mm30a04_abundances,  # inconsistent!
-  "d3t57g44b000chem1" => mm00_abundances,
-  "d3t57g44b200chem1" => mm00_abundances,
-  "d3t57g44b800chem1" => mm00_abundances,
-  "d3t57g44b1600chem1" => mm00_abundances
 )
 abundances = abundance_mapping[model_id]
 @show abundances

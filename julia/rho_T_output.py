@@ -117,25 +117,24 @@ def main():
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs/julia"
   res_dir = f"{PROJECT_DIR}/res"
   out_dir = f"{PROJECT_DIR}/out"
-  # model_dir += "/d3t63g40mm00chem2"
-  # model_dir += "/d3t63g40mm20chem2"
-  # model_dir += "/d3t63g40mm30chem2"
-  # model_dir += "/d3t63g40mm30c20n20o20chem2"
-  # model_dir += "/d3t63g40mm30c20n20o04chem2"
-  # model_dir += "/d3t36g10mm00chem2"
-  # model_dir += "/d3t40g15mm00chem2"
-  # model_dir += "/d3t40g15mm20chem2"
-  # model_dir += "/d3t40g15mm30chem2"
-  # model_dir += "/d3t50g25mm00chem2"
-  # model_dir += "/d3t50g25mm20chem2"
-  # model_dir += "/d3t50g25mm30chem2"
   model_ids = [
+      # "d3t63g40mm00chem1",
+      # "d3t63g40mm20chem1",
+      # "d3t63g40mm30chem1",
+      # "d3t63g40mm30c20n20o20chem1",
+      # "d3t63g40mm30c20n20o04chem1",
+      # "d3t40g15mm00chem1",
+      # "d3t40g15mm20chem1",
+      # "d3t40g15mm30chem1",
+      # "d3t50g25mm00chem1",
+      # "d3t50g25mm20chem1",
+      # "d3t50g25mm30chem1",
       # "d3t63g40mm00chem2",
       # "d3t63g40mm20chem2",
       # "d3t63g40mm30chem2",
       # "d3t63g40mm30c20n20o20chem2",
       # "d3t63g40mm30c20n20o04chem2",
-      "d3t36g10mm00chem1",
+      # "d3t36g10mm00chem1",
       # "d3t40g15mm00chem2",
       # "d3t40g15mm20chem2",
       # "d3t40g15mm30chem2",

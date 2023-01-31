@@ -16,18 +16,22 @@ def to_arr(*args):
 def main():
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs"
   RES_DIR = f"{PROJECT_DIR}/res"
-  network = Network.from_krome_file(f"{RES_DIR}/solar_co_w05.ntw",
+  # network_id = "solar_co_w05.ntw"
+  network_id = "cno.ntw"
+  network = Network.from_krome_file(f"{RES_DIR}/{network_id}",
                                     initialise_jacobian=True)
-  temperature = 5700.
-  rho = 1e-8
+  # temperature = 5700.
+  # rho = 1e-8
+  temperature = 3500.
+  rho = 1e-11
   # abundances = mm00_abundances
-  abundances = mm20a04_abundances
+  abundances = mm30a04_abundances
   n = calculate_number_densities(abundances, np.log10(rho))
   network.number_densities = n
   network.temperature = temperature
   # Step through network, keeping track of various timescales
   initial_time = 1e-7
-  times = np.logspace(-6, 3, num=20)
+  times = np.logspace(-6, 8, num=20)
   timescales = [jacobian_timescales(network.evaluate_jacobian(temperature,
                                                               network.number_densities))]
   number_densities = [network.number_densities]
@@ -43,16 +47,25 @@ def main():
   times = np.array([initial_time, *times])
   number_densities, timescales = to_arr(number_densities, timescales)
   fig, axes = plt.subplots(2, 1)
-  species = ["C", "O", "CH", "CO", "OH"]
-  species.sort()
-  print(network.species)
-  for i, s in enumerate(species):
-    # evolution
-    axes[0].plot(np.log10(times), np.log10(number_densities[:, i]),
-                 marker='o', label=s)
-    # timescales
-    axes[1].plot(np.log10(times), np.log10(timescales[:, i]), marker='o')
+  species = ["CH", "CO", "OH", "CN", "C2"]
+  # species = network.species
+  # print(network.species)
+  for i, s in enumerate(network.species):
+    # Only plot relevant species, but enumerate over all bc of indices
+    if s in species:
+      # evolution
+      axes[0].plot(np.log10(times), np.log10(number_densities[:, i]),
+                   marker='o', label=s)
+      # timescales
+      axes[1].plot(np.log10(times), np.log10(timescales[:, i]), marker='o')
 
+  # Aesthetics
+  for ax in axes:
+    ax.set_xlabel("Time [s]")
+  axes[0].set_ylabel(r"log $n$ [cm$^{-3}$]")
+  axes[1].set_ylabel(r"log $\tau$ [s]")
+  axes[0].legend()
+  fig.suptitle(rf"T = {temperature:.0f} [K], $\rho$ = {rho:1.1e}")
   plt.show()
 
 
