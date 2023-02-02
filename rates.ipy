@@ -1,0 +1,162 @@
+# coding: utf-8
+%load rates.ipy
+# %load rates.ipy
+import numpy as np
+items = {'a': 7, 'b': 12, 'c': 9, 'd': 0, 'e': 24, 'f': 10, 'g': 24}
+np.max(items.values())
+np.max(items.values)
+np.max(np.array(items.values()))
+items.values()
+np.array(items.values())
+1e6 / 3600
+1e6 / 3600 / 24
+lst1 = ["C", "H", "O"]
+lst2 = ["CO", "CH"]
+lst1 + lst2
+2.0e-10 * np.exp(-3.5 / 3500.)
+2.0e-10 * np.exp(-3.5 / 3500.)
+from gcrn.reaction import Reaction
+reactions = []
+reactions.append(Reaction())
+reactions.append(Reaction(["H", "C"], ["CH"], "k1"))
+reactions.append(Reaction(["H", "C"], ["CH"], "1e-10"))
+reactions.append(Reaction(["CH"], ["C", "H"], "2e-10"))
+reactions.append(Reaction(["H", "O"], ["OH"], "3e-10"))
+reactions.append(Reaction(["OH"], ["O", "H"], "4e-10"))
+reactions.append(Reaction(["H", "CO"], ["O" + "CH"], "7e-10"))
+reactions.append(Reaction(["O" + "CH"], ["H", "CO"], "8e-10"))
+reactions
+[rxn for rxn in reactions]
+[print(rxn) for rxn in reactions]
+reactions[-2] = Reaction(["CO", "H"], ["O", "CH"], 7e-10)
+reactions[-2] = Reaction(["CO", "H"], ["O", "CH"], "7e-10")
+reactions[-1] = Reaction(["O", "CH"], ["H", "CO"], "8e-10")
+print(reactions)
+print([rxn for rxn in reactions])
+[str(rxn) for rxn in reactions]
+from gcrn.network import Network
+?network
+?Network
+network = Network(reactions)
+sorted(reactions)
+reactions
+950 / 3600
+950 / 60
+?Reaction
+['C + H -> CH',
+ 'CH -> C + H',
+ 'H + O -> OH',
+ 'OH -> H + O',
+ 'CO + H -> CH + O',
+ 'CH + O -> CO + H']
+reactions = [
+Reaction(["C", "H"], ["CH"], 1e-10, idx=1),
+Reaction(["CH"], ["C", "H"], 2e-10, idx=2),
+Reaction(["H", "O"], ["OH"], 3e-10, idx=3),
+Reaction(["OH"], ["O", "H"], 4e-10, idx=4),
+Reaction(["CO", "H"], ["CH", "O"], 5e-10, idx=5),
+Reaction(["CH", "O"], ["CO", "H"], 6e-10, idx=6)]
+reactions = [
+Reaction(["C", "H"], ["CH"], "1e-10", idx=1),
+Reaction(["CH"], ["C", "H"], "2e-10", idx=2),
+Reaction(["H", "O"], ["OH"], "3e-10", idx=3),
+Reaction(["OH"], ["O", "H"], "4e-10", idx=4),
+Reaction(["CO", "H"], ["CH", "O"], "5e-10", idx=5),
+Reaction(["CH", "O"], ["CO", "H"], "6e-10", idx=6)]
+reactoins
+network = Network(reactions)
+network.species
+network.reactions
+[str(r) for r in network.reactions]
+network.complex_composition_matrix
+network.complex_kinetics_matrix
+reactions = [
+Reaction(["C", "H"], ["CH"], "1e-10", idx=1),
+Reaction(["CH"], ["C", "H"], "2e-10", idx=2),
+Reaction(["H", "O"], ["OH"], "3e-10", idx=3),
+Reaction(["OH"], ["O", "H"], "4e-10", idx=4),
+Reaction(["C", "OH"], ["CH", "O"], "5e-10", idx=5),
+Reaction(["CH", "O"], ["OH", "C"], "6e-10", idx=6)]
+network = Network(reactions)
+network.species
+network.complex_kinetics_matrix
+network.complexes
+network.dynamics_vector
+network.rates_vector
+network.eval_rates_vector()
+def create_RHS(network: Network):
+    # Create symbolic RHS of d[X]/dt foreach species in network
+    symbolic_RHS = []
+    for i, s in enumerate(network.species):
+        rhs = ""
+        for j, rxn in enumerate(network.reactions):
+            r_stoich, p_stoich = rxn.stoichiometry
+            if s in rxn.reactants:
+                rhs += rxn.determine_mass_action_rate()
+        symbolic_RHS.append(rhs)
+    
+def create_RHS(network: Network):
+    # Create symbolic RHS of d[X]/dt foreach species in network
+    symbolic_RHS = []
+    for i, s in enumerate(network.species):
+        rhs = ""
+        for j, rxn in enumerate(network.reactions):
+            r_stoich, p_stoich = rxn.stoichiometry
+            if s in rxn.reactants:
+                rhs += rxn.determine_mass_action_rate()
+        symbolic_RHS.append(rhs)
+    return symbolic_RHS
+    
+rhs = create_RHS(newtork)
+rhs = create_RHS(network)
+rhs
+network.species
+print(network)
+def create_RHS(network: Network):
+    # Create symbolic RHS of d[X]/dt foreach species in network
+    symbolic_RHS = []
+    for i, s in enumerate(network.species):
+        rhs = ""
+        for j, rxn in enumerate(network.reactions):
+            r_stoich, p_stoich = rxn.stoichiometry
+            if s in rxn.reactants:
+                rhs += f"-{rxn.determine_mass_action_rate()}"
+            if s in rxn.products:
+                rhs += f"+{rxn.determine_mass_action_rate()}"
+        symbolic_RHS.append(rhs)
+    
+    return symbolic_RHS
+    
+    
+rhs = create_RHS(network)
+rhs
+# %load rates.ipy
+import numpy as np
+from gcrn.reaction import Reaction
+from gcrn.network import Network
+reactions = [
+Reaction(["C", "H"], ["CH"], "1e-10", idx=1),
+Reaction(["CH"], ["C", "H"], "2e-10", idx=2),
+Reaction(["H", "O"], ["OH"], "3e-10", idx=3),
+Reaction(["OH"], ["O", "H"], "4e-10", idx=4),
+Reaction(["C", "OH"], ["CH", "O"], "5e-10", idx=5),
+Reaction(["CH", "O"], ["OH", "C"], "6e-10", idx=6)]
+network = Network(reactions)
+def create_RHS(network: Network):
+    # Create symbolic RHS of d[X]/dt foreach species in network
+    symbolic_RHS = []
+    for i, s in enumerate(network.species):
+        rhs = ""
+        for j, rxn in enumerate(network.reactions):
+            r_stoich, p_stoich = rxn.stoichiometry
+            if s in rxn.reactants:
+                rhs += f"-{rxn.determine_mass_action_rate()}"
+            if s in rxn.products:
+                rhs += f"+{rxn.determine_mass_action_rate()}"
+        symbolic_RHS.append(rhs)
+    
+    return symbolic_RHS
+    
+    
+rhs = create_RHS(network)
+rhs

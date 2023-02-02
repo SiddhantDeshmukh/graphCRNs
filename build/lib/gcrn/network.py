@@ -357,6 +357,12 @@ class Network:
   # ----------------------------------------------------------------------------
 
   def __str__(self) -> str:
+    output = f"Species: {', '.join(self.species)}"
+    output += "Reactions:\n"
+    output += self.print_reactions()
+    return output
+
+  def print_reactions(self) -> str:
     return "\n".join([str(rxn) for rxn in self.reactions])
 
   def description(self) -> str:
@@ -709,3 +715,55 @@ class Network:
     elif isinstance(value, np.ndarray):
       self._number_densities = value
     self._update()
+
+  # ----------------------------------------------------------------------------
+  # Evals for callables
+  # ----------------------------------------------------------------------------
+
+  def eval_rates_vector(self):
+    # length is length of reactions (one rate for each reaction)
+    Z = self.complex_composition_matrix
+    K = self.complex_kinetics_matrix
+    return self.rates_vector(Z, K, self.number_densities)
+
+  # ----------------------------------------------------------------------------
+  # Symbolic expressions
+  # ----------------------------------------------------------------------------
+
+  def rhs_rxns(self):
+    # Create RHS describing d[X]/dt with reaction objects, stating whether each
+    # reaction is a source or a sink
+    # Returns a dictionary with species as keys
+    rhs_dict = {s: {} for s in self.species}
+    for i, s in enumerate(self.species):
+      sources, sinks = [], []
+      for j, rxn in enumerate(self.reactions):
+        # Reactants (sink/negative term)
+        if s in rxn.reactants:
+          sinks.append(rxn)
+        # Products (source/positive term)
+        if s in rxn.products:
+          sources.append(rxn)
+      rhs_dict[s]["source"] = sources
+      rhs_dict[s]["sink"] = sources
+
+    return rhs_dict
+
+  def symbolic_rhs_rates(self):
+    # Create symbolic RHS of d[X]/dt foreach species in network
+    # Note that this does not simplify the expression in any way, e.g. if a
+    # species is present as a catalyst, it will be written explicitly for each
+    # term, and not cancelled to zero
+    symbolic_RHS = []
+    for i, s in enumerate(self.species):
+      rhs = ""
+      for j, rxn in enumerate(self.reactions):
+        # Reactants (sink/negative term)
+        if s in rxn.reactants:
+          rhs += f" - {rxn.determine_mass_action_rate()}"
+        # Products (source/positive term)
+        if s in rxn.products:
+          rhs += f" + {rxn.determine_mass_action_rate()}"
+        symbolic_RHS.append(rhs.lstrip())
+
+      return symbolic_RHS

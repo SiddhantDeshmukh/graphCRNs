@@ -141,12 +141,12 @@ def main():
       # "d3t50g25mm00chem2",
       # "d3t50g25mm20chem2",
       # "d3t50g25mm30chem2",
-      # # "d3t57g44b000chem1",
-      # # "d3t57g44b200chem1",
-      # # "d3t57g44b800chem1",
-      # # "d3t57g44b1600chem1",
+      "d3t57g44b000chem1",
+      "d3t57g44b200chem1",
+      "d3t57g44b800chem1",
+      "d3t57g44b1600chem1",
   ]
-  # snap_out_idxs = [int(i) for i in np.linspace(1, 20, num=20)]
+  snap_out_idxs = [int(i) for i in np.linspace(1, 20, num=20)]
   for model_id in model_ids:
     model_dir = f"/media/sdeshmukh/Crucial X6/cobold_runs/chem/{model_id}"
     loader = UIOLoader(model_dir)
@@ -184,9 +184,9 @@ def main():
     if write_subsample:
       save_subsample_snapshots(loader, num_snaps_out,
                                f"{res_dir}/{loader.current_model.id}",
-                               #  snap_out_idxs=snap_out_idxs,
+                               snap_out_idxs=snap_out_idxs,
                                num_snap_skip=num_snap_skip,
-                               has_full_mean_mismatch=False)
+                               has_full_mean_mismatch=True)
 
     print(f"Array output shape: {arr.shape}")
 

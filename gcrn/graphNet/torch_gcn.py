@@ -20,11 +20,8 @@ class GCNReg(torch.nn.Module):
     return x
 
 
-def create_datasets(densities: np.ndarray, )
-
-
 def train(network: GCNReg, train_loader: torch.utils.data.DataLoader,
-          val_loader: torch.utils.data.DataLoader num_iter = 100):
+          val_loader: torch.utils.data.DataLoader, num_iter=100):
   # Train 'network' for 'num_iter' iterations
   # Reject training sample if it exists
   # Add training sample to 'train_data'

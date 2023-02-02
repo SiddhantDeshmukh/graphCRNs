@@ -1,3 +1,4 @@
+from .linalg import *
 from .graphs import *
 from .helper_functions import *
 from .limits import *

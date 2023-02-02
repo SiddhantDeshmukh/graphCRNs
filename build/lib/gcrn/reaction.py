@@ -27,7 +27,7 @@ class Reaction:
     self.products = [product for product in self.products if product]
 
     # Create stoichiometry
-    self.stoichiometry = self.calcluate_stoichiometry()
+    self.stoichiometry = self.calculate_stoichiometry()
 
     self.reactant_complex = create_complex(self.reactants)
     self.product_complex = create_complex(self.products)
@@ -77,7 +77,7 @@ class Reaction:
     rxn_str += ','.join([r for r in self.reactants]) + ","
     rxn_str += ','.join([p for p in self.products]) + ","
     # TODO:
-    # Find a better way to replace 'e' -> 'd' while retaining 'exp'
+    # regex to replace 'e' -> 'd' while retaining 'exp'
     rxn_str += f"{self.rate_expression.replace('e', 'd').replace('dxp', 'exp')},"
 
     if self.min_temperature or self.max_temperature:
@@ -93,7 +93,7 @@ class Reaction:
   def __call__(self, temperature: float, use_limit=False) -> float:
     return self.evaluate_rate_expression(temperature, use_limit=use_limit)
 
-  def calcluate_stoichiometry(self) -> Dict:
+  def calculate_stoichiometry(self) -> Dict:
     # Write out stoichiometry for the reaction
     # Convention: reactants are negative
     reactant_stoichiometry = {}
@@ -148,13 +148,14 @@ class Reaction:
   def determine_mass_action_rate(self):
     # String expression of the reaction rate v(x)
     reactants = self.stoichiometry[0]
-    rate = f"({self.rate_expression})"
+    rate = f"({self.rate_expression})"  # rate coefficient
+    # include mass-action kinetics
     for key, value in reactants.items():
-      rate += f" * n_{key}"
+      rate += f"*n_{key}"
       if abs(value) > 1:
         rate += f"**{abs(value)}"
 
-    return rate
+    return rate.strip()
 
   def evaluate_mass_action_rate(self, temperature: float,
                                 number_densities: Dict) -> float:

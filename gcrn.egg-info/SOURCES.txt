@@ -8,6 +8,7 @@ gcrn/__init__.py
 gcrn/graphs.py
 gcrn/helper_functions.py
 gcrn/limits.py
+gcrn/linalg.py
 gcrn/matrices.py
 gcrn/network.py
 gcrn/pathfinding.py

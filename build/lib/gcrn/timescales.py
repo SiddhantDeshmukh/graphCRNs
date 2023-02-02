@@ -51,3 +51,22 @@ def find_equilibrium_interpolate(evolution_times: np.ndarray,
     eqm_number_densities[i] = number_densities[threshold_idx, i]
 
   return eqm_times, eqm_number_densities
+
+
+# ----------------------------------------------------------- ------------------
+# Timescale functions
+# -----------------------------------------------------------------------------
+def iets(jacobian: np.ndarray):
+  # Return the inverse-eigenvalue timescales without filtering
+  # zero-eigenvalues are given zero-value timescales
+  # Jacobian analysis
+  eigenvalues, eigenvectors = np.linalg.eig(jacobian)
+
+  # Calculate timescales
+  timescales = [1 / np.abs(e) if e < 0 else 0 for e in eigenvalues]
+  return timescales
+
+
+def evts(jacobian: np.ndarray):
+  # CTS-ID from Caudal+12
+  pass
