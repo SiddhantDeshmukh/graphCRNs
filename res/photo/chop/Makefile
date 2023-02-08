@@ -1,9 +1,9 @@
 #FC        = g77
 #FC        = pgf90
 #FC        = ifc
-FC         = ifort
-FFLAGS     = -O3 -fpe0 -fpic 
-LDFLAGS    = -shared -O3 -fpe0 
+FC         = gfortran
+FFLAGS     = -O3 -fpic 
+LDFLAGS    = -shared -O3 
 CC         = gcc
 CFLAGS     = -O3 -fPIC -m64 
 #

@@ -118,29 +118,44 @@ def main():
   res_dir = f"{PROJECT_DIR}/res"
   out_dir = f"{PROJECT_DIR}/out"
   model_ids = [
-      # "d3t63g40mm00chem1",
+      # chem 1
+      # solar mhd
+      # "d3t57g44b000chem1",
+      # "d3t57g44b200chem1",
+      # "d3t57g44b800chem1",
+      # "d3t57g44b1600chem1",
+      # dwarf
+      "d3t63g40mm00chem1",
       # "d3t63g40mm20chem1",
       # "d3t63g40mm30chem1",
       # "d3t63g40mm30c20n20o20chem1",
       # "d3t63g40mm30c20n20o04chem1",
+      # giant
+      # "d3t36g10mm00chem1",
       # "d3t40g15mm00chem1",
       # "d3t40g15mm20chem1",
       # "d3t40g15mm30chem1",
       # "d3t50g25mm00chem1",
       # "d3t50g25mm20chem1",
       # "d3t50g25mm30chem1",
+      # # chem 2
+      # # dwarf
       # "d3t63g40mm00chem2",
       # "d3t63g40mm20chem2",
       # "d3t63g40mm30chem2",
       # "d3t63g40mm30c20n20o20chem2",
       # "d3t63g40mm30c20n20o04chem2",
-      # "d3t36g10mm00chem1",
+      # # giant
+      # "d3t36g10mm00chem2",
       # "d3t40g15mm00chem2",
       # "d3t40g15mm20chem2",
       # "d3t40g15mm30chem2",
       # "d3t50g25mm00chem2",
       # "d3t50g25mm20chem2",
       # "d3t50g25mm30chem2",
+  ]
+  # All models that should only have 1 snap output per full file
+  full_mean_mismatch_models = [
       "d3t57g44b000chem1",
       "d3t57g44b200chem1",
       "d3t57g44b800chem1",
@@ -148,6 +163,7 @@ def main():
   ]
   snap_out_idxs = [int(i) for i in np.linspace(1, 20, num=20)]
   for model_id in model_ids:
+    has_full_mean_mismatch = model_id in full_mean_mismatch_models
     model_dir = f"/media/sdeshmukh/Crucial X6/cobold_runs/chem/{model_id}"
     loader = UIOLoader(model_dir)
     num_snaps_out = 20  # number of equidistant snapshots to pick
@@ -186,7 +202,7 @@ def main():
                                f"{res_dir}/{loader.current_model.id}",
                                snap_out_idxs=snap_out_idxs,
                                num_snap_skip=num_snap_skip,
-                               has_full_mean_mismatch=True)
+                               has_full_mean_mismatch=has_full_mean_mismatch)
 
     print(f"Array output shape: {arr.shape}")
 

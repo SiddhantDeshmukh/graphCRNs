@@ -170,10 +170,10 @@ def main():
   # network_id = "cno_extra.ntw"
   network = Network.from_krome_file(f"{RES_DIR}/{network_id}",
                                     initialise_jacobian=True)
-  # temperature = 5700.
-  # rho = 1e-8
-  temperature = 3500.
-  rho = 1e-11
+  temperature = 5700.
+  rho = 1e-8
+  #  temperature = 3500.
+  # rho = 1e-11
   # abundances = mm00_abundances
   abundances = mm30a04_abundances
   n = calculate_number_densities(abundances, np.log10(rho))

@@ -32,4 +32,11 @@ print, 'OH [s]'
 print, 'm00: ', 1.0/(4.0*!pi*tsum(lam, ohop(T,lam)*jlm00))
 print, 'm30: ', 1.0/(4.0*!pi*tsum(lam, ohop(T,lam)*jlm30))
 
+print, 'rates'
+print, 'CH [1/s]'
+print, 'm00: ', (4.0*!pi*tsum(lam, chop(T,lam)*jlm00))
+print, 'm30: ', (4.0*!pi*tsum(lam, chop(T,lam)*jlm30))
+print, 'OH [1/s]'
+print, 'm00: ', (4.0*!pi*tsum(lam, ohop(T,lam)*jlm00))
+print, 'm30: ', (4.0*!pi*tsum(lam, ohop(T,lam)*jlm30))
 end  

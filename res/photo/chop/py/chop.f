@@ -227,8 +227,8 @@ C     CROSS-SECTION TIMES
      5-22.809,-22.770,-22.743,-22.724,-22.713,-22.706,-22.703,-22.702/  10.5
       DATA w1/0.D0/
    10 CHOP=0.
-      IF(w.EQ.w1)GO TO 30
-      w1=w
+C     IF(w.EQ.w1)GO TO 30
+C     w1=w
       WAVENO=1./w
       EVOLT=WAVENO/8065.479
       N=EVOLT*10.
