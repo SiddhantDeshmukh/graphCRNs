@@ -164,7 +164,9 @@ def metallicity_sed_plot(T_rad=4000.):
   # Aesthetics
   ax.legend()
   ax.set_xlim(0., 6500.)
-  ax.set_title(f"T = {T_rad:.0f} [K]")
+  ax.set_title(r"T$_\mathrm{rad}$"f" = {T_rad:.0f} [K]")
+  ax.set_xlabel(r"Wavelength [$\mathrm{\AA}$]")
+  ax.set_ylabel("Photodissociation cross-section per molecule (cgs)")
 
 
 def temperature_rates_plot():
@@ -213,7 +215,8 @@ def temperature_rates_plot():
 
 def main():
   plt.style.use("standard-scientific")
-  temperature_rates_plot()
+  metallicity_sed_plot(T_rad=6250.)
+  # temperature_rates_plot()
   plt.show()
 
 

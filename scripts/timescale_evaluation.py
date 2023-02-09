@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from itertools import compress
+from typing import List
 
 
 def to_arr(*args):
@@ -109,15 +110,8 @@ def network_firrts(network: Network, verbose=False, return_all=False,
   # (those produced) to filter rates. This lets the user neglect unimportant
   # species in the network if so desired.
   # If no species chosen for production filter, use all species
-  if not production_filter_species:
-    production_filter_species = network.species
-  useful_rates, useful_rxns = [], []  # reaction rates to use for analysis
-  done_rxn_idxs = []
-  rhs_dict = network.rhs_rxns()
-  T, n = network.temperature, network.number_densities_dict
-  for s in rhs_dict.keys():
-    # Compute weights for each species based on production rate
-    rxns = rhs_dict[s]["source"] + rhs_dict[s]["sink"]
+  def weight_rxns(s: str, rxns: List, weights_threshold=0.05):
+    # Compute weights for each species based on production rate of each rxn
     rates = np.zeros(shape=len(rxns))
     for j, rxn in enumerate(rxns):
       reactants, products = rxn.reactants, rxn.products
@@ -126,27 +120,54 @@ def network_firrts(network: Network, verbose=False, return_all=False,
       if s in reactant_blacklist_species or not has_useful_product:
         continue
       if not rxn.idx in done_rxn_idxs:
-        rates[j] = rxn.evaluate_mass_action_rate(T, n)
+        # if s == "CO":
+          # print(s, n[s], rxn)
+          # print(rxn.evaluate_mass_action_rate(T, n))
+          # print(rxn.evaluate_mass_action_rate(T, n) / n[s])
+        # rates[j] = rxn.evaluate_mass_action_rate(T, n)
+        rates[j] = rxn.evaluate_mass_action_rate(T, n) / n[s]
         done_rxn_idxs.append(rxn.idx)
     total_production_rate = np.sum(rates)
     weights = rates / total_production_rate
 
+    # Keep reactions that have weights higher than threshold
     weight_mask = (weights > weights_threshold)
     # weight_mask = (weights > 0.)  # no filtering!
     filtered_rates = rates[weight_mask]
     filtered_rxns = list(compress(rxns, weight_mask))
-    # Add reactions that have weights higher than threshold
-    useful_rates.extend(filtered_rates)
-    useful_rxns.extend(filtered_rxns)
 
+    return filtered_rates, filtered_rxns, weights[weight_mask]
+
+  if not production_filter_species:
+    production_filter_species = network.species
+  # reaction rates to use for analysis
+  useful_rates, useful_rxns, useful_weights = [], [], []
+  done_rxn_idxs = []
+  rhs_dict = network.rhs_rxns()
+  T, n = network.temperature, network.number_densities_dict
+  for s in rhs_dict.keys():
+    # rxns_to_consider = [[rhs_dict[s]["source"] + rhs_dict[s]["sink"]]]
+    # rxns_to_consider = [rhs_dict[s]["source"], rhs_dict[s]["sink"]]
+    # rxns_to_consider = [rhs_dict[s]["source"]]
+    rxns_to_consider = [rhs_dict[s]["sink"]]
+    # print(s, len(rhs_dict[s]["source"]), len(rhs_dict[s]["sink"]))
+    for rxns in rxns_to_consider:
+      # print(s, len(rxns))
+      filtered_rates, filtered_rxns, weights = weight_rxns(s, rxns,
+                                                           weights_threshold=weights_threshold)
+      useful_rates.extend(filtered_rates)
+      useful_rxns.extend(filtered_rxns)
+      useful_weights.extend(weights)
+
+  # exit()
   useful_rates = np.array(useful_rates)
   timescales = 1 / useful_rates
-  # print(weights)
 
   if verbose:
     print(f"T = {T} [K]. {len(timescales)} relevant timescales.")
     for i in range(len(useful_rates)):
-      print(f"{i}: {useful_rxns[i]}; {timescales[i]:1.2e} [s]")
+      print(
+          f"{i}: {useful_rxns[i]}; {timescales[i]:1.2e} [s], weight = {useful_weights[i]:.2f}")
     longest_ts = np.nanmax(timescales)
     ts_idx = np.where(timescales == longest_ts)[0][0]
     print(f"Longest timescale: {useful_rxns[ts_idx]}; {longest_ts:1.2e} [s]")
@@ -165,14 +186,14 @@ def network_iets(network: Network):
 def main():
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs"
   RES_DIR = f"{PROJECT_DIR}/res"
-  # network_id = "solar_co_w05.ntw"
-  network_id = "cno_fix.ntw"
+  network_id = "solar_co_w05.ntw"
+  # network_id = "cno_fix.ntw"
   # network_id = "cno_extra.ntw"
   network = Network.from_krome_file(f"{RES_DIR}/{network_id}",
                                     initialise_jacobian=True)
   temperature = 5700.
   rho = 1e-8
-  #  temperature = 3500.
+  # temperature = 3500.
   # rho = 1e-11
   # abundances = mm00_abundances
   abundances = mm30a04_abundances
@@ -199,14 +220,14 @@ def main():
     network.solve([time], initial_time=prev_time, n_subtime=1)
     number_densities.append(deepcopy(network.number_densities))
 
-    # Timescales
-    timescales["IRRTS"].append(network_irrts(network))
-    timescales["IRRTS FILTER"].append(network_irrts(network,
-                                                    use_relevant_species=True))
-    timescales["FIRRTS"].append(network_firrts(network))
-    timescales["ETS"].append(network_ets(network,
-                                         relevant_species=["CH", "CO", "OH", "CN", "C2"]))
-    timescales["OFTS"].append(network_ofts(network))
+    # # Timescales
+    # timescales["IRRTS"].append(network_irrts(network))
+    # timescales["IRRTS FILTER"].append(network_irrts(network,
+    #                                                 use_relevant_species=True))
+    # timescales["FIRRTS"].append(network_firrts(network))
+    # timescales["ETS"].append(network_ets(network,
+    #                                      relevant_species=["CH", "CO", "OH", "CN", "C2"]))
+    # timescales["OFTS"].append(network_ofts(network))
     # timescales["IETS"].append(iets(network.evaluate_jacobian(temperature,
     #                                                           network.number_densities)))
 
@@ -215,20 +236,21 @@ def main():
   # network_evts(network)
   # network_irrts(network)
   # exit()
-  all_irrts_timescales = network_irrts(network, verbose=True, return_all=True)
-  firrts_timescales_all = network_firrts(network, verbose=True, return_all=True)
+  # all_irrts_timescales = network_irrts(network, verbose=True, return_all=True)
+  # firrts_timescales_all = network_firrts(network, verbose=True, return_all=True)
   firrts_timescales_sample = network_firrts(network, verbose=True,
                                             return_all=True,
-                                            production_filter_species=[
-                                                "C", "O", "CO", "OH", "CH", "CN", "C2"],
+                                            # production_filter_species=[
+                                            #     "C", "O", "CO", "OH", "CH", "CN", "C2"],
+                                            production_filter_species=["CO"],
                                             reactant_blacklist_species=["NO", "NH", "N2", "O2", "H", "H2", "M"])
 
-  fig, ax = plt.subplots()
-  ax.hist(np.log10(all_irrts_timescales), bins=15, label="IRRTS")
-  ax.hist(np.log10(firrts_timescales_all), bins=15, label="FIRRTS All")
-  ax.hist(np.log10(firrts_timescales_sample), bins=15, label="FIRRTS Sample")
-  ax.legend()
-  plt.show()
+  # fig, ax = plt.subplots()
+  # ax.hist(np.log10(all_irrts_timescales), bins=15, label="IRRTS")
+  # ax.hist(np.log10(firrts_timescales_all), bins=15, label="FIRRTS All")
+  # ax.hist(np.log10(firrts_timescales_sample), bins=15, label="FIRRTS Sample")
+  # ax.legend()
+  # plt.show()
   exit()
 
   times = np.array([initial_time, *times])
@@ -270,3 +292,11 @@ def main():
 
 if __name__ == "__main__":
   main()
+
+
+"""
+TODO:
+  - Scale by relevant product number density to get an actual timescale! This is
+    the actual rate we can use to compare various reactions (and it's analogous
+    to what Sven did)
+"""

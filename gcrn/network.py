@@ -745,7 +745,7 @@ class Network:
         if s in rxn.products:
           sources.append(rxn)
       rhs_dict[s]["source"] = sources
-      rhs_dict[s]["sink"] = sources
+      rhs_dict[s]["sink"] = sinks
 
     return rhs_dict
 

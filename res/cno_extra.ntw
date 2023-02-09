@@ -106,7 +106,7 @@
 101,CH,N,CN,H,222,584,1.66d-10 * (Tgas / 3d2)**(-9.0000d-02),weak
 #
 # Radiative disassociation
-@format:idx,R,P,P,Tmin,Tmax,rate,limit
+#@format:idx,R,P,P,Tmin,Tmax,rate,limit
 #3774,NH,N,H,10,41000,5.0000d-10 * exp(-2.3000d00 / Tgas),weak
 #3796,C2,C,C,10,41000,2.4000d-10 * exp(-2.6000d00 / Tgas),weak
 #3803,CN,N,C,10,41000,2.9000d-10 * exp(-3.5000d00 / Tgas),weak
