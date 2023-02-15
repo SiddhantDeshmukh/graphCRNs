@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from itertools import compress
-from typing import List
+from typing import List, Dict
 
 
 def to_arr(*args):
@@ -124,9 +124,13 @@ def network_firrts(network: Network, verbose=False, return_all=False,
           # print(s, n[s], rxn)
           # print(rxn.evaluate_mass_action_rate(T, n))
           # print(rxn.evaluate_mass_action_rate(T, n) / n[s])
-        # rates[j] = rxn.evaluate_mass_action_rate(T, n)
-        rates[j] = rxn.evaluate_mass_action_rate(T, n) / n[s]
-        done_rxn_idxs.append(rxn.idx)
+        original_rate = rxn.evaluate_mass_action_rate(T, n)
+        adjusted_rate = original_rate / n[s]
+        rates[j] = original_rate
+        # rates[j] = adjusted_rate
+        print(f"{rxn.idx}: {rxn}, dividing by {s} ({n[s]:1.2e})")
+        print(f"Original: {original_rate:1.2e}, Adjusted: {adjusted_rate:1.2e}")
+        # done_rxn_idxs.append(rxn.idx)
     total_production_rate = np.sum(rates)
     weights = rates / total_production_rate
 
@@ -149,7 +153,9 @@ def network_firrts(network: Network, verbose=False, return_all=False,
     # rxns_to_consider = [[rhs_dict[s]["source"] + rhs_dict[s]["sink"]]]
     # rxns_to_consider = [rhs_dict[s]["source"], rhs_dict[s]["sink"]]
     # rxns_to_consider = [rhs_dict[s]["source"]]
-    rxns_to_consider = [rhs_dict[s]["sink"]]
+    s = "CN"
+    # rxns_to_consider = [rhs_dict[s]["sink"]]
+    rxns_to_consider = [rhs_dict[s]["source"]]
     # print(s, len(rhs_dict[s]["source"]), len(rhs_dict[s]["sink"]))
     for rxns in rxns_to_consider:
       # print(s, len(rxns))
@@ -167,7 +173,7 @@ def network_firrts(network: Network, verbose=False, return_all=False,
     print(f"T = {T} [K]. {len(timescales)} relevant timescales.")
     for i in range(len(useful_rates)):
       print(
-          f"{i}: {useful_rxns[i]}; {timescales[i]:1.2e} [s], weight = {useful_weights[i]:.2f}")
+          f"{i}/{useful_rxns[i].idx}: {useful_rxns[i]}; {timescales[i]:1.2e} [s], weight = {useful_weights[i]:.2f}")
     longest_ts = np.nanmax(timescales)
     ts_idx = np.where(timescales == longest_ts)[0][0]
     print(f"Longest timescale: {useful_rxns[ts_idx]}; {longest_ts:1.2e} [s]")
@@ -183,18 +189,25 @@ def network_iets(network: Network):
                                         network.number_densities))
 
 
+def print_number_densities(n: Dict):
+  print("Number densities:")
+  for s in n.keys():
+    print(f"\t{s}: {n[s]:1.2e}")
+
+
 def main():
   PROJECT_DIR = "/home/sdeshmukh/Documents/graphCRNs"
   RES_DIR = f"{PROJECT_DIR}/res"
-  network_id = "solar_co_w05.ntw"
-  # network_id = "cno_fix.ntw"
+  # network_id = "solar_co_w05.ntw"
+  # network_id = "solar_co_w05_h2_mod.ntw"
+  network_id = "cno_fix.ntw"
   # network_id = "cno_extra.ntw"
   network = Network.from_krome_file(f"{RES_DIR}/{network_id}",
                                     initialise_jacobian=True)
-  temperature = 5700.
-  rho = 1e-8
-  # temperature = 3500.
-  # rho = 1e-11
+  # temperature = 6250.
+  # rho = 1e-8
+  temperature = 3500.
+  rho = 1e-9
   # abundances = mm00_abundances
   abundances = mm30a04_abundances
   n = calculate_number_densities(abundances, np.log10(rho))
@@ -205,8 +218,8 @@ def main():
   times = np.logspace(-4, 8, num=50)
   timescales = {
       "IRRTS": [network_irrts(network)],
-      "IRRTS FILTER": [network_irrts(network, use_relevant_species=True)],
-      "FIRRTS": [network_firrts(network)],
+      # "IRRTS FILTER": [network_irrts(network, use_relevant_species=True)],
+      # "FIRRTS": [network_firrts(network)],
       "ETS": [network_ets(network)],
       "OFTS": [network_ofts(network)],
       # "IETS": [],
@@ -215,6 +228,7 @@ def main():
   #                                              network.number_densities))]
   number_densities = [network.number_densities]
   prev_time = 0.
+  print_number_densities(network.number_densities_dict)
   for i, time in enumerate(times):
     # solve, then evaluate timescale
     network.solve([time], initial_time=prev_time, n_subtime=1)
@@ -233,6 +247,7 @@ def main():
 
     prev_time = time
 
+  print_number_densities(network.number_densities_dict)
   # network_evts(network)
   # network_irrts(network)
   # exit()
@@ -242,8 +257,8 @@ def main():
                                             return_all=True,
                                             # production_filter_species=[
                                             #     "C", "O", "CO", "OH", "CH", "CN", "C2"],
-                                            production_filter_species=["CO"],
-                                            reactant_blacklist_species=["NO", "NH", "N2", "O2", "H", "H2", "M"])
+                                            # production_filter_species=["CO"],
+                                            reactant_blacklist_species=["NO", "NH", "N2", "O2", "H", "M"])
 
   # fig, ax = plt.subplots()
   # ax.hist(np.log10(all_irrts_timescales), bins=15, label="IRRTS")

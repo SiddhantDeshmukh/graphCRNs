@@ -147,7 +147,7 @@ def main():
       # "d3t63g40mm30c20n20o04chem2",
       # # giant
       # "d3t36g10mm00chem2",
-      # "d3t40g15mm00chem2",
+      "d3t40g15mm00chem2",
       # "d3t40g15mm20chem2",
       # "d3t40g15mm30chem2",
       # "d3t50g25mm00chem2",
@@ -200,7 +200,7 @@ def main():
     if write_subsample:
       save_subsample_snapshots(loader, num_snaps_out,
                                f"{res_dir}/{loader.current_model.id}",
-                               snap_out_idxs=snap_out_idxs,
+                               #  snap_out_idxs=snap_out_idxs,
                                num_snap_skip=num_snap_skip,
                                has_full_mean_mismatch=has_full_mean_mismatch)
 
