@@ -6,3 +6,4 @@ src/profiles/**
 julia/out/**
 julia/res/**
 julia/statprof/
+scripts/models/**

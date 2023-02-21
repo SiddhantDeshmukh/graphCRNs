@@ -13,7 +13,8 @@ def main():
   densities = np.logspace(-10., -6., num=50)
 
   network_dir = "../res"
-  networks = ["solar_co_w05.ntw", "solar_co_w05_4097.ntw"]
+  # networks = ["solar_co_w05.ntw", "solar_co_w05_4097.ntw"]
+  networks = ["cno.ntw", "cno_fix.ntw"]
   output_number_densities = {}
   for network_name in networks:
     network_id = network_name.replace(".ntw", "")

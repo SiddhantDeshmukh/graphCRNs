@@ -1,24 +1,21 @@
 # TODO list
 
-## Week of 27/09/21
+## Week of 20/01/23
 
 ### Network
 
-- Add method to init from chem.dat
-- Create 'simplify' test
-- Simplify CO network across CO5BOLD model
+- Implement timescale analysis with properly scaled rates
 
 ### Simplification
 
-- Implement path flux analysis (PFA)
-- Test on dummy networks
-- Test on CO
-- Use on CNO
+- Use "weight" timescale analysis to find the most important reactions
+
+## ML
+
+- Test various architectures of NNs for EQM chemistry predictions
+- Try RandomForest and XGBoost
 
 ### Writeup
 
-- Graph CRN theory
-- Graph theoretical kinetics
-- Examples using ring reaction network and an astrophysical case
-  - Perhaps a simplified CO network to illustrate the idea of complexes?
-    - Could be hydrogen ionisation as well, plus H2
+- Network simplification
+- ML

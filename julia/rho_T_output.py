@@ -125,13 +125,13 @@ def main():
       # "d3t57g44b800chem1",
       # "d3t57g44b1600chem1",
       # dwarf
-      "d3t63g40mm00chem1",
+      # "d3t63g40mm00chem1",
       # "d3t63g40mm20chem1",
       # "d3t63g40mm30chem1",
       # "d3t63g40mm30c20n20o20chem1",
       # "d3t63g40mm30c20n20o04chem1",
       # giant
-      # "d3t36g10mm00chem1",
+      "d3t36g10mm00chem1",
       # "d3t40g15mm00chem1",
       # "d3t40g15mm20chem1",
       # "d3t40g15mm30chem1",
@@ -148,8 +148,8 @@ def main():
       # # giant
       # "d3t36g10mm00chem2",
       "d3t40g15mm00chem2",
-      # "d3t40g15mm20chem2",
-      # "d3t40g15mm30chem2",
+      "d3t40g15mm20chem2",
+      "d3t40g15mm30chem2",
       # "d3t50g25mm00chem2",
       # "d3t50g25mm20chem2",
       # "d3t50g25mm30chem2",
@@ -161,13 +161,14 @@ def main():
       "d3t57g44b800chem1",
       "d3t57g44b1600chem1",
   ]
-  snap_out_idxs = [int(i) for i in np.linspace(1, 20, num=20)]
+  # snap_out_idxs = [int(i) for i in np.linspace(1, 20, num=20)]
+  snap_out_idxs = [124, 129, 135]
   for model_id in model_ids:
     has_full_mean_mismatch = model_id in full_mean_mismatch_models
     model_dir = f"/media/sdeshmukh/Crucial X6/cobold_runs/chem/{model_id}"
     loader = UIOLoader(model_dir)
     num_snaps_out = 20  # number of equidistant snapshots to pick
-    num_snap_skip = 5  # number of snaps to skip when choosing output
+    num_snap_skip = 20  # number of snaps to skip when choosing output
 
     if test_case:
       # Write single
@@ -200,7 +201,7 @@ def main():
     if write_subsample:
       save_subsample_snapshots(loader, num_snaps_out,
                                f"{res_dir}/{loader.current_model.id}",
-                               #  snap_out_idxs=snap_out_idxs,
+                               snap_out_idxs=snap_out_idxs,
                                num_snap_skip=num_snap_skip,
                                has_full_mean_mismatch=has_full_mean_mismatch)
 

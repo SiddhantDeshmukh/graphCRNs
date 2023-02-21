@@ -102,6 +102,8 @@ res/ring_single.ntw
 res/ring_temperature.ntw
 res/simplified_co.ntw
 res/solar_co_w05.ntw
+res/solar_co_w05_4097.ntw
+res/solar_co_w05_h2_mod.ntw
 res/photo/c2.txt
 res/photo/ch.txt
 res/photo/cn.txt
@@ -134,15 +136,18 @@ res/photo/chop/py/doc
 res/photo/chop/py/mkpyso
 scripts/abundances.py
 scripts/co_profile.txt
+scripts/compare_networks.py
 scripts/eqm_time.py
 scripts/io.py
 scripts/limits.py
+scripts/nn_models.py
 scripts/parser.py
 scripts/pathfinding_test.py
 scripts/pfa.py
 scripts/photochemistry.py
 scripts/profile.txt
 scripts/profile_network.py
+scripts/proto_resnet.ipynb
 scripts/rho_T_grid.py
 scripts/simplify.py
 scripts/step_size.py

@@ -36,6 +36,8 @@ class CustomAttention(keras.layers.Layer):
 # =========================================================================
 # Pre-defined models
 # =========================================================================
+
+
 def simple_rnn(input_length=9, num_features=1, output_length=1):
   print("Creating simple RNN")
   model = keras.models.Sequential([
