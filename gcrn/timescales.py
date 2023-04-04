@@ -203,7 +203,8 @@ def network_firrts(network: Network, verbose=False, return_all=False,
   rhs_dict = network.rhs_rxns()
   T, n = network.temperature, network.number_densities_dict
   for s in rhs_dict.keys():
-    rxns_to_consider = [rhs_dict[s]["source"] + rhs_dict[s]["sink"]]
+    # rxns_to_consider = [rhs_dict[s]["source"] + rhs_dict[s]["sink"]]
+    rxns_to_consider = [rhs_dict[s]["source"]]  # only formation reactions
     for rxns in rxns_to_consider:
       filtered_rates, filtered_rxns, weights = weight_rxns(s, rxns,
                                                            weights_threshold=weights_threshold)

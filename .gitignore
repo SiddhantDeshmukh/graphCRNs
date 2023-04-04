@@ -7,3 +7,6 @@ julia/out/**
 julia/res/**
 julia/statprof/
 scripts/models/**
+scripts/train_history/**
+res/df/**
+res/vtk/**

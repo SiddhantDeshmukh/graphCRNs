@@ -140,6 +140,7 @@ scripts/compare_networks.py
 scripts/eqm_time.py
 scripts/io.py
 scripts/limits.py
+scripts/neural_prototyping.py
 scripts/nn_models.py
 scripts/parser.py
 scripts/pathfinding_test.py
@@ -157,7 +158,10 @@ scripts/timescale_evaluation.py
 scripts/__pycache__/abundances.cpython-38.pyc
 scripts/__pycache__/dynamics_test.cpython-38.pyc
 scripts/__pycache__/helper_functions.cpython-38.pyc
+scripts/__pycache__/nn_models.cpython-38.pyc
 scripts/pathfinding_outputs/pathfinding_cno_mm00.txt
 scripts/pathfinding_outputs/pathfinding_cno_mm30.txt
 scripts/pathfinding_outputs/pathfinding_cno_mm30c20n20o04.txt
 scripts/pathfinding_outputs/pathfinding_cno_mm30c20n20o20.txt
+scripts/train_history/TF_MLP6-10.pkl
+scripts/train_history/TF_MLPD6-10.pkl

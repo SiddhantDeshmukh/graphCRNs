@@ -257,7 +257,7 @@ def main():
                                             return_all=True,
                                             # production_filter_species=[
                                             #     "C", "O", "CO", "OH", "CH", "CN", "C2"],
-                                            # production_filter_species=["CO"],
+                                            production_filter_species=["CO"],
                                             reactant_blacklist_species=["NO", "NH", "N2", "O2", "H", "M"])
 
   # fig, ax = plt.subplots()

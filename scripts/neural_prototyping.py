@@ -1,4 +1,3 @@
-# Prototype a ResNet
 from sklearn.ensemble import RandomForestRegressor
 import tensorflow.keras as keras
 import numpy as np
@@ -46,6 +45,20 @@ Pipeline overview:
     - from density, temperature and abundance, map to output EQ number densities
   - Loss function analysis
 """
+
+
+class Config:
+  def __init__(self, num_inputs: int, num_outputs: int, uid_suffix="",
+               input_species=[], output_species=[], use_logn=False) -> None:
+    # input_keys & output_keys must have len (num_inputs - 2) & num_outputs, respectively
+    self.num_inputs = num_inputs
+    self.num_outputs = num_outputs
+    uid_logn_id = "logn" if use_logn else "abu"
+    self.uid = f"{num_inputs}-{num_outputs}_{uid_logn_id}{uid_suffix}"
+    self.input_keys = input_species
+    self.output_keys = output_species
+    # whether to use log(n) inputs (True) or abundance inputs (False)
+    self.use_logn = use_logn
 
 
 class WeightedSumConvolution(tf.keras.layers.Layer):
@@ -106,57 +119,57 @@ def mlp_builder(hp):
   return model
 
 
-def mlp():
+def mlp(input_shape=(6,), num_out=8):
   model = keras.Sequential([
-      keras.layers.Dense(32, input_shape=(6,), activation="relu"),
+      keras.layers.Dense(32,  input_shape=input_shape, activation="relu"),
       keras.layers.Dense(32, activation="relu"),
       keras.layers.Dense(32, activation="relu"),
-      keras.layers.Dense(8, activation="linear"),
+      keras.layers.Dense(num_out, activation="linear"),
   ])
 
   model.compile(optimizer="adam", loss="mse", metrics=["mae"])
   return model
 
 
-def mlp_dropout():
+def mlp_dropout(input_shape=(6,), num_out=8):
   # Same as mlp() but with Dropout layers between each Dense layer
   model = keras.Sequential([
-      keras.layers.Dense(64, input_shape=(6,), activation="relu"),
+      keras.layers.Dense(64, input_shape=input_shape, activation="relu"),
       keras.layers.Dropout(0.5),
       keras.layers.Dense(64, activation="relu"),
       keras.layers.Dropout(0.5),
       keras.layers.Dense(64, activation="relu"),
       keras.layers.Dropout(0.5),
-      keras.layers.Dense(8, activation="linear"),
+      keras.layers.Dense(num_out, activation="linear"),
   ])
 
   model.compile(optimizer="adam", loss="mse", metrics=["mae"])
   return model
 
 
-def cnn_1d():
+def cnn_1d(input_shape=(6, 1), num_out=8):
   # 1D CNN
   model = keras.Sequential([
       # # Input
       # keras.layers.Dense(32, input_shape=(6,), activation="relu"),
       # Convolutional Layers
-      keras.layers.Conv1D(32, 4, input_shape=(
-          6, 1), activation="relu", padding="same"),
+      keras.layers.Conv1D(32, 4, input_shape=input_shape,
+                          activation="relu", padding="same"),
       keras.layers.Conv1D(64, 4, activation="relu"),
       keras.layers.MaxPooling1D(2),
       keras.layers.Flatten(),
       # Output
-      keras.layers.Dense(8, activation="linear")
+      keras.layers.Dense(num_out, activation="linear")
   ])
 
   model.compile(optimizer="adam", loss="mse", metrics=["mae"])
   return model
 
 
-def encoder_decoder():
+def encoder_decoder(input_shape=(6,), num_out=8):
   model = keras.Sequential([
       # Encoder
-      keras.layers.Dense(128, input_shape=(6,), activation="relu"),
+      keras.layers.Dense(128, input_shape=input_shape, activation="relu"),
       keras.layers.Dense(64, activation="relu"),
       keras.layers.Dense(32, activation="relu"),
       # Decoder
@@ -164,7 +177,7 @@ def encoder_decoder():
       keras.layers.Dense(64, activation="relu"),
       keras.layers.Dense(128, activation="relu"),
       # Output
-      keras.layers.Dense(8, activation="linear")
+      keras.layers.Dense(num_out, activation="linear")
   ])
 
   model.compile(optimizer="adam", loss="mse", metrics=["mae"])
@@ -205,11 +218,11 @@ def add_log_n_cols(df, abundances, species):
   mass_hydrogen = 1.67262171e-24  # g
   abundance_arr = np.array([v for v in abundances.values()])
   percent_hydrogen = 10**abundances['H'] / (np.sum(10**abundance_arr))
-  df["log10_H_density"] = np.log10(
-      df.density / (percent_hydrogen * mass_hydrogen))
+  log10_H_density = np.log10(df.density / (percent_hydrogen * mass_hydrogen))
   for s in species:
     print(f"Adding {abundances[s]} to column N_{s}")
-    df[f"N_{s}"] = df.log10_H_density + abundances[s] - 12
+    # Apparently vaex doesn't recognise these as columns but it still works?
+    df[f"N_{s}"] = log10_H_density + abundances[s] - 12
 
   return df
 
@@ -217,92 +230,138 @@ def add_log_n_cols(df, abundances, species):
 def add_abundance_cols(df, abundances, species):
   for s in species:
     print(f"Adding {abundances[s]} to column A_{s}")
-    df[f"A_{s}"] = vaex.vconstant(abundances[s], len(df))
+    df[f"A_{s}"] = vaex.vconstant(abundances[s], len(df), dtype=np.float32)
 
   return df
 
 
-def prepare_dataset():
-  cemp_dir = "/media/sdeshmukh/Crucial X6/mean_chemistry/combined_cemp"
-  suffix = "*chem1*.txt"
+def clean_dfs(*dfs):
+  # Remove all unnecessary columns
+  drop_cols = ["density_centres", "temperature_centres", "x", "y", "z", "abs_v"]
+  for df in dfs:
+    for col in df.columns:
+      if col in drop_cols or col.endswith("_NEQ"):
+        print(f"Dropping {col}")
+        df = df.drop(col, inplace=True)
+      # else:
+      #   df[col] = df[col].astype("float32")
 
-  # species = ["H", "H2", "C", "O", "CO", "CH", "OH", "M"]
-  species = ["H", "C", "O", "M"]
-  chem_keys = [f"{s}_EQ" for s in ["H", "H2", "C", "O", "CO", "CH", "OH", "M"]]
-  input_keys = [*[f"A_{s}" for s in species], "density", "temperature"]
-  # input_keys = [*[f"N_{s}" for s in species], "density", "temperature"]
-  print("Input")
-  print(input_keys)
-  print("Output")
-  print(chem_keys)
+  return dfs
+
+
+def check_dfs(*dfs):
+  for i, df in enumerate(dfs):
+    print(f"DF {i+1}: {len(list(df.columns))} cols, {len(df)} rows")
+    print("dtypes:")
+    print(df.dtypes)
+    print("shapes: ", df.shape)
+    # print("Any Missing?", df.ismissing().any())
+    # print("Any NaN?", df.isnan().any())
+    # print("Any inf?", df.isinfinite().any())
+
+
+def prepare_dataset(use_logn=False,
+                    input_species=["H", "H2", "C", "O", "CO", "CH", "OH", "M"],
+                    output_species=["H", "H2", "C", "O", "CO", "CH", "OH", "M"],
+                    test_files=None, abundance_mappings=None):
+  cemp_dir = "/media/sdeshmukh/Crucial X6/mean_chemistry/combined_cemp"
+
+  if use_logn:
+    X_keys = [*[f"N_{s}" for s in input_species], "density", "temperature"]
+  else:
+    X_keys = [*[f"A_{s}" for s in input_species], "density", "temperature"]
+  y_keys = [f"{s}_EQ" for s in output_species]
+
   # test_suffix = "d3t63g40mm30chem1_04*.parquet"  # load one file
   # TODO:
   # - Use 5 files with different abundances and correctly assign the required
   #   abundance to each
-  snap_num = "101"
-  test_files = [f"{cemp_dir}/d3t63g40mm{id_}chem1_{snap_num}.parquet" for id_ in
-                ["20", "30", "30c20n20o20", "30c20n20o04"]]
-  abundance_mappings = [mm20a04_abundances, mm30a04_abundances,
-                        mm30a04c20n20o20_abundances, mm30a04c20n20o04_abundances]
+  # snap_num = "017"
+  snap_num = "07*"
+  # snap_num = "023"
+  if test_files is None or abundance_mappings is None:
+    test_files = [f"{cemp_dir}/d3t63g40mm{id_}chem1_{snap_num}.parquet" for id_ in
+                  [
+                      # "00",
+                      # "20",
+                      # "30",
+                      "30c20n20o20",
+                      # "30c20n20o04"
+                  ]]
+    abundance_mappings = [
+        # mm00_abundances,
+        # mm20a04_abundances,
+        # mm30a04_abundances,
+        mm30a04c20n20o20_abundances,
+        # mm30a04c20n20o04_abundances
+    ]
   dfs = [load_dataframe(f) for f in test_files]
+  dfs = clean_dfs(*dfs)
   for df_, abundances in zip(dfs, abundance_mappings):
-    df_ = add_abundance_cols(df_, abundances, species)
-    # df_ = add_log_n_cols(df_, abundances, species)
-    # print(list(df_.columns))
+    if use_logn:
+      df_ = add_log_n_cols(df_, abundances, input_species)
+    else:
+      df_ = add_abundance_cols(df_, abundances, input_species)
 
-  df = vaex.concat([*dfs])
+  print(list(dfs[0].columns))
+  print("Cleaned DFs")
+  check_dfs(*dfs)
+  # exit()
+  print("Concatenating DataFrames")
+  df = vaex.concat([*dfs], resolver="strict")
+  print(list(df.columns))
 
-  # TODO: Combine dfs into 1?
-  # Single file
-  # test_file = "d3t63g40mm30chem1_08*.parquet"
-  # df = load_dataframe(f"{cemp_dir}/{test_file}")
-  # print("Loaded DF")
+  print("Input")
+  print(X_keys)
+  print("Output")
+  print(y_keys)
+  print(list(df.columns))
 
-  # # Let's just pass the abundances in
-  # abundances = np.array([mm30a04_abundances[s] for s in species])
-  # new_cols = [f"A_{s}" for s in species]
-
-  # n_elements = df['density'].shape[0]
-  # for i, k in enumerate(new_cols):
-  #   df[k] = np.repeat(abundances[i], n_elements)
-  # df = add_log_n_cols(df, mm30a04_abundances, species)
-  # df = add_abundance_cols(df, mm30a04_abundances, species)
-
-  data = df[input_keys]
-  print("Added new columns")
+  data = df[X_keys]
+  label = df[y_keys]
+  print("Input columns:")
   print(list(data.columns))
+  print("Output columns:")
+  print(list(label.columns))
+
+  # Apply log scaling
   data["density"] = np.log10(data["density"])
   # data["temperature"] = np.log10(data["temperature"])
-  label = df[chem_keys]
-  for k in chem_keys:
+  for k in y_keys:
     label[k] = np.log10(label[k])
   print("Applied log scaling")
 
-  data_rest, data_test, label_rest, label_test = train_test_split(
-      data.values, label.values, test_size=0.25, random_state=42)
-  data_train, data_val, label_train, label_val = train_test_split(
-      data_rest, label_rest, test_size=0.1, random_state=42)
+  # .values throws TypeError: DataType expected, got <class 'numpy.dtype[float32]'>
+  # when using multiple DFs (concatenating seems to mess up dtypes?)
+  X = data.values
+  y = label.values
+  X_trainval, X_test, y_trainval, y_test = train_test_split(
+      X, y, test_size=0.25, random_state=42)
+  X_train, X_val, y_train, y_val = train_test_split(
+      X_trainval, y_trainval, test_size=0.1, random_state=42)
   print("Split data")
-  print("Train", data_train.shape, label_train.shape)
-  print("Val", data_val.shape, label_val.shape)
-  print("Test", data_test.shape, label_test.shape)
-  print(data_train[0])
-  print(minmax(data_train[:, 0]))
+  print("Train", X_train.shape, y_train.shape)
+  print("Val", X_val.shape, y_val.shape)
+  print("Test", X_test.shape, y_test.shape)
+  print(X_train[0])
+  for i in range(X_train.shape[1]):
+    print(X_keys[i], minmax(X_train[:, i]))
   scaler = MinMaxScaler(feature_range=(0, 1))
-  scaler.fit(data_train)
-  data_train = scaler.transform(data_train)
-  data_val = scaler.transform(data_val)
-  data_test = scaler.transform(data_test)
+  scaler.fit(X_train)
+  X_train = scaler.transform(X_train)
+  X_val = scaler.transform(X_val)
+  X_test = scaler.transform(X_test)
 
-  print(data_train[0])
+  print(X_train[0])
   print("Any nans?")
-  for k in chem_keys:
+  for k in y_keys:
     print(k, np.any(np.isnan(label[k].values)))
 
-  return (data_train, label_train), (data_val, label_val), (data_test, label_test)
+  return (X_train, y_train), (X_val, y_val), (X_test, y_test)
 
 
-def prepare_models(uid=""):
+def prepare_models(num_in: int, num_out: int, uid=""):
+  input_shape = (num_in,)
   # Set up sklearn, XGBoost and TensorFlow models
   models = [
       # (f"SKL_Linear{uid}", LinearRegression(n_jobs=4)),
@@ -310,16 +369,17 @@ def prepare_models(uid=""):
       # (f"SKL_RF{uid}", RandomForestRegressor(
       #     criterion="mse", n_jobs=2, verbose=1)),
       # (f"XGB_XGB{uid}", xgb.XGBRegressor()),
-      (f"TF_MLP{uid}", mlp()),
-      (f"TF_MLPD{uid}", mlp_dropout()),
-      (f"TF_CNN{uid}", cnn_1d()),
-      (f"TF_EncDec{uid}", encoder_decoder),
+      (f"TF_MLP{uid}", mlp(input_shape=input_shape, num_out=num_out)),
+      # (f"TF_MLPD{uid}", mlp_dropout(input_shape=input_shape, num_out=num_out)),
+      (f"TF_CNN{uid}", cnn_1d(input_shape=(num_in, 1), num_out=num_out)),
+      (f"TF_EncDec{uid}", encoder_decoder(input_shape=input_shape,
+                                          num_out=num_out)),
   ]
 
   return models
 
 
-def train_models(models, X_train, y_train, X_val, y_val, X_test, y_test):
+def train_models(models, X_train, y_train, X_val, y_val, X_test, y_test, outputs):
   # Trains models from SKLearn, XGBoost and TensorFlow
   model_stats = {}
   for model_name, model in models:
@@ -356,31 +416,20 @@ def train_models(models, X_train, y_train, X_val, y_val, X_test, y_test):
       save_path = f"./models/{model_name}.pkl"
       pickle.dump(model, open(save_path, "wb"))
 
-    chem_keys = [f"{s}_EQ" for s in [
-        "H", "H2", "C", "O", "CO", "CH", "OH", "M"]]
     predictions, truths, inputs = check_random_idx(model, X_test, y_test,
                                                    seed=None)
-    print(model_name)
-    print(model_stats[model_name])
+    print("Testing:")
     for j in range(5):
-      for i, s in enumerate(chem_keys):
+      for i, s in enumerate(outputs):
         print(
             f"({s}): Prediction = {predictions[j, i]:.3f}. Truth = {truths[j, i]:.3f}. P - T = {predictions[j, i] - truths[j, i]:.3f}")
         print(f"Inputs: {inputs[j]}")
+    with open("./model_predictions.txt", "a", encoding="utf-8") as outfile:
+      outfile.write(f"{model_name}\n")
+      outfile.write(f"Test MSE = {model_stats[model_name][0]:1.2e}\n")
+      outfile.write(f"Test MAE = {model_stats[model_name][1]:1.2e}\n")
 
   return models, model_stats
-
-
-def main():
-  # TensorFlow models
-  uid = "6-10"  # maps X features - Y outputs
-  models = prepare_models(uid=uid)
-  print("Set up models")
-  (X_train, y_train), (X_val, y_val), (X_test, y_test) = prepare_dataset()
-  print("Set up dataset")
-  models, model_stats = train_models(models, X_train, y_train, X_val, y_val,
-                                     X_test, y_test)
-  print_stats(model_stats)
 
 
 def check_random_idx(model, X_test, y_test, seed=42):
@@ -391,6 +440,77 @@ def check_random_idx(model, X_test, y_test, seed=42):
   truths = y_test[idx:idx+10]
 
   return predictions, truths, X_test[idx:idx+10]
+
+
+def setup_and_train(config: Config, test_files=None, abundance_mappings=None):
+  models = prepare_models(config.num_inputs, config.num_outputs, uid=config.uid)
+  print("Set up models")
+  (X_train, y_train), (X_val, y_val), (X_test, y_test) =\
+      prepare_dataset(use_logn=config.use_logn,
+                      input_species=config.input_keys,
+                      output_species=config.output_keys,
+                      test_files=test_files,
+                      abundance_mappings=abundance_mappings
+                      )
+  print("Set up dataset")
+  models, model_stats = train_models(models, X_train, y_train, X_val, y_val,
+                                     X_test, y_test, config.output_keys)
+  print_stats(model_stats)
+
+  return models, model_stats
+
+
+def main():
+  chem1_keys = ["H", "C", "O", "M", "H2", "CH", "OH", "CO"]
+  chem1_atomic_keys = ["H", "C", "O", "M"]
+  model_ids = [
+      "mm00",
+      "mm20",
+      "mm30",
+      # "mm30c20n20o20",
+      # "mm30c20n20o04",
+  ]
+  uid_suffixes_3d = [f"_{model_id}_3d" for model_id in model_ids]
+  test_files_3d = [f"../res/df/d3t63g40mm{id_}chem1_074.parquet" for id_ in
+                   [
+                        "00",
+                        "20",
+                        "30",
+                      #  "30c20n20o20",
+                      #  "30c20n20o04"
+                   ]]
+  abundance_mappings = [
+      mm00_abundances,
+      mm20a04_abundances,
+      mm30a04_abundances,
+      # mm30a04c20n20o20_abundances,
+      # mm30a04c20n20o04_abundances
+  ]
+  configs_3d_chem1 = [Config(6, 8, input_species=chem1_atomic_keys,
+                             output_species=chem1_keys, use_logn=False,
+                             uid_suffix=uid_suffix) for uid_suffix in uid_suffixes_3d]
+  configs = [
+      *configs_3d_chem1
+      # # All log(n) -> CO
+      # Config(10, 1, input_species=chem1_keys,
+      #        output_species=["CO"], use_logn=True,
+      #        uid_suffix=uid_suffix),
+      # # All log(n) -> all log(n)
+      # Config(10, 8, input_species=chem1_keys,
+      #        output_species=chem1_keys, use_logn=True,
+      #        uid_suffix=uid_suffix),
+      # Config(6, 1, input_species=chem1_atomic_keys,
+      #        output_species=["CO"], use_logn=True,
+      #        uid_suffix=uid_suffix),
+      # Config(6, 8, input_species=chem1_atomic_keys,
+      #        output_species=chem1_keys, use_logn=True,
+      #        uid_suffix=uid_suffix),
+  ]
+
+  for (config, test_file, abundance_mapping) in zip(configs, test_files_3d, abundance_mappings):
+    print(f"Running config {config.uid}")
+    models, model_stats = setup_and_train(
+        config, test_files=[test_file], abundance_mappings=[abundance_mapping])
 
 
 if __name__ == "__main__":
