@@ -57,6 +57,7 @@ Test MSE = 0.000
 Test MAE = 0.002
 
 6-8 Abundance 3D
+
 TF_MLP6-8_abu_mm00_3d
 Test MSE = 7.62e-04
 Test MAE = 1.44e-02
@@ -66,6 +67,7 @@ Test MAE = 3.57e-03
 TF_EncDec6-8_abu_mm00_3d
 Test MSE = 1.53e-06
 Test MAE = 8.20e-04
+
 TF_MLP6-8_abu_mm20_3d
 Test MSE = 6.20e-04
 Test MAE = 1.37e-02
@@ -75,6 +77,7 @@ Test MAE = 5.49e-03
 TF_EncDec6-8_abu_mm20_3d
 Test MSE = 6.87e-06
 Test MAE = 1.51e-03
+
 TF_MLP6-8_abu_mm30_3d
 Test MSE = 4.51e-04
 Test MAE = 9.57e-03
@@ -84,6 +87,7 @@ Test MAE = 4.37e-03
 TF_EncDec6-8_abu_mm30_3d
 Test MSE = 4.81e-05
 Test MAE = 2.71e-03
+
 TF_MLP6-8_abu_mm30c20n20o20_3d
 Test MSE = 1.81e-04
 Test MAE = 7.81e-03
@@ -93,6 +97,7 @@ Test MAE = 6.30e-03
 TF_EncDec6-8_abu_mm30c20n20o20_3d
 Test MSE = 2.01e-05
 Test MAE = 2.34e-03
+
 TF_MLP6-8_abu_mm30c20n20o04_3d
 Test MSE = 1.55e-04
 Test MAE = 6.99e-03
@@ -102,3 +107,15 @@ Test MAE = 6.25e-03
 TF_EncDec6-8_abu_mm30c20n20o04_3d
 Test MSE = 9.35e-06
 Test MAE = 1.70e-03
+TF_MLP6-8_abu_combined_3d
+Test MSE = 1.67e-03
+Test MAE = 2.21e-02
+TF_MLP6-8_abu_combined_3d
+Test MSE = 2.76e-04
+Test MAE = 8.60e-03
+TF_CNN6-8_abu_combined_3d
+Test MSE = 2.06e-04
+Test MAE = 6.94e-03
+TF_EncDec6-8_abu_combined_3d
+Test MSE = 2.20e-05
+Test MAE = 2.30e-03

@@ -391,7 +391,9 @@ def train_models(models, X_train, y_train, X_val, y_val, X_test, y_test, outputs
       checkpoint_cb = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
                                                       save_weights_only=True,
                                                       verbose=1)
-      history = model.fit(X_train, y_train, batch_size=512, epochs=500,
+      history = model.fit(X_train, y_train, batch_size=512,
+                          epochs=500,
+                          # epochs=5,
                           validation_data=(X_val, y_val),
                           callbacks=[keras.callbacks.EarlyStopping(restore_best_weights=True,
                                                                    patience=30),
@@ -403,7 +405,7 @@ def train_models(models, X_train, y_train, X_val, y_val, X_test, y_test, outputs
       with open(f"./train_history/{model_name}.pkl", "wb") as history_file:
         pickle.dump(history.history, history_file)
 
-      model_stats[model_name] = model.evaluate(X_test, y_test)
+      model_stats[model_name] = model.evaluate(X_test, y_test, verbose=2)
 
     else:
       # SKLearn/XGBoost training
@@ -442,7 +444,54 @@ def check_random_idx(model, X_test, y_test, seed=42):
   return predictions, truths, X_test[idx:idx+10]
 
 
+def compile_and_train(config: Config, X_train, y_train, X_val, y_val,
+                      model_type="MLP"):
+  # Compile a model from 'config', train & validate it (no eval with test)
+  # Return the trained model
+  input_shape = (config.num_inputs,)
+  models = {
+      # Models are compiled upon initialisation
+      "MLP": mlp(input_shape=input_shape, num_out=config.num_outputs),
+      "CNN": cnn_1d(input_shape=(config.num_inputs, 1),
+                    num_out=config.num_outputs),
+      "EncDec": encoder_decoder(input_shape=input_shape,
+                                num_out=config.num_outputs)
+  }
+  model = models[model_type]
+  model_name = f"TF_{model_type}{config.uid}"
+
+  # Train
+  # model_stats = {}
+  print(f"Training \'{model_name}\'")
+  model.summary()
+  # TensorFlow training
+  checkpoint_path = f"./models/{model_name}.ckpt"
+  checkpoint_cb = keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
+                                                  save_weights_only=True,
+                                                  verbose=1)
+  history = model.fit(X_train, y_train,
+                      batch_size=1024,
+                      epochs=500,
+                      # epochs=5,
+                      validation_data=(X_val, y_val),
+                      callbacks=[keras.callbacks.EarlyStopping(restore_best_weights=True,
+                                                               patience=30),
+                                 checkpoint_cb,
+                                 keras.callbacks.ReduceLROnPlateau(monitor="val_loss",
+                                                                   factor=0.1, patience=30, min_delta=1e-4, cooldown=0,
+                                                                   min_lr=1e-4)],
+                      verbose=2)
+  with open(f"./train_history/{model_name}.pkl", "wb") as history_file:
+    pickle.dump(history.history, history_file)
+
+  return model, history, model_name
+
+
 def setup_and_train(config: Config, test_files=None, abundance_mappings=None):
+  # TODO:
+  # Refactor to have a 'compile_and_train' function that takes the config and
+  # model type, compiles & fits model, then returns
+  # This might fix the memory issues
   models = prepare_models(config.num_inputs, config.num_outputs, uid=config.uid)
   print("Set up models")
   (X_train, y_train), (X_val, y_val), (X_test, y_test) =\
@@ -460,6 +509,94 @@ def setup_and_train(config: Config, test_files=None, abundance_mappings=None):
   return models, model_stats
 
 
+def prepare_combined_dataset(train_file: str, test_file: str, config: Config):
+  # Set up combined dataset
+  df_train = vaex.open(train_file)
+  df_test = vaex.open(test_file)
+
+  X_keys = [*[f"A_{s}" for s in config.input_keys], "density", "temperature"]
+  y_keys = [f"{s}_EQ" for s in config.output_keys]
+
+  df_train, df_test = clean_dfs(df_train, df_test)
+
+  print(list(df_train.columns))
+  print("Cleaned DFs")
+  check_dfs(df_train, df_test)
+
+  data_train = df_train[X_keys]
+  label_train = df_train[y_keys]
+  X_test = df_test[X_keys]
+  y_test = df_test[y_keys]
+  print("Input columns:")
+  print(list(data_train.columns))
+  print("Output columns:")
+  print(list(label_train.columns))
+
+  # Apply log scaling
+  data_train["density"] = np.log10(data_train["density"])
+  X_test["density"] = np.log10(X_test["density"])
+  for k in y_keys:
+    label_train[k] = np.log10(label_train[k])
+    y_test[k] = np.log10(y_test[k])
+  print("Applied log scaling")
+
+  X_trainval = data_train.values
+  y_trainval = label_train.values
+  X_test = X_test.values
+  y_test = y_test.values
+  X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval,
+                                                    test_size=0.25, random_state=42)
+  print("Split data")
+  print("Train", X_train.shape, y_train.shape)
+  print("Val", X_val.shape, y_val.shape)
+  print("Test", X_test.shape, y_test.shape)
+  for i in range(X_train.shape[1]):
+    print(X_keys[i], minmax(X_train[:, i]))
+  scaler = MinMaxScaler(feature_range=(0, 1))
+  scaler.fit(X_train)
+  X_train = scaler.transform(X_train)
+  X_val = scaler.transform(X_val)
+  X_test = scaler.transform(X_test)
+  # print("Any nans?")
+  # for k in y_keys:
+  #   print(k, np.any(np.isnan(y_train[k].values)))
+
+  return (X_train, y_train), (X_val, y_val), (X_test, y_test)
+
+
+def setup_train_combined(train_file: str, test_file: str, config: Config):
+  # Load a combined parquet DF for training and another for testing, setup
+  # data and train relevant networks
+  (X_train, y_train), (X_val, y_val), (X_test, y_test) =\
+      prepare_combined_dataset(train_file, test_file, config)
+  print("Loaded datasets")
+  model_types = [
+      # "MLP",
+      # "CNN",
+      "EncDec"
+  ]
+  model_stats = {}
+  for model_type in model_types:
+    # Compile and train model
+    model, history, model_name = compile_and_train(config, X_train, y_train, X_val, y_val,
+                                                   model_type=model_type)
+    # Evaluate on test set
+    model_stats[model_name] = model.evaluate(X_test, y_test, verbose=2)
+    print(f"Testing {model_name}")
+    print_stats(model_stats)
+    predictions, truths, inputs = check_random_idx(model, X_test, y_test,
+                                                   seed=None)
+    for j in range(5):
+      for i, s in enumerate(config.output_keys):
+        print(
+            f"({s}): Prediction = {predictions[j, i]:.3f}. Truth = {truths[j, i]:.3f}. P - T = {predictions[j, i] - truths[j, i]:.3f}")
+        print(f"Inputs: {inputs[j]}")
+    with open("./model_predictions.txt", "a", encoding="utf-8") as outfile:
+      outfile.write(f"{model_name}\n")
+      outfile.write(f"Test MSE = {model_stats[model_name][0]:1.2e}\n")
+      outfile.write(f"Test MAE = {model_stats[model_name][1]:1.2e}\n")
+
+
 def main():
   chem1_keys = ["H", "C", "O", "M", "H2", "CH", "OH", "CO"]
   chem1_atomic_keys = ["H", "C", "O", "M"]
@@ -467,24 +604,24 @@ def main():
       "mm00",
       "mm20",
       "mm30",
-      # "mm30c20n20o20",
-      # "mm30c20n20o04",
+      "mm30c20n20o20",
+      "mm30c20n20o04",
   ]
   uid_suffixes_3d = [f"_{model_id}_3d" for model_id in model_ids]
   test_files_3d = [f"../res/df/d3t63g40mm{id_}chem1_074.parquet" for id_ in
                    [
-                        "00",
-                        "20",
-                        "30",
-                      #  "30c20n20o20",
-                      #  "30c20n20o04"
+                       "00",
+                       "20",
+                       "30",
+                       "30c20n20o20",
+                       "30c20n20o04"
                    ]]
   abundance_mappings = [
       mm00_abundances,
       mm20a04_abundances,
       mm30a04_abundances,
-      # mm30a04c20n20o20_abundances,
-      # mm30a04c20n20o04_abundances
+      mm30a04c20n20o20_abundances,
+      mm30a04c20n20o04_abundances
   ]
   configs_3d_chem1 = [Config(6, 8, input_species=chem1_atomic_keys,
                              output_species=chem1_keys, use_logn=False,
@@ -507,11 +644,27 @@ def main():
       #        uid_suffix=uid_suffix),
   ]
 
-  for (config, test_file, abundance_mapping) in zip(configs, test_files_3d, abundance_mappings):
-    print(f"Running config {config.uid}")
-    models, model_stats = setup_and_train(
-        config, test_files=[test_file], abundance_mappings=[abundance_mapping])
+  # for (config, test_file, abundance_mapping) in zip(configs, test_files_3d, abundance_mappings):
+  #   print(f"Running config {config.uid}")
+  #   models, model_stats = setup_and_train(
+  #       config, test_files=[test_file], abundance_mappings=[abundance_mapping])
+
+  # Run combined dataset
+  res_dir = "../res/df/"
+  combined_config = Config(6, 8, input_species=chem1_atomic_keys,
+                           output_species=chem1_keys, use_logn=False,
+                           uid_suffix="_combined_3d")
+  setup_train_combined(f"{res_dir}/combined_dwarf_cemp_074.parquet",
+                       f"{res_dir}/combined_dwarf_cemp_116.parquet",
+                       config=combined_config)
 
 
 if __name__ == "__main__":
   main()
+
+"""
+TODO:
+  - use combined set 74 for training and combined set 116 for testing, DFs are
+    already init'd
+    - can write a few new functions to do this
+"""
