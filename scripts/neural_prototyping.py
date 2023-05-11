@@ -572,8 +572,8 @@ def setup_train_combined(train_file: str, test_file: str, config: Config):
   print("Loaded datasets")
   model_types = [
       # "MLP",
-      # "CNN",
-      "EncDec"
+      "CNN",
+      # "EncDec"
   ]
   model_stats = {}
   for model_type in model_types:
@@ -651,12 +651,30 @@ def main():
 
   # Run combined dataset
   res_dir = "../res/df/"
-  combined_config = Config(6, 8, input_species=chem1_atomic_keys,
+  combined_config_dwarf_cemp = Config(6, 8, input_species=chem1_atomic_keys,
+                           output_species=chem1_keys, use_logn=True,
+                           uid_suffix="_combined_dwarf_cemp_3d")
+  combined_config_rgb = Config(6, 8, input_species=chem1_atomic_keys,
+                           output_species=chem1_keys, use_logn=True,
+                           uid_suffix="_combined_rgb_3d")
+  combined_config_dwarf_rgb = Config(6, 8, input_species=chem1_atomic_keys,
+                           output_species=chem1_keys, use_logn=True,
+                           uid_suffix="_combined_dwarf_cemp_rgb_3d")
+  combined_config_dwarf_rgb_abu = Config(6, 8, input_species=chem1_atomic_keys,
                            output_species=chem1_keys, use_logn=False,
-                           uid_suffix="_combined_3d")
-  setup_train_combined(f"{res_dir}/combined_dwarf_cemp_074.parquet",
-                       f"{res_dir}/combined_dwarf_cemp_116.parquet",
-                       config=combined_config)
+                           uid_suffix="_combined_dwarf_cemp_rgb_3d")
+  # setup_train_combined(f"{res_dir}/combined_dwarf_cemp_074.parquet",
+  #                      f"{res_dir}/combined_dwarf_cemp_116.parquet",
+  #                      config=combined_config_dwarf_cemp)
+  # setup_train_combined(f"{res_dir}/combined_rgb_074.parquet",
+  #                      f"{res_dir}/combined_rgb_116.parquet",
+  #                      config=combined_config_rgb)
+  # setup_train_combined(f"{res_dir}/combined_dwarf_cemp_rgb_074.parquet",
+  #                      f"{res_dir}/combined_dwarf_cemp_rgb_116.parquet",
+  #                      config=combined_config_dwarf_rgb)
+  setup_train_combined(f"{res_dir}/combined_dwarf_cemp_rgb_074.parquet",
+                       f"{res_dir}/combined_dwarf_cemp_rgb_116.parquet",
+                       config=combined_config_dwarf_rgb_abu)
 
 
 if __name__ == "__main__":

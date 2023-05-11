@@ -89,6 +89,7 @@ def network_irrts(network: Network, use_relevant_species=False,
     for i, rxn in enumerate(network.reactions):
       if not np.isnan(timescales[i]):
         print(f"{i}: {rxn}: {timescales[i]:1.2e} [s]")
+    print(len(timescales))
     longest_ts = np.nanmax(timescales)
     ts_idx = np.where(timescales == longest_ts)[0][0]
     print(
@@ -153,7 +154,8 @@ def network_firrts(network: Network, verbose=False, return_all=False,
     # rxns_to_consider = [[rhs_dict[s]["source"] + rhs_dict[s]["sink"]]]
     # rxns_to_consider = [rhs_dict[s]["source"], rhs_dict[s]["sink"]]
     # rxns_to_consider = [rhs_dict[s]["source"]]
-    s = "CN"
+    # s = "CO"
+    s = "CH"
     # rxns_to_consider = [rhs_dict[s]["sink"]]
     rxns_to_consider = [rhs_dict[s]["source"]]
     # print(s, len(rhs_dict[s]["source"]), len(rhs_dict[s]["sink"]))
@@ -219,7 +221,7 @@ def main():
   timescales = {
       "IRRTS": [network_irrts(network)],
       # "IRRTS FILTER": [network_irrts(network, use_relevant_species=True)],
-      # "FIRRTS": [network_firrts(network)],
+      "FIRRTS": [network_firrts(network, verbose=False)],
       "ETS": [network_ets(network)],
       "OFTS": [network_ofts(network)],
       # "IETS": [],
@@ -255,9 +257,9 @@ def main():
   # firrts_timescales_all = network_firrts(network, verbose=True, return_all=True)
   firrts_timescales_sample = network_firrts(network, verbose=True,
                                             return_all=True,
-                                            # production_filter_species=[
-                                            #     "C", "O", "CO", "OH", "CH", "CN", "C2"],
-                                            production_filter_species=["CO"],
+                                            production_filter_species=[
+                                                "C", "O", "CO", "OH", "CH", "CN", "C2"],
+                                            # production_filter_species=["CO"],
                                             reactant_blacklist_species=["NO", "NH", "N2", "O2", "H", "M"])
 
   # fig, ax = plt.subplots()
