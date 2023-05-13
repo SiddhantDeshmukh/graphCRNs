@@ -1,3 +1,2 @@
 #!/bin/bash
-rm -r build dist gcrn.egg-info
-python setup.py install
+pip install -e .

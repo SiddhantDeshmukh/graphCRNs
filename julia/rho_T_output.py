@@ -132,12 +132,12 @@ def main():
       # "d3t63g40mm30c20n20o04chem1",
       # giant
       # "d3t36g10mm00chem1",
-      "d3t40g15mm00chem1",
-      "d3t40g15mm20chem1",
-      "d3t40g15mm30chem1",
-      "d3t50g25mm00chem1",
-      "d3t50g25mm20chem1",
-      "d3t50g25mm30chem1",
+      # "d3t40g15mm00chem1",
+      # "d3t40g15mm20chem1",
+      # "d3t40g15mm30chem1",
+      # "d3t50g25mm00chem1",
+      # "d3t50g25mm20chem1",
+      # "d3t50g25mm30chem1",
       # # chem 2
       # # dwarf
       # "d3t63g40mm00chem2",
@@ -150,9 +150,9 @@ def main():
       # "d3t40g15mm00chem2",
       # "d3t40g15mm20chem2",
       # "d3t40g15mm30chem2",
-      # "d3t50g25mm00chem2",
-      # "d3t50g25mm20chem2",
-      # "d3t50g25mm30chem2",
+      "d3t50g25mm00chem2",
+      "d3t50g25mm20chem2",
+      "d3t50g25mm30chem2",
   ]
   # All models that should only have 1 snap output per full file
   full_mean_mismatch_models = [
@@ -162,7 +162,8 @@ def main():
       "d3t57g44b1600chem1",
   ]
   # snap_out_idxs = [int(i) for i in np.linspace(1, 20, num=20)]
-  snap_out_idxs = [26, 74, 116, 125, 131, 137]
+  # snap_out_idxs = [26, 74, 116, 125, 131, 137]
+  snap_out_idxs = [124, 129, 135]
   for model_id in model_ids:
     has_full_mean_mismatch = model_id in full_mean_mismatch_models
     model_dir = f"/media/sdeshmukh/Crucial X6/cobold_runs/chem/{model_id}"

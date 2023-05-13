@@ -1,12 +1,12 @@
 from sklearn.ensemble import RandomForestRegressor
 import tensorflow.keras as keras
 import numpy as np
-from nn_models import simple_dnn
 from abundances import *
 from typing import Dict, List
 import glob
 import vaex
 import tensorflow as tf
+from tensorflow.keras.utils import plot_model
 import tensorflow_gnn as tfgnn
 from petastorm import make_batch_reader
 from petastorm.tf_utils import make_petastorm_dataset
@@ -597,6 +597,29 @@ def setup_train_combined(train_file: str, test_file: str, config: Config):
       outfile.write(f"Test MAE = {model_stats[model_name][1]:1.2e}\n")
 
 
+def visualise_networks(config: Config):
+  # Simple function to draw network architectures
+  model_types = [
+    "MLP",
+    "CNN",
+    "EncDec"
+  ]
+  input_shape = (config.num_inputs,)
+  models = {
+      # Models are compiled upon initialisation
+      "MLP": mlp(input_shape=input_shape, num_out=config.num_outputs),
+      "CNN": cnn_1d(input_shape=(config.num_inputs, 1),
+                    num_out=config.num_outputs),
+      "EncDec": encoder_decoder(input_shape=input_shape,
+                                num_out=config.num_outputs)
+  }
+  out_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/out/figs/nn_architectures"
+  for model_type in model_types:
+    model = models[model_type]
+    model_name = f"TF_{model_type}{config.uid}"
+    plot_model(model, to_file=f"{out_dir}/{model_name}.png",
+               show_shapes=True, show_layer_names=False)
+
 def main():
   chem1_keys = ["H", "C", "O", "M", "H2", "CH", "OH", "CO"]
   chem1_atomic_keys = ["H", "C", "O", "M"]
@@ -663,6 +686,9 @@ def main():
   combined_config_dwarf_rgb_abu = Config(6, 8, input_species=chem1_atomic_keys,
                            output_species=chem1_keys, use_logn=False,
                            uid_suffix="_combined_dwarf_cemp_rgb_3d")
+
+  visualise_networks(combined_config_rgb)
+  exit()
   # setup_train_combined(f"{res_dir}/combined_dwarf_cemp_074.parquet",
   #                      f"{res_dir}/combined_dwarf_cemp_116.parquet",
   #                      config=combined_config_dwarf_cemp)
@@ -672,9 +698,9 @@ def main():
   # setup_train_combined(f"{res_dir}/combined_dwarf_cemp_rgb_074.parquet",
   #                      f"{res_dir}/combined_dwarf_cemp_rgb_116.parquet",
   #                      config=combined_config_dwarf_rgb)
-  setup_train_combined(f"{res_dir}/combined_dwarf_cemp_rgb_074.parquet",
-                       f"{res_dir}/combined_dwarf_cemp_rgb_116.parquet",
-                       config=combined_config_dwarf_rgb_abu)
+  # setup_train_combined(f"{res_dir}/combined_dwarf_cemp_rgb_074.parquet",
+  #                      f"{res_dir}/combined_dwarf_cemp_rgb_116.parquet",
+  #                      config=combined_config_dwarf_rgb_abu)
 
 
 if __name__ == "__main__":

@@ -69,6 +69,15 @@ def iets(jacobian: np.ndarray):
   timescales = [1 / np.abs(e) if e < 0 else 0 for e in eigenvalues]
   return timescales
 
+def irrts(reactions: List, temperature: float, number_densities: Dict):
+  rates = np.zeros(len(reactions))
+  for i, rxn in enumerate(reactions):
+    rates[i] = rxn.evaluate_mass_action_rate(temperature, number_densities)
+
+  timescales = 1 / rates
+
+  return timescales
+
 
 def evts(jacobian: np.ndarray):
   # CTS-ID from Caudal+12
@@ -156,7 +165,7 @@ def network_irrts(network: Network, use_relevant_species=False,
     return np.nanmax(timescales)
 
 
-def network_firrts(network: Network, verbose=False, return_all=False,
+def network_firrts(network: Network, verbose=0, return_all=False,
                    weights_threshold=0.05, production_filter_species=[],
                    reactant_blacklist_species=[]):
   # Custom version of inverse reaction rate timescale that filters rates based
@@ -173,17 +182,17 @@ def network_firrts(network: Network, verbose=False, return_all=False,
       reactants, products = rxn.reactants, rxn.products
       has_useful_product = any([s_ in production_filter_species
                                 for s_ in products])
-      if s in reactant_blacklist_species or not has_useful_product:
+      in_blacklist = any([s_ in reactant_blacklist_species for s_ in reactants])
+      if in_blacklist or not has_useful_product:
         continue
       if not rxn.idx in done_rxn_idxs:
         original_rate = rxn.evaluate_mass_action_rate(T, n)
         adjusted_rate = original_rate / n[s]
-        # rates[j] = original_rate
         rates[j] = adjusted_rate
-        if verbose:
+        if verbose > 1:
           print(f"{rxn.idx}: {rxn}, dividing by {s} ({n[s]:1.2e})")
-          print(
-              f"Original: {original_rate:1.2e}, Adjusted: {adjusted_rate:1.2e}")
+          print(f"Original: {original_rate:1.2e}, Adjusted: {adjusted_rate:1.2e}")
+        # done_rxn_idxs.append(rxn.idx)
     total_production_rate = np.sum(rates)
     weights = rates / total_production_rate
 
@@ -203,8 +212,7 @@ def network_firrts(network: Network, verbose=False, return_all=False,
   rhs_dict = network.rhs_rxns()
   T, n = network.temperature, network.number_densities_dict
   for s in rhs_dict.keys():
-    # rxns_to_consider = [rhs_dict[s]["source"] + rhs_dict[s]["sink"]]
-    rxns_to_consider = [rhs_dict[s]["source"]]  # only formation reactions
+    rxns_to_consider = [rhs_dict[s]["source"]]
     for rxns in rxns_to_consider:
       filtered_rates, filtered_rxns, weights = weight_rxns(s, rxns,
                                                            weights_threshold=weights_threshold)
@@ -215,25 +223,43 @@ def network_firrts(network: Network, verbose=False, return_all=False,
   useful_rates = np.array(useful_rates)
   timescales = 1 / useful_rates
 
-  if verbose:
+  if verbose > 0:
     print(f"T = {T} [K]. {len(timescales)} relevant timescales.")
-    for i in range(len(useful_rates)):
-      print(
-          f"{i}/{useful_rxns[i].idx}: {useful_rxns[i]}; {timescales[i]:1.2e} [s], rate = {1/timescales[i]:1.2e}, weight = {useful_weights[i]:.2f}")
+    # Sort by ascending timescale
+    idxs = np.argsort(timescales)
+    timescales = timescales[idxs]
+    useful_rates = [useful_rates[idx] for idx in idxs]
+    useful_rxns = [useful_rxns[idx] for idx in idxs]
+    useful_weights = [useful_weights[idx] for idx in idxs]
+    if verbose > 1:
+      for i in range(len(useful_rates)):
+        print(
+            f"{i}/{useful_rxns[i].idx}: {useful_rxns[i]}; {timescales[i]:1.2e} [s], weight = {useful_weights[i]:.2f}")
     longest_ts = np.nanmax(timescales)
-    ts_idx = np.where(timescales == longest_ts)[0][0]
-    print(
-        f"Longest timescale: ({useful_rxns[ts_idx].idx}) {useful_rxns[ts_idx]}; {longest_ts:1.2e} [s]; {1 / longest_ts:1.2e} [1/s]")
+    shortest_ts = np.nanmin(timescales)
+    lt_idx = np.where(timescales == longest_ts)[0][0]
+    st_idx = np.where(timescales == shortest_ts)[0][0]
+    rxn_l = useful_rxns[lt_idx]
+    rxn_s = useful_rxns[st_idx]
+    print(f"Shortest timescale: {rxn_s.idx} {rxn_s}; {shortest_ts:1.2e} [s], weight = {useful_weights[lt_idx]:.2f}")
+    print(f"Longest timescale: {rxn_l.idx} {rxn_l}; {shortest_ts:1.2e} [s], weight = {useful_weights[st_idx]:.2f}")
 
   if return_all:
     return timescales
   else:
-    return np.nanmax(timescales)
-
+    # return np.nanmax(timescales)
+    return np.nanmin(timescales)
 
 def network_iets(network: Network):
   return iets(network.evaluate_jacobian(network.temperature,
                                         network.number_densities))
+
+
+def network_idx_irrts(network: Network, rxn_idxs: List):
+  # Compute IRRTS of the single 'rxn_idx' reaction
+  rxns = [r for r in network.reactions if r.idx in rxn_idxs]
+  timescales = irrts(rxns, network.temperature, network.number_densities_dict)
+  return timescales
 
 
 def compute_timescales(network: Network, method="firrts", **kwargs):
@@ -244,6 +270,7 @@ def compute_timescales(network: Network, method="firrts", **kwargs):
       "ofts": network_ofts,
       "irrts": network_irrts,
       "firrts": network_firrts,
+      "idx_irrts": network_idx_irrts
   }[method]
 
   return timescale_func(network, **kwargs)

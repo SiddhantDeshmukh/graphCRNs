@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+[project]
+name = "gcrn"
+version = "0.0.1"
+authors = [
+  { name="Siddhant A. Deshmukh", email="deshmukh@sci-an.com" },
+]
+description = "A set of tools to investigate chemical reaction networks as graphs."
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+  "matplotlib",
+  "mplcursors",
+  "networkx",
+  "numpy",
+  "pandas",
+  "plotly",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/SiddhantDeshmukh/graphCRNs"
