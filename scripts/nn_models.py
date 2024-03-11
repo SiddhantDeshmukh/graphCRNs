@@ -258,3 +258,69 @@ def stacked_cnn_1d(input_length=9, output_length=8, num_features=1,
   model.add(keras.layers.Reshape((output_length, num_features)))
 
   return model
+
+# =========================================================================
+# Used for RGB paper, do not change!
+# =========================================================================
+def mlp(input_shape=(6,), num_out=8):
+  model = keras.Sequential([
+      keras.layers.Dense(32,  input_shape=input_shape, activation="relu"),
+      keras.layers.Dense(32, activation="relu"),
+      keras.layers.Dense(32, activation="relu"),
+      keras.layers.Dense(num_out, activation="linear"),
+  ])
+
+  model.compile(optimizer="adam", loss="mse", metrics=["mae"])
+  return model
+
+
+def mlp_dropout(input_shape=(6,), num_out=8):
+  # Same as mlp() but with Dropout layers between each Dense layer
+  model = keras.Sequential([
+      keras.layers.Dense(64, input_shape=input_shape, activation="relu"),
+      keras.layers.Dropout(0.5),
+      keras.layers.Dense(64, activation="relu"),
+      keras.layers.Dropout(0.5),
+      keras.layers.Dense(64, activation="relu"),
+      keras.layers.Dropout(0.5),
+      keras.layers.Dense(num_out, activation="linear"),
+  ])
+
+  model.compile(optimizer="adam", loss="mse", metrics=["mae"])
+  return model
+
+
+def cnn_1d(input_shape=(6, 1), num_out=8):
+  # 1D CNN
+  model = keras.Sequential([
+      # Input
+      # Convolutional Layers
+      keras.layers.Conv1D(32, 4, input_shape=input_shape,
+                          activation="relu", padding="same"),
+      keras.layers.Conv1D(64, 4, activation="relu"),
+      keras.layers.MaxPooling1D(2),
+      keras.layers.Flatten(),
+      # Output
+      keras.layers.Dense(num_out, activation="linear")
+  ])
+
+  model.compile(optimizer="adam", loss="mse", metrics=["mae"])
+  return model
+
+
+def encoder_decoder(input_shape=(6,), num_out=8):
+  model = keras.Sequential([
+      # Encoder
+      keras.layers.Dense(128, input_shape=input_shape, activation="relu"),
+      keras.layers.Dense(64, activation="relu"),
+      keras.layers.Dense(32, activation="relu"),
+      # Decoder
+      keras.layers.Dense(32, activation="relu"),
+      keras.layers.Dense(64, activation="relu"),
+      keras.layers.Dense(128, activation="relu"),
+      # Output
+      keras.layers.Dense(num_out, activation="linear")
+  ])
+
+  model.compile(optimizer="adam", loss="mse", metrics=["mae"])
+  return model

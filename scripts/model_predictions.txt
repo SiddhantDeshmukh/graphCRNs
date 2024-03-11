@@ -160,6 +160,14 @@ TF_EncDec6-8_abu_combined_rgb_3d
 Test MSE = 7.28e-04
 Test MAE = 6.04e-03
 
+Model Name: TF_MLP6-8_abu_combined_rgb_3d
+Test MSE = 1.10e-03
+Test MAE = 1.14e-02
+
+Model Name: TF_EncDec6-8_abu_combined_rgb_3d
+Test MSE = 5.30e-04
+Test MAE = 5.12e-03
+
 6-8 log(n) RGB 3D
 
 TF_MLP6-8_logn_combined_rgb_3d
@@ -171,6 +179,26 @@ Test MAE = 9.01e-03
 TF_EncDec6-8_logn_combined_rgb_3d
 Test MSE = 7.21e-04
 Test MAE = 5.11e-03
+
+Model Name: TF_MLP6-8_logn_combined_rgb_3d
+Test MSE = 1.35e-03
+Test MAE = 1.42e-02
+
+Model Name: TF_MLP6-8_logn_combined_rgb_3d
+Test MSE = 2.64e-03
+Test MAE = 2.33e-02
+
+Model Name: TF_CNN6-8_logn_combined_rgb_3d
+Test MSE = 1.68e-03
+Test MAE = 1.41e-02
+
+Model Name: TF_EncDec6-8_logn_combined_rgb_3d
+Test MSE = 5.57e-04
+Test MAE = 5.48e-03
+
+Model Name: TF_EncDec6-8_logn_combined_rgb_3d
+Test MSE = 1.39e-03
+Test MAE = 1.37e-02
 
 6-8 log(n) dwarf + RGB 3D
 

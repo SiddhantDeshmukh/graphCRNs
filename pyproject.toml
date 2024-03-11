@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 name = "gcrn"
 version = "0.0.1"
 authors = [
-  { name="Siddhant A. Deshmukh", email="deshmukh@sci-an.com" },
+  { name="Siddhant A. Deshmukh", email="siddhant593@gmail.com" },
 ]
 description = "A set of tools to investigate chemical reaction networks as graphs."
 readme = "README.md"

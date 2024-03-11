@@ -13,7 +13,7 @@ import re
 import sympy
 from math import exp  # used in 'eval'
 from scipy.integrate import ode
-from sadtools.utilities.abu_tools import load_abu
+from sadchem.utils import load_abu
 
 
 # REFACTOR TODO:

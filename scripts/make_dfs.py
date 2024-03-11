@@ -1,5 +1,5 @@
 # Create DataFrames from 3D model snaps for NN training input
-from uio_tools.uio_loader import UIOLoader, UIOData
+from uio_tools.uio_loader import UIOLoader
 from typing import List, Dict
 from sadchem.io.interface.gcrn_uio import load_corresponding_snapshot, quc_to_dict, snap_num_from_path
 from sadchem.io.gcrn import load_jcrn_file
@@ -10,7 +10,7 @@ from abundances import *
 
 
 # Global paths
-SSD_DIR = "/media/sdeshmukh/Crucial X6"
+SSD_DIR = "/mnt/d"
 MODEL_DIR = f"{SSD_DIR}/cobold_runs/chem"
 JCRN_DIR = f"{SSD_DIR}/jcrn_runs"
 
@@ -92,11 +92,11 @@ def main():
   model_ids = [
       # chem1
       # Dwarf CEMP
-      "d3t63g40mm00chem1",
-      "d3t63g40mm20chem1",
-      "d3t63g40mm30chem1",
-      "d3t63g40mm30c20n20o20chem1",
-      "d3t63g40mm30c20n20o04chem1",
+      # "d3t63g40mm00chem1",
+      # "d3t63g40mm20chem1",
+      # "d3t63g40mm30chem1",
+      # "d3t63g40mm30c20n20o20chem1",
+      # "d3t63g40mm30c20n20o04chem1",
       # RGB
       "d3t36g10mm00chem1",
       "d3t40g15mm00chem1",
@@ -133,13 +133,15 @@ def main():
     mm30a04_abundances
   ]
 
-  full_abundance_sets = [*dwarf_cemp_abundance_sets, *rgb_abundance_sets]
+  # full_abundance_sets = [*dwarf_cemp_abundance_sets, *rgb_abundance_sets]
+  full_abundance_sets = [*rgb_abundance_sets]
 
   # snap nums for JCRN
   dwarf_cemp_snap_nums = ["026", "074", "116"]
   rgb_snap_nums = ["026", "074", "116"]
   # rgb_snap_nums = ["023", "077", "113"]
 
+  # out_dir = f"{SSD_DIR}/chem_dfs"
   out_dir = "../res/df"
   os.system(f"mkdir -p {out_dir}")
   keys = ["density", "temperature"]
@@ -147,12 +149,13 @@ def main():
   species = ["C", "H", "O",  "M", "CO", "CH", "OH", "H2"]
 
 
-  abundance_sets = full_abundance_sets
-  snap_nums = dwarf_cemp_snap_nums
-  for snap_num in snap_nums:
+  abundance_sets = rgb_abundance_sets
+  snap_nums = rgb_snap_nums
+  for i, snap_num in enumerate(snap_nums):
+    print(f"Current snap_num: {snap_num} ({i+1} / {len(snap_nums)})")
     models_to_single_df(model_ids, [snap_num] * len(model_ids), keys, species,
                         abundance_sets,
-                        output_file=f"{out_dir}/combined_dwarf_cemp_rgb_{snap_num}.parquet")
+                        output_file=f"{out_dir}/combined_rgb_{snap_num}.parquet")
 
 
 if __name__ == "__main__":

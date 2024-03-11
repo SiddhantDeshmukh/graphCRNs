@@ -1,7 +1,7 @@
 from __future__ import annotations
 from itertools import product
 from sadtools.utilities.chemistryUtilities import log_abundance_to_number_density
-from sadtools.utilities.abu_tools import load_abu, get_abundances
+from sadchem.utils import load_abu, get_abundances
 from typing import Dict, List
 import numpy as np
 from gcrn.network import Network

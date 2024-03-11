@@ -1,8 +1,6 @@
 # Plot training losses for models of interest
-import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-import os
 
 
 def read_history(filepath: str):
@@ -59,9 +57,9 @@ def main():
 
   plt.subplots_adjust(left=0.07, right=0.97, top=0.96, bottom=0.07,
                       wspace=0., hspace=0.33)
-  out_dir = "/home/sdeshmukh/Documents/chemicalAnalysis/out/figs/nn_loss"
-  fig.savefig(f"{out_dir}/loss_combined_rgb_3d.png",
-              bbox_inches="tight")
+  # out_dir = "/home/phd/chemicalAnalysis/out/figs/nn_loss"
+  # fig.savefig(f"{out_dir}/loss_combined_rgb_3d.png",
+  #             bbox_inches="tight")
   plt.show()
 
 if __name__ == "__main__":

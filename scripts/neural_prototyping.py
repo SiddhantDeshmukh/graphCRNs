@@ -1,24 +1,25 @@
 from sklearn.ensemble import RandomForestRegressor
-import tensorflow.keras as keras
+# import tensorflow.keras as keras
+import keras
 import numpy as np
 from abundances import *
 from typing import Dict, List
 import glob
 import vaex
 import tensorflow as tf
-from tensorflow.keras.utils import plot_model
-import tensorflow_gnn as tfgnn
+# from keras.utils import plot_model
+# import tensorflow_gnn as tfgnn
 from petastorm import make_batch_reader
 from petastorm.tf_utils import make_petastorm_dataset
-from gcrn.helper_functions import number_densities_from_abundances
+# from gcrn.helper_functions import number_densities_from_abundances
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
+# from sklearn.linear_model import LinearRegression
+# from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import MinMaxScaler
-import keras_tuner as kt
-import xgboost as xgb
+# import keras_tuner as kt
+# import xgboost as xgb
 import pickle
 
 
@@ -61,36 +62,36 @@ class Config:
     self.use_logn = use_logn
 
 
-class WeightedSumConvolution(tf.keras.layers.Layer):
-  "Weighted sum of source node states"
+# class WeightedSumConvolution(tf.keras.layers.Layer):
+#   "Weighted sum of source node states"
 
-  def __call__(self, graph: tfgnn.GraphTensor,
-               edge_set_name: tfgnn.EdgeSetName) -> tfgnn.Field:
-    messages = tfgnn.broadcast_node_to_edges(
-        graph, edge_set_name, tfgnn.SOURCE, feature_name=tfgnn.DEFAULT_STATE_NAME
-    )
-    weights = graph.edge_sets[edge_set_name]["weight"]
-    weighted_messages = tf.expand_dims(weights, -1) * messages
-    pooled_messages = tfgnn.pool_edges_to_node(
-        graph, edge_set_name, tfgnn.TARGET, reduce_type="sum",
-        feature_value=weighted_messages
-    )
+#   def __call__(self, graph: tfgnn.GraphTensor,
+#                edge_set_name: tfgnn.EdgeSetName) -> tfgnn.Field:
+#     messages = tfgnn.broadcast_node_to_edges(
+#         graph, edge_set_name, tfgnn.SOURCE, feature_name=tfgnn.DEFAULT_STATE_NAME
+#     )
+#     weights = graph.edge_sets[edge_set_name]["weight"]
+#     weighted_messages = tf.expand_dims(weights, -1) * messages
+#     pooled_messages = tfgnn.pool_edges_to_node(
+#         graph, edge_set_name, tfgnn.TARGET, reduce_type="sum",
+#         feature_value=weighted_messages
+#     )
 
-    return pooled_messages
+#     return pooled_messages
 
 
-def gnn_network():
-  gnn = tfgnn.keras.ConvGNNBuilder(
-      lambda edge_set_name: WeightedSumConvolution(),
-      lambda node_set_name: tfgnn.keras.layers.NextStateFromConcat(
-          tf.keras.layers.Dense(32)
-      )
-  )
-  model = keras.Sequential([
-      gnn.Convolve()
-  ])
+# def gnn_network():
+#   gnn = tfgnn.keras.ConvGNNBuilder(
+#       lambda edge_set_name: WeightedSumConvolution(),
+#       lambda node_set_name: tfgnn.keras.layers.NextStateFromConcat(
+#           tf.keras.layers.Dense(32)
+#       )
+#   )
+#   model = keras.Sequential([
+#       gnn.Convolve()
+#   ])
 
-  return model
+#   return model
 
 
 def mlp_builder(hp):
@@ -176,6 +177,13 @@ def encoder_decoder(input_shape=(6,), num_out=8):
       keras.layers.Dense(32, activation="relu"),
       keras.layers.Dense(64, activation="relu"),
       keras.layers.Dense(128, activation="relu"),
+      # # MLP end
+      # keras.layers.Dense(32, activation="relu"),
+      # keras.layers.Dropout(0.5),
+      # keras.layers.Dense(32, activation="relu"),
+      # keras.layers.Dropout(0.5),
+      # keras.layers.Dense(32, activation="relu"),
+      # keras.layers.Dropout(0.5),
       # Output
       keras.layers.Dense(num_out, activation="linear")
   ])
@@ -264,7 +272,7 @@ def prepare_dataset(use_logn=False,
                     input_species=["H", "H2", "C", "O", "CO", "CH", "OH", "M"],
                     output_species=["H", "H2", "C", "O", "CO", "CH", "OH", "M"],
                     test_files=None, abundance_mappings=None):
-  cemp_dir = "/media/sdeshmukh/Crucial X6/mean_chemistry/combined_cemp"
+  cemp_dir = "/mnt/d/mean_chemistry/combined_cemp"
 
   if use_logn:
     X_keys = [*[f"N_{s}" for s in input_species], "density", "temperature"]
@@ -475,7 +483,8 @@ def compile_and_train(config: Config, X_train, y_train, X_val, y_val,
                       # epochs=5,
                       validation_data=(X_val, y_val),
                       callbacks=[keras.callbacks.EarlyStopping(restore_best_weights=True,
-                                                               patience=30),
+                                                               patience=30,
+                                                               start_from_epoch=150),
                                  checkpoint_cb,
                                  keras.callbacks.ReduceLROnPlateau(monitor="val_loss",
                                                                    factor=0.1, patience=30, min_delta=1e-4, cooldown=0,
@@ -571,8 +580,8 @@ def setup_train_combined(train_file: str, test_file: str, config: Config):
       prepare_combined_dataset(train_file, test_file, config)
   print("Loaded datasets")
   model_types = [
-      # "MLP",
-      "CNN",
+      "MLP",
+      # "CNN",
       # "EncDec"
   ]
   model_stats = {}
@@ -592,7 +601,7 @@ def setup_train_combined(train_file: str, test_file: str, config: Config):
             f"({s}): Prediction = {predictions[j, i]:.3f}. Truth = {truths[j, i]:.3f}. P - T = {predictions[j, i] - truths[j, i]:.3f}")
         print(f"Inputs: {inputs[j]}")
     with open("./model_predictions.txt", "a", encoding="utf-8") as outfile:
-      outfile.write(f"{model_name}\n")
+      outfile.write(f"\nModel Name: {model_name}\n")
       outfile.write(f"Test MSE = {model_stats[model_name][0]:1.2e}\n")
       outfile.write(f"Test MAE = {model_stats[model_name][1]:1.2e}\n")
 
@@ -680,6 +689,9 @@ def main():
   combined_config_rgb = Config(6, 8, input_species=chem1_atomic_keys,
                            output_species=chem1_keys, use_logn=True,
                            uid_suffix="_combined_rgb_3d")
+  combined_config_rgb_abu = Config(6, 8, input_species=chem1_atomic_keys,
+                           output_species=chem1_keys, use_logn=False,
+                           uid_suffix="_combined_rgb_3d")
   combined_config_dwarf_rgb = Config(6, 8, input_species=chem1_atomic_keys,
                            output_species=chem1_keys, use_logn=True,
                            uid_suffix="_combined_dwarf_cemp_rgb_3d")
@@ -687,14 +699,17 @@ def main():
                            output_species=chem1_keys, use_logn=False,
                            uid_suffix="_combined_dwarf_cemp_rgb_3d")
 
-  visualise_networks(combined_config_rgb)
-  exit()
+  # visualise_networks(combined_config_rgb)
+  # exit()
   # setup_train_combined(f"{res_dir}/combined_dwarf_cemp_074.parquet",
   #                      f"{res_dir}/combined_dwarf_cemp_116.parquet",
   #                      config=combined_config_dwarf_cemp)
-  # setup_train_combined(f"{res_dir}/combined_rgb_074.parquet",
-  #                      f"{res_dir}/combined_rgb_116.parquet",
-  #                      config=combined_config_rgb)
+  setup_train_combined(f"{res_dir}/combined_rgb_074.parquet",
+                       f"{res_dir}/combined_rgb_116.parquet",
+                       config=combined_config_rgb)
+  setup_train_combined(f"{res_dir}/combined_rgb_074.parquet",
+                       f"{res_dir}/combined_rgb_116.parquet",
+                       config=combined_config_rgb_abu)
   # setup_train_combined(f"{res_dir}/combined_dwarf_cemp_rgb_074.parquet",
   #                      f"{res_dir}/combined_dwarf_cemp_rgb_116.parquet",
   #                      config=combined_config_dwarf_rgb)
@@ -708,7 +723,4 @@ if __name__ == "__main__":
 
 """
 TODO:
-  - use combined set 74 for training and combined set 116 for testing, DFs are
-    already init'd
-    - can write a few new functions to do this
 """
